@@ -113,7 +113,7 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
             <div className="w-[24%] shrink-0 bg-gradient-to-b from-[#1e3a2c] to-[#26301f] px-[3%] py-[3.5%] flex flex-col">
               <div className="flex items-center gap-1.5 mb-[8%]">
                 <div className="w-[18%] aspect-square rounded-md bg-white/10 flex items-center justify-center"><FlaskConical className="text-white w-1/2 h-1/2" /></div>
-                <div className="leading-none"><div className="text-white font-bold text-[0.62vw] sm:text-[0.6vw]" style={{ fontSize: 'clamp(6px,0.85vw,11px)' }}>Seawise Enterprise</div><div className="text-[#9db3a5]" style={{ fontSize: 'clamp(5px,0.7vw,9px)' }}>Pharmacy Store Edition</div></div>
+                <div className="leading-none"><div className="text-white font-bold text-[0.62vw] sm:text-[0.6vw]" style={{ fontSize: 'clamp(6px,0.85vw,11px)' }}>Pharmacy Store</div><div className="text-[#9db3a5]" style={{ fontSize: 'clamp(5px,0.7vw,9px)' }}>by Seawise Studio</div></div>
               </div>
               <div className="rounded-md bg-white/10 text-white/90 px-2 py-1 mb-[7%] truncate" style={{ fontSize: 'clamp(5px,0.75vw,10px)' }}>Apotek Rakyat Sejahtera</div>
               <div className="space-y-[4%]">
@@ -127,7 +127,7 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
             {/* Main */}
             <div className="flex-1 min-w-0 px-[3.2%] py-[2.8%] flex flex-col overflow-hidden">
               <p className="font-bold text-[#1c2620] leading-none shrink-0" style={{ fontSize: 'clamp(11px,1.7vw,24px)' }}>Dashboard</p>
-              <p className="text-[#6b7280] mt-1 mb-[3%] shrink-0" style={{ fontSize: 'clamp(6px,0.78vw,11px)' }}>Hello, apt. Anessa Beckham 👋 — {t('ringkasan aktivitas apotek', "today's pharmacy summary")}</p>
+              <p className="text-[#6b7280] mt-1 mb-[3%] shrink-0" style={{ fontSize: 'clamp(6px,0.78vw,11px)' }}>Hello, apt. Anessa Beckham 👋, {t('ringkasan aktivitas apotek', "today's pharmacy summary")}</p>
               {/* Stat cards */}
               <div className="grid grid-cols-4 gap-[2.2%] mb-[3%] shrink-0">
                 {stats.map(([Ic, chip, label, val], i) => (
@@ -143,7 +143,7 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
                 <div className="col-span-2 bg-white/80 border border-white/70 rounded-lg p-[3.2%] flex flex-col min-h-0">
                   <div className="flex items-center justify-between mb-[2%] shrink-0">
                     <div>
-                      <p className="font-bold text-[#1c2620]" style={{ fontSize: 'clamp(6px,0.85vw,12px)' }}>Sales — Last 7 Days</p>
+                      <p className="font-bold text-[#1c2620]" style={{ fontSize: 'clamp(6px,0.85vw,12px)' }}>Sales, Last 7 Days</p>
                       <div className="flex items-center gap-2 mt-0.5" style={{ fontSize: 'clamp(4.5px,0.62vw,8px)' }}><span className="text-[#2f5741]">● Revenue</span><span className="text-[#c2632f]">━ Transactions</span></div>
                     </div>
                     <p className="font-bold text-[#1e3a2c]" style={{ fontSize: 'clamp(6px,0.9vw,13px)' }}>Rp 10.095.000</p>
@@ -174,7 +174,7 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
         <div className="mb-deck"><span className="mb-groove" /></div>
       </div>
 
-      {/* iPhone Pro — Kasir mobile */}
+      {/* iPhone Pro, Kasir mobile */}
       <div className="iphone">
         <span className="ip-island" />
         <span className="ip-side ip-pw" /><span className="ip-side ip-cam" />
@@ -216,13 +216,13 @@ export default function Kenapa() {
   }, [])
 
   const spotlights = [
-    { tag: t('DASHBOARD ANALITIK', 'ANALYTICS DASHBOARD'), title: t('Kondisi apotek, dalam sekali pandang.', 'Your whole pharmacy, at a glance.'), body: t('Grafik penjualan interaktif — batang omzet dipadu garis jumlah transaksi, bisa ganti rentang 7 atau 30 hari. Di bawahnya: produk terlaris, stok yang menipis, barang segera expired, dan tagihan yang akan jatuh tempo. Semua real-time, tanpa perlu buka laporan.', 'An interactive sales chart — revenue bars paired with a transaction-count line, switchable between 7 or 30 days. Below it: best sellers, low stock, items expiring soon, and invoices coming due. All real-time, no report needed.'), Icon: TrendingUp,
+    { tag: t('DASHBOARD ANALITIK', 'ANALYTICS DASHBOARD'), title: t('Kondisi apotek, dalam sekali pandang.', 'Your whole pharmacy, at a glance.'), body: t('Grafik penjualan interaktif, batang omzet dipadu garis jumlah transaksi, bisa ganti rentang 7 atau 30 hari. Di bawahnya: produk terlaris, stok yang menipis, barang segera expired, dan tagihan yang akan jatuh tempo. Semua real-time, tanpa perlu buka laporan.', 'An interactive sales chart, revenue bars paired with a transaction-count line, switchable between 7 or 30 days. Below it: best sellers, low stock, items expiring soon, and invoices coming due. All real-time, no report needed.'), Icon: TrendingUp,
       visual: (<AppWindow><div className="space-y-3">
         <div className="grid grid-cols-3 gap-1.5">
           {[[t('Omzet','Revenue'),'Rp8,4jt','bg-[#f0dcd2] text-[#a75a34]'],[t('Transaksi','Sales'),'87','bg-[#dce5db] text-[#2f5741]'],[t('Produk','Products'),'1.240','bg-[#dce5db] text-[#2f5741]']].map((c,i)=>(<div key={i} className="rounded-lg border border-[#eceae3] p-2"><p className="text-[8px] text-[#9ca3af] uppercase tracking-wide">{c[0]}</p><p className="text-[11px] font-bold text-[#1c2620]">{c[1]}</p></div>))}
         </div>
         <div className="rounded-lg border border-[#eceae3] p-2.5">
-          <div className="flex items-center justify-between mb-1"><span className="text-[9px] font-semibold text-[#1c2620]">{t('Penjualan 7 Hari','Sales — 7 Days')}</span><div className="flex gap-1.5 text-[7px]"><span className="text-[#2f5741]">▉ {t('Omzet','Revenue')}</span><span className="text-[#c2632f]">━ {t('Transaksi','Trx')}</span></div></div>
+          <div className="flex items-center justify-between mb-1"><span className="text-[9px] font-semibold text-[#1c2620]">{t('Penjualan 7 Hari','Sales, 7 Days')}</span><div className="flex gap-1.5 text-[7px]"><span className="text-[#2f5741]">▉ {t('Omzet','Revenue')}</span><span className="text-[#c2632f]">━ {t('Transaksi','Trx')}</span></div></div>
           <svg viewBox="0 0 240 74" className="w-full">
             {[24,40,32,54,46,66,58].map((h,i)=>(<rect key={i} x={12+i*32} y={68-h} width="16" height={h} rx="3" fill="#1e3a2c" />))}
             <path d="M20,42 C36,34 40,32 52,30 C68,27 72,40 84,38 C100,35 104,24 116,22 C132,20 136,32 148,30 C164,27 168,16 180,15 C196,14 200,22 212,24" fill="none" stroke="#c2632f" strokeWidth="2.4" strokeLinecap="round" />
@@ -234,21 +234,21 @@ export default function Kenapa() {
           <div className="rounded-lg border border-[#eceae3] p-2"><p className="text-[8px] text-[#9ca3af] mb-0.5">{t('Jatuh Tempo','Due')}</p><p className="text-[10px] text-[#1c2620]">PBF Sehat <span className="text-amber-600 font-semibold">3 {t('hari','d')}</span></p></div>
         </div>
       </div></AppWindow>) },
-    { tag: t('ORDER TERPANDU', 'GUIDED ORDER'), title: t('Restok otomatis. PO terpecah sendiri.', 'Auto-restock. POs split themselves.'), body: t('Satu klik, sistem mengumpulkan semua barang yang mencapai stok minimum, menyarankan jumlah order, lalu otomatis membagi ke distributor masing-masing. Tinggal review — order langsung terpecah menjadi PO per supplier, siap kirim. Tak perlu lagi cek kartu stok satu per satu.', 'One click, the system gathers every item at minimum stock, suggests order quantities, then auto-assigns each to its distributor. Just review — the order splits into a PO per supplier, ready to send. No more checking stock cards one by one.'), Icon: Wand2,
+    { tag: t('ORDER TERPANDU', 'GUIDED ORDER'), title: t('Restok otomatis. PO terpecah sendiri.', 'Auto-restock. POs split themselves.'), body: t('Satu klik, sistem mengumpulkan semua barang yang mencapai stok minimum, menyarankan jumlah order, lalu otomatis membagi ke distributor masing-masing. Tinggal review, order langsung terpecah menjadi PO per supplier, siap kirim. Tak perlu lagi cek kartu stok satu per satu.', 'One click, the system gathers every item at minimum stock, suggests order quantities, then auto-assigns each to its distributor. Just review, the order splits into a PO per supplier, ready to send. No more checking stock cards one by one.'), Icon: Wand2,
       visual: (<AppWindow><div className="space-y-2">
         <div className="flex items-center gap-1.5 mb-1">{[t('Pilih','Select'),t('Bagi','Assign'),t('Buat','Create')].map((s,i)=>(<div key={i} className="flex items-center gap-1.5 flex-1"><span className={`w-4 h-4 rounded-full text-[8px] flex items-center justify-center ${i===0?'bg-[#1e3a2c] text-white':'bg-[#eceae3] text-[#9ca3af]'}`}>{i+1}</span><span className="text-[8px] text-[#6b7280]">{s}</span>{i<2&&<div className="flex-1 h-px bg-[#eceae3]" />}</div>))}</div>
         {[['Amoxicillin 500','2/10','PBF Sehat'],['Paracetamol','5/20','PBF Sehat'],['Vitamin C','3/15','PT Kimia']].map((r,i)=>(<div key={i} className="flex items-center justify-between text-[10px] rounded-lg border border-[#eceae3] px-2.5 py-1.5"><span className="text-[#1c2620]">{r[0]}</span><span className="text-red-500">{r[1]}</span><span className="text-[9px] px-1.5 py-0.5 rounded bg-[#eef0ea] text-[#2f5741]">{r[2]}</span></div>))}
         <div className="text-[9px] text-center text-[#2f5741] font-medium">→ 2 PO {t('siap kirim','ready to send')}</div>
       </div></AppWindow>) },
-    { tag: t('KASIR & KEPATUHAN', 'POS & COMPLIANCE'), title: t('Jual cepat, tetap patuh aturan.', 'Sell fast, stay compliant.'), body: t('Kasir ringan dengan metode bayar Tunai, QRIS, Transfer. Untuk obat Narkotika, Psikotropika & Prekursor, data pasien dan nomor resep wajib terisi otomatis — tercatat rapi untuk pelaporan.', 'A light POS with Cash, QRIS, and Transfer payments. For Narcotics, Psychotropics & Precursors, patient data and prescription number are required automatically — neatly recorded for reporting.'), Icon: ShoppingCart,
-      visual: (<AppWindow><div className="space-y-2"><div className="h-8 rounded-lg bg-[#f5f2eb] flex items-center px-3 text-xs text-[#9ca3af]">Cari obat…</div><div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800">⚠ Narkotika — isi data pasien & resep</div><div className="grid grid-cols-3 gap-1.5">{['Tunai','QRIS','Transfer'].map(m=><div key={m} className="text-[10px] text-center py-1.5 rounded-lg bg-[#1e3a2c] text-white">{m}</div>)}</div></div></AppWindow>) },
-    { tag: t('STOK & EXPIRED', 'STOCK & EXPIRY'), title: t('Tak ada lagi obat kadaluarsa terbuang.', 'No more expired medicine wasted.'), body: t('Pantau batch & tanggal expired, dapat peringatan dini, lalu tindak lanjuti: musnahkan dengan Berita Acara resmi atau retur ke supplier — stok berkurang hanya setelah dikonfirmasi.', 'Track batches & expiry dates, get early alerts, then follow up: destroy with an official report or return to supplier — stock is only reduced after confirmation.'), Icon: CalendarClock,
+    { tag: t('KASIR & KEPATUHAN', 'POS & COMPLIANCE'), title: t('Jual cepat, tetap patuh aturan.', 'Sell fast, stay compliant.'), body: t('Kasir ringan dengan metode bayar Tunai, QRIS, Transfer. Untuk obat Narkotika, Psikotropika & Prekursor, data pasien dan nomor resep wajib terisi otomatis, tercatat rapi untuk pelaporan.', 'A light POS with Cash, QRIS, and Transfer payments. For Narcotics, Psychotropics & Precursors, patient data and prescription number are required automatically, neatly recorded for reporting.'), Icon: ShoppingCart,
+      visual: (<AppWindow><div className="space-y-2"><div className="h-8 rounded-lg bg-[#f5f2eb] flex items-center px-3 text-xs text-[#9ca3af]">Cari obat…</div><div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800">⚠ Narkotika, isi data pasien & resep</div><div className="grid grid-cols-3 gap-1.5">{['Tunai','QRIS','Transfer'].map(m=><div key={m} className="text-[10px] text-center py-1.5 rounded-lg bg-[#1e3a2c] text-white">{m}</div>)}</div></div></AppWindow>) },
+    { tag: t('STOK & EXPIRED', 'STOCK & EXPIRY'), title: t('Tak ada lagi obat kadaluarsa terbuang.', 'No more expired medicine wasted.'), body: t('Pantau batch & tanggal expired, dapat peringatan dini, lalu tindak lanjuti: musnahkan dengan Berita Acara resmi atau retur ke supplier, stok berkurang hanya setelah dikonfirmasi.', 'Track batches & expiry dates, get early alerts, then follow up: destroy with an official report or return to supplier, stock is only reduced after confirmation.'), Icon: CalendarClock,
       visual: (<AppWindow><table className="w-full text-[11px]"><thead><tr className="text-[#9ca3af]"><th className="text-left font-medium pb-1">Batch</th><th className="text-left font-medium pb-1">Exp</th><th className="text-right font-medium pb-1">Aksi</th></tr></thead><tbody>{[['BT-2401','30 hari','#dc2626'],['BT-2312','≤60 hari','#b45309'],['BT-2408','Aman','#16a34a']].map((r,i)=>(<tr key={i} className="border-t border-[#f0ede6]"><td className="py-1.5 font-mono text-[#1c2620]">{r[0]}</td><td className="py-1.5" style={{color:r[2]}}>{r[1]}</td><td className="py-1.5 text-right"><span className="text-[10px] px-2 py-0.5 rounded bg-[#1e3a2c] text-white">Tindak Lanjut</span></td></tr>))}</tbody></table></AppWindow>) },
-    { tag: t('LAPORAN SIPNAP', 'SIPNAP REPORT'), title: t('Laporan SIPNAP, otomatis.', 'SIPNAP reports, automated.'), body: t('Narkotika, Psikotropika, dan Prekursor per periode — penerimaan dari pembelian, pengeluaran lengkap dengan data pasien & resep, siap cetak dengan tanda tangan Apoteker Penanggung Jawab. Hemat berjam-jam kerja manual.', 'Narcotics, Psychotropics, and Precursors per period — receipts from purchases, dispensing complete with patient & prescription data, ready to print with the Responsible Pharmacist signature. Save hours of manual work.'), Icon: BarChart2,
+    { tag: t('LAPORAN SIPNAP', 'SIPNAP REPORT'), title: t('Laporan SIPNAP, otomatis.', 'SIPNAP reports, automated.'), body: t('Narkotika, Psikotropika, dan Prekursor per periode, penerimaan dari pembelian, pengeluaran lengkap dengan data pasien & resep, siap cetak dengan tanda tangan Apoteker Penanggung Jawab. Hemat berjam-jam kerja manual.', 'Narcotics, Psychotropics, and Precursors per period, receipts from purchases, dispensing complete with patient & prescription data, ready to print with the Responsible Pharmacist signature. Save hours of manual work.'), Icon: BarChart2,
       visual: (<AppWindow><div className="text-center"><p className="text-[11px] font-bold text-[#1c2620]">LAPORAN PENGGUNAAN NARKOTIKA</p><p className="text-[9px] text-[#9ca3af] mb-2">Periode: Bulan berjalan</p><div className="border border-[#e2ddd3] rounded"><div className="grid grid-cols-4 text-[8px] bg-[#f5f2eb] text-[#6b7280]"><span className="p-1 border-r border-[#e2ddd3]">Sediaan</span><span className="p-1 border-r border-[#e2ddd3]">Masuk</span><span className="p-1 border-r border-[#e2ddd3]">Keluar</span><span className="p-1">Sisa</span></div>{[['Codein 10mg','20','5','15'],['Pethidin 50ml','10','2','8']].map((r,i)=>(<div key={i} className="grid grid-cols-4 text-[8px] border-t border-[#f0ede6]">{r.map((c,j)=><span key={j} className={`p-1 ${j<3?'border-r border-[#f0ede6]':''}`}>{c}</span>)}</div>))}</div></div></AppWindow>) },
-    { tag: t('PEMBELIAN & KEUANGAN', 'PURCHASING & FINANCE'), title: t('Pembelian sampai bayar faktur, terpantau.', 'From purchasing to invoice payment, all tracked.'), body: t('Buat PO ke supplier, terima barang beserta batch & faktur, lalu kelola pembayaran faktur — diurutkan berdasarkan jatuh tempo, dengan pengingat yang lewat tempo dan bukti pembayaran yang bisa dicetak.', 'Create POs to suppliers, receive goods with batches & invoices, then manage invoice payments — sorted by due date, with overdue reminders and printable payment receipts.'), Icon: Receipt,
+    { tag: t('PEMBELIAN & KEUANGAN', 'PURCHASING & FINANCE'), title: t('Pembelian sampai bayar faktur, terpantau.', 'From purchasing to invoice payment, all tracked.'), body: t('Buat PO ke supplier, terima barang beserta batch & faktur, lalu kelola pembayaran faktur, diurutkan berdasarkan jatuh tempo, dengan pengingat yang lewat tempo dan bukti pembayaran yang bisa dicetak.', 'Create POs to suppliers, receive goods with batches & invoices, then manage invoice payments, sorted by due date, with overdue reminders and printable payment receipts.'), Icon: Receipt,
       visual: (<AppWindow><div className="space-y-1.5">{[['INV/0087','Jatuh tempo 3 hari','#b45309'],['INV/0091','Terlambat','#dc2626'],['INV/0080','Lunas','#16a34a']].map((r,i)=>(<div key={i} className="flex items-center justify-between text-[11px] bg-white/70 border border-[#f0ede6] rounded-lg px-3 py-2"><span className="font-mono text-[#1c2620]">{r[0]}</span><span style={{color:r[2]}}>{r[1]}</span></div>))}</div></AppWindow>) },
-    { tag: t('ONBOARDING', 'ONBOARDING'), title: t('Pindah data lama? Cukup satu klik.', 'Migrating old data? Just one click.'), body: t('Unduh template, isi di Excel, upload CSV — daftar produk, supplier, stok awal, hingga saldo hutang langsung masuk. Client baru bisa langsung jalan tanpa input manual berhari-hari.', 'Download a template, fill it in Excel, upload the CSV — products, suppliers, opening stock, even outstanding debts come straight in. New clients get running without days of manual entry.'), Icon: Database,
+    { tag: t('ONBOARDING', 'ONBOARDING'), title: t('Pindah data lama? Cukup satu klik.', 'Migrating old data? Just one click.'), body: t('Unduh template, isi di Excel, upload CSV, daftar produk, supplier, stok awal, hingga saldo hutang langsung masuk. Client baru bisa langsung jalan tanpa input manual berhari-hari.', 'Download a template, fill it in Excel, upload the CSV, products, suppliers, opening stock, even outstanding debts come straight in. New clients get running without days of manual entry.'), Icon: Database,
       visual: (<AppWindow><div className="grid grid-cols-2 gap-2">{['Produk','Supplier','Stok Awal','Faktur Awal'].map((t,i)=>(<div key={i} className="rounded-lg border border-[#e2ddd3] p-2.5"><Database size={14} className="text-[#2f5741] mb-1"/><p className="text-[11px] font-semibold text-[#1c2620]">{t}</p><p className="text-[9px] text-[#9ca3af]">Template + Upload CSV</p></div>))}</div></AppWindow>) },
   ]
 
@@ -278,7 +278,7 @@ export default function Kenapa() {
             <div className="relative w-9 h-9 rounded-xl bg-[#1e3a2c] flex items-center justify-center">
               <FlaskConical size={18} className="text-white" /><span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-[#c2632f]" />
             </div>
-            <div className="leading-tight"><div className="font-bold text-sm">Seawise Enterprise Apps</div><div className="text-[10px] text-[#8a8f88]">Pharmacy Store Edition</div></div>
+            <div className="leading-tight"><div className="font-bold text-sm">Pharmacy Store</div><div className="text-[10px] text-[#8a8f88]">by Seawise Studio</div></div>
           </div>
           <div className="flex items-center gap-2">
             <LangToggle />
@@ -295,7 +295,7 @@ export default function Kenapa() {
           {t('Apotek Anda,', 'Your pharmacy,')}<br />{t('dikelola dengan tenang.', 'managed with ease.')}
         </h1>
         <p className="reveal text-lg sm:text-xl text-[#4b5563] max-w-2xl mx-auto mb-9" style={{ transitionDelay: '.1s' }}>
-          {t('Dashboard analitik real-time, kasir, stok, order terpandu, kepatuhan SIPNAP — semuanya dalam satu aplikasi yang dirancang khusus untuk apotek Indonesia.', 'A real-time analytics dashboard, POS, stock, guided ordering, and SIPNAP compliance — all in one app built specifically for Indonesian pharmacies.')}
+          {t('Dashboard analitik real-time, kasir, stok, order terpandu, kepatuhan SIPNAP, semuanya dalam satu aplikasi yang dirancang khusus untuk apotek Indonesia.', 'A real-time analytics dashboard, POS, stock, guided ordering, and SIPNAP compliance, all in one app built specifically for Indonesian pharmacies.')}
         </p>
         <div className="reveal flex items-center justify-center gap-3 mb-14" style={{ transitionDelay: '.15s' }}>
           <a href="/" className="inline-flex items-center gap-2 bg-[#1e3a2c] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#24462f] transition">{t('Coba Sekarang', 'Try Now')} <ArrowRight size={17} /></a>
@@ -310,7 +310,7 @@ export default function Kenapa() {
       <section className="kn-dark text-white py-20 sm:py-28">
         <div className="max-w-4xl mx-auto px-5 text-center">
           <h2 className="reveal kn-headline text-3xl sm:text-5xl font-bold mb-6">{t('Mengelola apotek nggak harus ribet.', 'Managing a pharmacy should not be hard.')}</h2>
-          <p className="reveal text-[#c9d6cc] text-lg max-w-2xl mx-auto mb-12" style={{ transitionDelay: '.05s' }}>{t('Kebocoran yang diam-diam menggerus keuntungan — dan bikin repot saat audit.', 'Silent leaks that eat into profit — and cause headaches at audit time.')}</p>
+          <p className="reveal text-[#c9d6cc] text-lg max-w-2xl mx-auto mb-12" style={{ transitionDelay: '.05s' }}>{t('Kebocoran yang diam-diam menggerus keuntungan, dan bikin repot saat audit.', 'Silent leaks that eat into profit, and cause headaches at audit time.')}</p>
           <div className="grid sm:grid-cols-3 gap-5 text-left">
             {[
               [t('Obat kadaluarsa terbuang', 'Expired medicine wasted'), t('Tanpa pantauan batch & expired, stok mati jadi kerugian.', 'Without batch & expiry tracking, dead stock becomes loss.')],
@@ -377,7 +377,7 @@ export default function Kenapa() {
             </div>
           </div>
           <div className="reveal mt-8 space-y-2 text-left max-w-md mx-auto" style={{ transitionDelay: '.2s' }}>
-            {[t('Semua fitur — tanpa batasan', 'All features — no limits'), t('Dashboard analitik & laporan real-time', 'Real-time analytics dashboard & reports'), t('Order terpandu & dwibahasa ID/EN', 'Guided ordering & bilingual ID/EN'), t('Multi-pengguna dengan hak akses', 'Multi-user with role-based access'), t('Migrasi data & pendampingan awal', 'Data migration & onboarding support'), t('Update fitur berkelanjutan', 'Continuous feature updates')].map((f, i) => (
+            {[t('Semua fitur, tanpa batasan', 'All features, no limits'), t('Dashboard analitik & laporan real-time', 'Real-time analytics dashboard & reports'), t('Order terpandu & dwibahasa ID/EN', 'Guided ordering & bilingual ID/EN'), t('Multi-pengguna dengan hak akses', 'Multi-user with role-based access'), t('Migrasi data & pendampingan awal', 'Data migration & onboarding support'), t('Update fitur berkelanjutan', 'Continuous feature updates')].map((f, i) => (
               <div key={i} className="flex items-center gap-2.5 text-[#e8efe9]"><Check size={16} className="text-[#8fbf7f] shrink-0" /> <span className="text-sm">{f}</span></div>
             ))}
           </div>
@@ -396,9 +396,9 @@ export default function Kenapa() {
 
       <footer className="border-t border-black/5 py-8 text-center text-sm text-[#9ca3af]">
         <div className="flex items-center justify-center gap-2 mb-2">
-          <FlaskConical size={16} className="text-[#1e3a2c]" /> <span className="font-semibold text-[#1c2620]">Seawise Enterprise Apps</span>
+          <FlaskConical size={16} className="text-[#1e3a2c]" /> <span className="font-semibold text-[#1c2620]">Pharmacy Store</span>
         </div>
-        © {new Date().getFullYear()} Seawise Creative · Pharmacy Store Edition
+        © {new Date().getFullYear()} Seawise Studio · Pharmacy Store
       </footer>
     </div>
   )

@@ -48,8 +48,8 @@ function Logo() {
         <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-[#c2632f]" />
       </div>
       <div>
-        <div className="font-bold text-[#1c2620] leading-tight">Seawise Enterprise Apps</div>
-        <div className="text-xs text-[#8a8f88]">Pharmacy Store Edition</div>
+        <div className="font-bold text-[#1c2620] leading-tight">Pharmacy Store</div>
+        <div className="text-xs text-[#8a8f88]">by Seawise Studio</div>
       </div>
     </div>
   )
@@ -157,7 +157,7 @@ export default function Auth() {
           <Logo />
           <p className="text-[#c2632f] text-xs font-semibold uppercase tracking-[0.18em] mb-2">{t('Gabung Sekarang', 'Join Now')}</p>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#1c2620] mb-1">{t('Daftarkan Apotek', 'Register Pharmacy')}</h1>
-          <p className="text-sm text-[#6b7280] mb-5">{t('Gratis mendaftar — aktivasi oleh tim Seawise.', 'Free to register — activated by the Seawise team.')}</p>
+          <p className="text-sm text-[#6b7280] mb-5">{t('Gratis mendaftar, aktivasi oleh tim Seawise.', 'Free to register, activated by the Seawise team.')}</p>
           {sError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{sError}</div>}
           {sSukses && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">{sSukses}</div>}
           <div className="space-y-3.5">

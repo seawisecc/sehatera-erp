@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og'
 
-export const alt = 'Seawise Enterprise Apps — Pharmacy Store Edition'
+export const alt = 'Pharmacy Store by Seawise Studio'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -41,8 +41,8 @@ export default function OpengraphImage() {
             </svg>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.5px' }}>Seawise Enterprise Apps</div>
-            <div style={{ fontSize: 24, color: '#9db3a5' }}>Pharmacy Store Edition</div>
+            <div style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.5px' }}>Pharmacy Store</div>
+            <div style={{ fontSize: 24, color: '#9db3a5' }}>by Seawise Studio</div>
           </div>
         </div>
 
@@ -52,7 +52,7 @@ export default function OpengraphImage() {
         </div>
 
         <div style={{ fontSize: 27, color: '#c9d6cc', lineHeight: 1.45, marginBottom: 44, maxWidth: 940 }}>
-          Dashboard analitik real-time, kasir &amp; resep, stok &amp; kadaluarsa, order terpandu, hingga laporan SIPNAP — dalam satu aplikasi.
+          Dashboard analitik real-time, kasir &amp; resep, stok &amp; kadaluarsa, order terpandu, hingga laporan SIPNAP, dalam satu aplikasi.
         </div>
 
         {/* Feature chips */}

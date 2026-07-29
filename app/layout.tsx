@@ -14,18 +14,18 @@ const geistMono = Geist_Mono({
 });
 
 const SITE_URL = "https://apotek-erp.vercel.app";
-const TITLE = "Seawise Enterprise Apps — Pharmacy Store Edition";
+const TITLE = "Pharmacy Store | Seawise Studio";
 const DESCRIPTION =
-  "Sistem manajemen apotek: dashboard analitik real-time, kasir & resep, stok & kadaluarsa, order terpandu, pembayaran faktur, hingga laporan SIPNAP — dalam satu aplikasi.";
+  "Sistem manajemen apotek: dashboard analitik real-time, kasir & resep, stok & kadaluarsa, order terpandu, pembayaran faktur, hingga laporan SIPNAP, dalam satu aplikasi.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: TITLE,
-    template: "%s — Seawise Enterprise Apps",
+    template: "%s | Pharmacy Store",
   },
   description: DESCRIPTION,
-  applicationName: "Seawise Enterprise Apps",
+  applicationName: "Pharmacy Store",
   keywords: [
     "aplikasi apotek", "software apotek", "ERP apotek", "sistem manajemen apotek",
     "POS apotek", "laporan SIPNAP", "stok obat", "kadaluarsa obat", "pharmacy management system",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "id_ID",
     url: SITE_URL,
-    siteName: "Seawise Enterprise Apps",
+    siteName: "Pharmacy Store",
     title: TITLE,
     description: DESCRIPTION,
   },

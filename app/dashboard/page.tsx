@@ -363,7 +363,7 @@ export default function Dashboard() {
           <p>SIPA: ${settingsData.nomor_sipa || '-'}</p>
         </div>
       </div>
-      <div class="foot">Dokumen ini dicetak otomatis oleh Seawise Enterprise Apps — Pharmacy Store Edition.</div>
+      <div class="foot">Dokumen ini dicetak otomatis oleh Pharmacy Store by Seawise Studio.</div>
     </body></html>`)
     win?.document.close(); win?.print()
   }
@@ -448,7 +448,7 @@ export default function Dashboard() {
       for (const sid of Object.keys(groups)) {
         const items = groups[sid]
         const total_nilai = items.reduce((a, b) => a + b.qty * b.harga_beli, 0)
-        const { data: po, error } = await supabase.from('purchase_orders').insert([{ supplier_id: sid, total_nilai, catatan: t('Order terpandu — restok otomatis', 'Guided order — auto restock'), ...cid }]).select().single()
+        const { data: po, error } = await supabase.from('purchase_orders').insert([{ supplier_id: sid, total_nilai, catatan: t('Order terpandu, restok otomatis', 'Guided order, auto restock'), ...cid }]).select().single()
         if (error) { alert('Error: ' + error.message); setGuidedLoading(false); return }
         await supabase.from('po_items').insert(items.map(i => ({ po_id: po.id, product_id: i.product_id, nama_produk: i.nama, satuan: i.satuan, qty_pesan: i.qty, harga_beli: i.harga_beli, subtotal: i.qty * i.harga_beli, ...cid })))
         created.push(po.nomor_po)
@@ -1048,7 +1048,7 @@ export default function Dashboard() {
       .order('expired_date')
     setProdukBatches(batches || [])
 
-    // Fetch riwayat keluar (transaksi) — sort by tanggal transaksi di JS
+    // Fetch riwayat keluar (transaksi), sort by tanggal transaksi di JS
     // (transaction_items tidak punya kolom created_at sendiri, jadi jangan .order di query)
     const { data: trxOut } = await supabase
       .from('transaction_items')
@@ -1057,7 +1057,7 @@ export default function Dashboard() {
     setProdukTrxOut((trxOut || []).sort((a: any, b: any) =>
       new Date(b.transactions?.created_at || 0).getTime() - new Date(a.transactions?.created_at || 0).getTime()))
 
-    // Fetch riwayat masuk (PO) — sort by tanggal terima di JS
+    // Fetch riwayat masuk (PO), sort by tanggal terima di JS
     const { data: trxIn } = await supabase
       .from('po_items')
       .select('*, purchase_orders(nomor_po, tanggal_terima, status, suppliers(nama_supplier))')
@@ -1083,7 +1083,7 @@ export default function Dashboard() {
 
 const submitCloseBatch = async () => {
   if (!showTindakLanjut) return
-  if (!confirm(t('Tandai batch ini selesai ditindaklanjuti?\nAlert akan dihapus. Stok total TIDAK dipotong — ini hanya pengingat.', 'Mark this batch as followed up?\nThe alert will be removed. Total stock is NOT deducted — reminder only.'))) return
+  if (!confirm(t('Tandai batch ini selesai ditindaklanjuti?\nAlert akan dihapus. Stok total TIDAK dipotong, ini hanya pengingat.', 'Mark this batch as followed up?\nThe alert will be removed. Total stock is NOT deducted, reminder only.'))) return
   // Hanya menghapus batch dari daftar reminder (stok_batch -> 0).
   // Stok total produk TIDAK diubah di sini (bukan mutasi stok, hanya pengingat).
   await supabase.from('product_batches').update({ stok_batch: 0 }).eq('id', showTindakLanjut.id)
@@ -1111,13 +1111,13 @@ const submitRetur = async () => {
   if (!showTindakLanjut) return
   const supplierId = formRetur.supplier_id || batchSupplier?.id
   if (!supplierId) { alert(t('Pilih supplier dulu!', 'Choose a supplier first!')); return }
-  // Retur hanya DIAJUKAN dulu — stok belum berkurang sampai dikonfirmasi.
+  // Retur hanya DIAJUKAN dulu, stok belum berkurang sampai dikonfirmasi.
   const { error } = await supabase.from('retur_supplier').insert([{ batch_id: showTindakLanjut.id, product_id: showTindakLanjut.product_id, supplier_id: supplierId, qty_retur: formRetur.qty_retur, tanggal_retur: formRetur.tanggal_retur, alasan: formRetur.alasan, status: 'diajukan' }])
   if (error) { alert('Error: ' + error.message); return }
   setShowTindakLanjut(null)
   fetchExpiredAlerts()
   if (showProdukDetail) openProdukDetail(showProdukDetail)
-  alert(t('✅ Retur diajukan. Stok belum berubah — konfirmasi di menu Tindak Lanjut → Retur untuk memproses.', '✅ Return filed. Stock unchanged — confirm it in Follow-up → Returns to process.'))
+  alert(t('✅ Retur diajukan. Stok belum berubah, konfirmasi di menu Tindak Lanjut → Retur untuk memproses.', '✅ Return filed. Stock unchanged, confirm it in Follow-up → Returns to process.'))
 }
 
 // Konfirmasi retur: stok fisik keluar → kurangi batch & stok total, status jadi 'selesai'
@@ -1412,13 +1412,13 @@ const batalRetur = async (row: any) => {
     )
   }
 
-  // Konten Migrasi Data — dirender sebagai sub-menu di dalam Pengaturan
+  // Konten Migrasi Data, dirender sebagai sub-menu di dalam Pengaturan
   const migrasiCards = [
     { key: 'produk', title: t('Daftar Produk', 'Product List'), Icon: Pill, desc: t('Impor katalog obat: nama, kategori, harga, dan stok awal.', 'Import the drug catalog: name, category, price, and opening stock.'), cols: 'kode (opsional), nama_obat, nama_generik, kandungan, kategori, satuan, isi_kemasan, harga_beli, harga_jual, stok_total, stok_minimum', hint: t('Kategori: bebas, bebas_terbatas, keras, suplemen, psikotropika, narkotika, prekursor, alkes, lainnya.', 'Category: bebas, bebas_terbatas, keras, suplemen, psikotropika, narkotika, prekursor, alkes, lainnya.'), file: 'template_produk.csv', headers: ['kode', 'nama_obat', 'nama_generik', 'kandungan', 'kategori', 'satuan', 'isi_kemasan', 'harga_beli', 'harga_jual', 'stok_total', 'stok_minimum'], examples: [['', 'Paracetamol 500mg', 'Paracetamol', 'Paracetamol 500 mg', 'bebas', 'Tablet', '100', '500', '1000', '150', '10']], onUpload: importProduk },
     { key: 'supplier', title: t('Daftar Supplier', 'Supplier List'), Icon: Truck, desc: t('Impor daftar PBF / supplier obat.', 'Import the list of distributors / drug suppliers.'), cols: 'nama_supplier, jenis, alamat, telepon, email', hint: t('Jenis yang valid: PBF, Subdistributor, atau Lainnya (nilai lain otomatis disesuaikan).', 'Valid types: PBF, Subdistributor, or Lainnya (other values auto-adjusted).'), file: 'template_supplier.csv', headers: ['nama_supplier', 'jenis', 'alamat', 'telepon', 'email'], examples: [['PT Bina San Prima', 'PBF', 'Jl. Industri No. 1', '021-1234567', 'sales@binasan.co.id']], onUpload: importSupplier },
     { key: 'stok', title: t('Stok Awal (Batch)', 'Opening Stock (Batch)'), Icon: PackageOpen, desc: t('Impor stok awal per batch + expired date. Dicocokkan ke produk lewat kode.', 'Import opening stock per batch + expiry date. Matched to products by code.'), cols: 'kode_produk, batch_number, expired_date (YYYY-MM-DD), stok_batch', hint: t('Impor Produk dulu agar kode-nya tersedia. Stok batch akan menambah stok total produk.', 'Import Products first so codes exist. Batch stock adds to the total product stock.'), file: 'template_stok_awal.csv', headers: ['kode_produk', 'batch_number', 'expired_date', 'stok_batch'], examples: [['OBT-0001', 'BT-2401', '2026-12-31', '150']], onUpload: importStok },
     { key: 'mapping', title: t('Mapping Produk–Supplier', 'Product–Supplier Mapping'), Icon: ClipboardList, desc: t('Kaitkan tiap produk ke supplier-nya, agar pembuatan PO otomatis tahu daftar produk per supplier.', 'Link each product to its supplier, so creating a PO automatically knows the products per supplier.'), cols: 'kode_produk, nama_supplier (atau kode_supplier)', hint: t('Import Produk & Supplier dulu. Nama supplier harus sama persis dengan yang terdaftar.', 'Import Products & Suppliers first. Supplier name must match exactly.'), file: 'template_mapping_produk_supplier.csv', headers: ['kode_produk', 'nama_supplier'], examples: [['OBT-0001', 'PT Bina San Prima']], onUpload: importMapping },
-    { key: 'fakturawal', title: t('Faktur / Hutang Awal', 'Opening Invoices / Debts'), Icon: Receipt, desc: t('Impor faktur pembelian yang belum lunas — langsung muncul di menu Pembayaran Faktur dengan jatuh tempo.', 'Import unpaid purchase invoices — they appear in Invoice Payments with due dates.'), cols: 'nomor_faktur, nama_supplier, tanggal_faktur (YYYY-MM-DD), term_of_payment, total', hint: t('Import Supplier dulu. Jatuh tempo dihitung dari tanggal_faktur + term_of_payment bila kolom tanggal_jatuh_tempo tidak diisi.', 'Import Suppliers first. Due date is computed from tanggal_faktur + term_of_payment if tanggal_jatuh_tempo is empty.'), file: 'template_faktur_awal.csv', headers: ['nomor_faktur', 'nama_supplier', 'tanggal_faktur', 'term_of_payment', 'total'], examples: [['INV/2025/0087', 'PT Bina San Prima', '2026-06-15', '30', '2500000']], onUpload: importFakturAwal },
+    { key: 'fakturawal', title: t('Faktur / Hutang Awal', 'Opening Invoices / Debts'), Icon: Receipt, desc: t('Impor faktur pembelian yang belum lunas, langsung muncul di menu Pembayaran Faktur dengan jatuh tempo.', 'Import unpaid purchase invoices, they appear in Invoice Payments with due dates.'), cols: 'nomor_faktur, nama_supplier, tanggal_faktur (YYYY-MM-DD), term_of_payment, total', hint: t('Import Supplier dulu. Jatuh tempo dihitung dari tanggal_faktur + term_of_payment bila kolom tanggal_jatuh_tempo tidak diisi.', 'Import Suppliers first. Due date is computed from tanggal_faktur + term_of_payment if tanggal_jatuh_tempo is empty.'), file: 'template_faktur_awal.csv', headers: ['nomor_faktur', 'nama_supplier', 'tanggal_faktur', 'term_of_payment', 'total'], examples: [['INV/2025/0087', 'PT Bina San Prima', '2026-06-15', '30', '2500000']], onUpload: importFakturAwal },
   ]
   const migrasiPane = (
     <div>
@@ -1428,11 +1428,11 @@ const batalRetur = async (row: any) => {
         <div className="mb-5 p-4 rounded-xl border border-amber-300 bg-amber-50 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1">
             <p className="text-sm font-semibold text-amber-800">{t('Mode Super Admin', 'Super Admin Mode')}</p>
-            <p className="text-xs text-amber-700">{t('Pilih apotek tujuan — data import/export akan masuk/diambil dari apotek ini.', 'Select a target pharmacy — imported/exported data goes to/from this pharmacy.')}</p>
+            <p className="text-xs text-amber-700">{t('Pilih apotek tujuan, data import/export akan masuk/diambil dari apotek ini.', 'Select a target pharmacy, imported/exported data goes to/from this pharmacy.')}</p>
           </div>
           <select value={migrasiCompany} onChange={e => setMigrasiCompany(e.target.value)}
             className="border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white min-w-[200px] focus:outline-none focus:ring-2 focus:ring-[#1e3a2c]">
-            <option value="">{t('— Pilih Apotek —', '— Select Pharmacy —')}</option>
+            <option value="">{t('Pilih Apotek', 'Select Pharmacy')}</option>
             {companies.map((c: any) => <option key={c.id} value={c.id}>{c.nama}</option>)}
           </select>
         </div>
@@ -1499,7 +1499,7 @@ const batalRetur = async (row: any) => {
         <div className="space-y-3">
           <button onClick={submitCloseBatch} className="w-full flex items-start gap-4 p-4 border-2 border-[#d1cdc4] rounded-xl hover:border-[#1e3a2c] hover:bg-[#f5f2eb] transition text-left">
             <span className="text-2xl">✅</span>
-            <div><p className="font-semibold text-[#1e3a2c] text-sm">{t('Tandai Selesai (Reminder)', 'Mark Done (Reminder)')}</p><p className="text-xs text-[#6b7280] mt-0.5">{t('Hapus alert batch ini dari daftar. Stok total tidak dipotong — hanya pengingat.', 'Remove this batch alert from the list. Total stock is not deducted — reminder only.')}</p></div>
+            <div><p className="font-semibold text-[#1e3a2c] text-sm">{t('Tandai Selesai (Reminder)', 'Mark Done (Reminder)')}</p><p className="text-xs text-[#6b7280] mt-0.5">{t('Hapus alert batch ini dari daftar. Stok total tidak dipotong, hanya pengingat.', 'Remove this batch alert from the list. Total stock is not deducted, reminder only.')}</p></div>
           </button>
           <button onClick={() => setTindakLanjutMode('musnahkan')} className="w-full flex items-start gap-4 p-4 border-2 border-[#d1cdc4] rounded-xl hover:border-red-400 hover:bg-red-50 transition text-left">
             <span className="text-2xl">🔥</span>
@@ -1595,7 +1595,7 @@ const batalRetur = async (row: any) => {
                 const margin = jual > 0 ? ((jual - beli) / jual) * 100 : 0
                 return (
                 <div className="grid grid-cols-2 gap-4">
-                  {/* Baris harga — memudahkan atur harga */}
+                  {/* Baris harga, memudahkan atur harga */}
                   <div className="col-span-2 bg-white border border-[#e2ddd3] rounded-xl p-4">
                     <div className="flex items-center justify-between gap-4">
                       <div className="grid grid-cols-4 gap-4 flex-1">
@@ -1647,7 +1647,7 @@ const batalRetur = async (row: any) => {
                       <p className="text-xs text-[#6b7280]">{t('Bisa dipesan di', 'Can be ordered from')}</p>
                     </div>
                     {produkSuppliers.length === 0 ? (
-                      <p className="text-xs text-[#9ca3af] italic">{t('Belum ada supplier — atur lewat tombol Edit.', 'No supplier set — assign via Edit.')}</p>
+                      <p className="text-xs text-[#9ca3af] italic">{t('Belum ada supplier, atur lewat tombol Edit.', 'No supplier set, assign via Edit.')}</p>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
                         {produkSuppliers.map((ps: any) => (
@@ -1712,7 +1712,7 @@ const batalRetur = async (row: any) => {
                                     Tindak Lanjut
                                   </button>
                                 ) : (
-                                  <span className="text-xs text-[#9ca3af]">—</span>
+                                  <span className="text-xs text-[#9ca3af]">-</span>
                                 )}
                               </td>
                             </tr>
@@ -1830,7 +1830,7 @@ const batalRetur = async (row: any) => {
       {editProduk && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-[#1e3a2c] mb-4">Edit Produk — {editProduk.kode}</h2>
+            <h2 className="text-lg font-bold text-[#1e3a2c] mb-4">Edit Produk, {editProduk.kode}</h2>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1878,7 +1878,7 @@ const batalRetur = async (row: any) => {
               <div className="border-t border-[#f0ede6] pt-3">
                 <label className="text-xs font-medium text-[#6b7280] mb-2 block">{t('Supplier Produk Ini', 'Suppliers for this Product')} <span className="text-[#9ca3af]">({produkSuppliers.length} {t('dipilih', 'selected')})</span></label>
                 {suppliers.length === 0 ? (
-                  <p className="text-xs text-[#9ca3af]">Belum ada supplier — tambah di menu Supplier dulu</p>
+                  <p className="text-xs text-[#9ca3af]">Belum ada supplier, tambah di menu Supplier dulu</p>
                 ) : (
                   <>
                   <div className="relative mb-2">
@@ -2453,8 +2453,8 @@ const batalRetur = async (row: any) => {
               </div>
               {!sidebarCollapsed && (
                 <div className="min-w-0">
-                  <div className="text-white font-semibold text-sm leading-tight truncate">Seawise Enterprise</div>
-                  <div className="text-[#9db3a5] text-xs truncate">Pharmacy Store Edition</div>
+                  <div className="text-white font-semibold text-sm leading-tight truncate">Pharmacy Store</div>
+                  <div className="text-[#9db3a5] text-xs truncate">by Seawise Studio</div>
                 </div>
               )}
               <button onClick={() => setMobileNavOpen(false)} className="md:hidden ml-auto text-[#9db3a5] hover:text-white" aria-label="Tutup menu"><X size={20} /></button>
@@ -2472,7 +2472,7 @@ const batalRetur = async (row: any) => {
                 <label className="text-[10px] uppercase tracking-wide text-[#9db3a5] mb-1 block">Lihat sebagai apotek</label>
                 <select value={superViewCompany} onChange={e => setSuperViewCompany(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-white/[0.07] border border-white/10 text-[#e8efe9] text-sm focus:outline-none">
-                  <option value="" className="text-black">— Semua apotek —</option>
+                  <option value="" className="text-black">Semua apotek</option>
                   {companies.map((c: any) => <option key={c.id} value={c.id} className="text-black">{c.nama}</option>)}
                 </select>
               </div>
@@ -2588,7 +2588,7 @@ const batalRetur = async (row: any) => {
             <div>
               <h1 className="text-3xl font-bold text-[#1c2620] mb-1">{t('Dashboard', 'Dashboard')}</h1>
               <p className="text-[#6b7280] text-sm mb-8">
-                {t('Halo', 'Hello')}, <span className="font-semibold text-[#1c2620]">{settingsData.nama_apoteker || t('Apoteker', 'Pharmacist')}</span> 👋 — {t('ringkasan aktivitas apotek hari ini', "today's pharmacy activity summary")}
+                {t('Halo', 'Hello')}, <span className="font-semibold text-[#1c2620]">{settingsData.nama_apoteker || t('Apoteker', 'Pharmacist')}</span> 👋, {t('ringkasan aktivitas apotek hari ini', "today's pharmacy activity summary")}
               </p>
               <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5">
                 {[
@@ -2615,7 +2615,7 @@ const batalRetur = async (row: any) => {
                 <div className="lg:col-span-2 bg-white/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl p-5">
                   <div className="flex items-start justify-between mb-4 gap-3">
                     <div>
-                      <h3 className="font-bold text-[#1c2620]">{chartRange === '7d' ? t('Penjualan 7 Hari Terakhir', 'Sales — Last 7 Days') : t('Penjualan 30 Hari Terakhir', 'Sales — Last 30 Days')}</h3>
+                      <h3 className="font-bold text-[#1c2620]">{chartRange === '7d' ? t('Penjualan 7 Hari Terakhir', 'Sales, Last 7 Days') : t('Penjualan 30 Hari Terakhir', 'Sales, Last 30 Days')}</h3>
                       <div className="flex items-center gap-3 mt-1">
                         <span className="flex items-center gap-1.5 text-xs text-[#6b7280]"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-[#2f5741]" />{t('Omzet', 'Revenue')}</span>
                         <span className="flex items-center gap-1.5 text-xs text-[#6b7280]"><span className="inline-block w-4 h-0.5 rounded bg-[#c2632f]" />{t('Transaksi', 'Transactions')}</span>
@@ -2822,7 +2822,7 @@ const batalRetur = async (row: any) => {
             </div>
           )}
 
-          {/* TINDAK LANJUT — Riwayat Barang Expired */}
+          {/* TINDAK LANJUT, Riwayat Barang Expired */}
           {activePage === 'tindaklanjut' && (
             <div>
               <h1 className="text-3xl font-bold text-[#1c2620] mb-1">{t('Tindak Lanjut Barang Expired', 'Expired Goods Follow-up')}</h1>
@@ -2938,7 +2938,7 @@ const batalRetur = async (row: any) => {
                                   </button>
                                 </div>
                               ) : (
-                                <div className="text-center text-xs text-[#9ca3af]">—</div>
+                                <div className="text-center text-xs text-[#9ca3af]">-</div>
                               )}
                             </td>
                           </tr>
@@ -3317,7 +3317,7 @@ const batalRetur = async (row: any) => {
                       <div className="mt-3 space-y-1 max-h-64 overflow-y-auto">
                         {filteredProducts.map(p => (
                           <div key={p.id} onClick={() => {
-                            if ((p.stok_total ?? 0) <= 0) { alert(t(`Stok ${p.nama_obat} habis — tidak bisa dijual.`, `${p.nama_obat} is out of stock.`)); return }
+                            if ((p.stok_total ?? 0) <= 0) { alert(t(`Stok ${p.nama_obat} habis, tidak bisa dijual.`, `${p.nama_obat} is out of stock.`)); return }
                             const exists = keranjang.find(k => k.id === p.id)
                             if (exists) {
                               if (exists.jumlah + 1 > (p.stok_total ?? 0)) { alert(t(`Stok ${p.nama_obat} hanya ${p.stok_total}.`, `Only ${p.stok_total} of ${p.nama_obat} in stock.`)); return }
@@ -3364,7 +3364,7 @@ const batalRetur = async (row: any) => {
                       </thead>
                       <tbody>
                         {keranjang.length === 0 ? (
-                          <tr><td colSpan={5} className="px-4 py-8 text-center text-[#9ca3af]">{t('Belum ada produk — cari obat di atas', 'No products yet — search above')}</td></tr>
+                          <tr><td colSpan={5} className="px-4 py-8 text-center text-[#9ca3af]">{t('Belum ada produk, cari obat di atas', 'No products yet, search above')}</td></tr>
                         ) : (
                           keranjang.map(item => (
                             <tr key={item.id} className={TR}>
@@ -3427,7 +3427,7 @@ const batalRetur = async (row: any) => {
                       )}
                       {(hasGolongan || isResep) && (
                       <div className={`mb-4 p-3 rounded-xl border space-y-2 ${hasGolongan ? 'border-amber-300 bg-amber-50' : 'border-[#cfe0d4] bg-[#f2f7f3]'}`}>
-                        <p className={`text-xs font-semibold ${hasGolongan ? 'text-amber-800' : 'text-[#2f5741]'}`}>{hasGolongan ? '⚠️ ' + t('Ada obat Narkotika/Psikotropika/Prekursor — wajib isi data pasien & resep', 'Contains Narcotics/Psychotropics/Precursors — patient & prescription data required') : '📋 ' + t('Data Pasien & Resep', 'Patient & Prescription Data')}</p>
+                        <p className={`text-xs font-semibold ${hasGolongan ? 'text-amber-800' : 'text-[#2f5741]'}`}>{hasGolongan ? '⚠️ ' + t('Ada obat Narkotika/Psikotropika/Prekursor, wajib isi data pasien & resep', 'Contains Narcotics/Psychotropics/Precursors, patient & prescription data required') : '📋 ' + t('Data Pasien & Resep', 'Patient & Prescription Data')}</p>
                         <input value={pasienForm.nomor_resep} onChange={e => setPasienForm({...pasienForm, nomor_resep: e.target.value})}
                           placeholder={t('No. Resep *', 'Prescription No. *')} className="w-full border border-[#d1cdc4] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1e3a2c]" />
                         <input value={pasienForm.nama_pasien} onChange={e => setPasienForm({...pasienForm, nama_pasien: e.target.value})}
@@ -3470,7 +3470,7 @@ const batalRetur = async (row: any) => {
                       if (isSuper && !superViewCompany) return alert(t('⚠️ Dropdown "Lihat sebagai apotek" masih menampilkan SEMUA apotek. Pilih satu apotek dulu sebelum transaksi agar tidak mempengaruhi stok apotek lain.', '⚠️ The "View as pharmacy" dropdown still shows ALL pharmacies. Select a specific pharmacy before making a transaction to avoid affecting other pharmacies\' stock.'))
                       if (keranjang.length === 0) return alert(t('Keranjang kosong!', 'Cart is empty!'))
                       const over = keranjang.find(k => !k.is_jasa && k.jumlah > (k.stok_total ?? 0))
-                      if (over) return alert(t(`Stok ${over.nama_obat} tidak cukup — tersedia ${over.stok_total}, diminta ${over.jumlah}.`, `Insufficient stock for ${over.nama_obat} — available ${over.stok_total}, requested ${over.jumlah}.`))
+                      if (over) return alert(t(`Stok ${over.nama_obat} tidak cukup, tersedia ${over.stok_total}, diminta ${over.jumlah}.`, `Insufficient stock for ${over.nama_obat}, available ${over.stok_total}, requested ${over.jumlah}.`))
                       const total = keranjang.reduce((a, b) => a + b.harga_jual * b.jumlah, 0)
                       if (bayar < total) return alert(t('Pembayaran kurang!', 'Insufficient payment!'))
                       const hasGolongan = keranjang.some(k => ['narkotika','psikotropika','prekursor'].includes(k.kategori))
@@ -3527,7 +3527,7 @@ const batalRetur = async (row: any) => {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h1 className="text-3xl font-bold text-[#1c2620] mb-1">{t('Layanan Jasa', 'Services')}</h1>
-                  <p className="text-[#6b7280] text-sm">{t('Jasa apotek seperti racikan resep, cek gula darah, tensi, dll — bisa dijual di Kasir.', 'Pharmacy services like prescription compounding, blood-sugar checks, etc. — sellable at the cashier.')}</p>
+                  <p className="text-[#6b7280] text-sm">{t('Jasa apotek seperti racikan resep, cek gula darah, tensi, dll, bisa dijual di Kasir.', 'Pharmacy services like prescription compounding, blood-sugar checks, etc., sellable at the cashier.')}</p>
                 </div>
                 <button onClick={() => { setServiceForm({ nama: '', harga: 0, deskripsi: '' }); setShowServiceForm(true) }}
                   className="bg-[#1e3a2c] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#24462f] transition">
@@ -3547,7 +3547,7 @@ const batalRetur = async (row: any) => {
                   </thead>
                   <tbody>
                     {services.length === 0 ? (
-                      <tr><td colSpan={5} className="px-4 py-8 text-center text-[#9ca3af]">{t('Belum ada layanan — tambah layanan pertama', 'No services yet — add your first service')}</td></tr>
+                      <tr><td colSpan={5} className="px-4 py-8 text-center text-[#9ca3af]">{t('Belum ada layanan, tambah layanan pertama', 'No services yet, add your first service')}</td></tr>
                     ) : services.map((s: any) => (
                       <tr key={s.id} className={TR}>
                         <td className="px-4 py-3 font-medium text-[#1c2620]">{s.nama}</td>
@@ -3604,7 +3604,7 @@ const batalRetur = async (row: any) => {
               {showPOForm && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
                   <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
-                    <h2 className="text-lg font-bold text-[#1e3a2c] mb-4">{t('Order Manual — Buat Purchase Order', 'Manual Order — Create Purchase Order')}</h2>
+                    <h2 className="text-lg font-bold text-[#1e3a2c] mb-4">{t('Order Manual, Buat Purchase Order', 'Manual Order, Create Purchase Order')}</h2>
                     <div className="mb-4">
                       <label className="text-xs font-medium text-[#6b7280] mb-1 block">Pilih Supplier *</label>
                       <select onChange={async (e) => {
@@ -3726,7 +3726,7 @@ const batalRetur = async (row: any) => {
                     </div>
 
                     <div className="px-6 py-4 overflow-y-auto flex-1">
-                      {/* STEP 1 — pilih barang */}
+                      {/* STEP 1, pilih barang */}
                       {guidedStep === 1 && (
                         <div>
                           <p className="text-sm text-[#6b7280] mb-3">{t('Sistem mengumpulkan barang yang sudah mencapai stok minimum. Sesuaikan jumlah order bila perlu.', 'The system collected items that reached minimum stock. Adjust order quantities as needed.')}</p>
@@ -3769,7 +3769,7 @@ const batalRetur = async (row: any) => {
                         </div>
                       )}
 
-                      {/* STEP 2 — bagi distributor */}
+                      {/* STEP 2, bagi distributor */}
                       {guidedStep === 2 && (
                         <div>
                           <p className="text-sm text-[#6b7280] mb-3">{t('Sistem memilih distributor default tiap barang. Ubah bila perlu. Barang tanpa supplier akan dilewati.', 'The system picked a default distributor per item. Change if needed. Items without a supplier will be skipped.')}</p>
@@ -3794,7 +3794,7 @@ const batalRetur = async (row: any) => {
                         </div>
                       )}
 
-                      {/* STEP 3 — review & buat */}
+                      {/* STEP 3, review & buat */}
                       {guidedStep === 3 && (() => {
                         const valid = guidedItems.filter(i => i.supplier_id && i.qty > 0)
                         const skipped = guidedItems.filter(i => !i.supplier_id || i.qty <= 0)
@@ -3879,7 +3879,7 @@ const batalRetur = async (row: any) => {
                   </thead>
                   <tbody>
                     {poList.length === 0 ? (
-                      <tr><td colSpan={6} className="px-4 py-8 text-center text-[#9ca3af]">{t('Belum ada PO — buat PO pertama', 'No POs yet — create your first PO')}</td></tr>
+                      <tr><td colSpan={6} className="px-4 py-8 text-center text-[#9ca3af]">{t('Belum ada PO, buat PO pertama', 'No POs yet, create your first PO')}</td></tr>
                     ) : (
                       poList.map((po: any) => (
                         <tr key={po.id} className={TR}>
@@ -4000,7 +4000,7 @@ const batalRetur = async (row: any) => {
                   </thead>
                   <tbody>
                     {suppliers.length === 0 ? (
-                      <tr><td colSpan={5} className="px-4 py-8 text-center text-[#9ca3af]">{t('Belum ada supplier — tambah supplier dulu', 'No suppliers yet — add a supplier first')}</td></tr>
+                      <tr><td colSpan={5} className="px-4 py-8 text-center text-[#9ca3af]">{t('Belum ada supplier, tambah supplier dulu', 'No suppliers yet, add a supplier first')}</td></tr>
                     ) : (
                       suppliers.map(s => (
                         <tr key={s.id} className={TR}>
@@ -4072,7 +4072,7 @@ const batalRetur = async (row: any) => {
                 </div>
               )}
 
-              {/* Tab Metode Bayar — rekap uang per metode */}
+              {/* Tab Metode Bayar, rekap uang per metode */}
               {laporanTab === 'metode' && (() => {
                 const aktif = riwayatFiltered.filter(x => x.status !== 'dibatalkan')
                 const metodeList = ['Tunai','QRIS','Transfer','Debit','Kartu Kredit']
@@ -4254,7 +4254,7 @@ const batalRetur = async (row: any) => {
             </div>
           )}
 
-          {/* MIGRASI DATA — dipindah ke Settings → Migrasi Data (lihat migrasiPane) */}
+          {/* MIGRASI DATA, dipindah ke Settings → Migrasi Data (lihat migrasiPane) */}
           {false && (() => {
             const cards = [
               {
@@ -4299,7 +4299,7 @@ const batalRetur = async (row: any) => {
               },
               {
                 key: 'fakturawal', title: t('Faktur / Hutang Awal', 'Opening Invoices / Debts'), Icon: Receipt,
-                desc: t('Impor faktur pembelian yang belum lunas — langsung muncul di menu Pembayaran Faktur dengan jatuh tempo.', 'Import unpaid purchase invoices — they appear in Invoice Payments with due dates.'),
+                desc: t('Impor faktur pembelian yang belum lunas, langsung muncul di menu Pembayaran Faktur dengan jatuh tempo.', 'Import unpaid purchase invoices, they appear in Invoice Payments with due dates.'),
                 cols: 'nomor_faktur, nama_supplier, tanggal_faktur (YYYY-MM-DD), term_of_payment, total',
                 hint: 'Import Supplier dulu. Jatuh tempo dihitung dari tanggal_faktur + term_of_payment bila kolom tanggal_jatuh_tempo tidak diisi.',
                 file: 'template_faktur_awal.csv',
@@ -4317,11 +4317,11 @@ const batalRetur = async (row: any) => {
                 <div className="mb-5 p-4 rounded-xl border border-amber-300 bg-amber-50 flex flex-col sm:flex-row sm:items-center gap-3">
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-amber-800">{t('Mode Super Admin', 'Super Admin Mode')}</p>
-                    <p className="text-xs text-amber-700">{t('Pilih apotek tujuan — data import/export akan masuk/diambil dari apotek ini.', 'Select a target pharmacy — imported/exported data goes to/from this pharmacy.')}</p>
+                    <p className="text-xs text-amber-700">{t('Pilih apotek tujuan, data import/export akan masuk/diambil dari apotek ini.', 'Select a target pharmacy, imported/exported data goes to/from this pharmacy.')}</p>
                   </div>
                   <select value={migrasiCompany} onChange={e => setMigrasiCompany(e.target.value)}
                     className="border border-amber-300 rounded-lg px-3 py-2 text-sm bg-white min-w-[220px] focus:outline-none focus:ring-2 focus:ring-[#1e3a2c]">
-                    <option value="">{t('— Pilih Apotek —', '— Select Pharmacy —')}</option>
+                    <option value="">{t('Pilih Apotek', 'Select Pharmacy')}</option>
                     {companies.map((c: any) => <option key={c.id} value={c.id}>{c.nama}</option>)}
                   </select>
                 </div>

@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 
-// Seawise Enterprise Apps — Pharmacy Store Edition
+// Pharmacy Store by Seawise Studio
 // Ambient page backdrop: soft green -> cream -> peach
 export const AMBIENT: CSSProperties = {
   background:
