@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import {
-  LayoutDashboard, Pill, ShoppingCart, PackageOpen, BarChart2, LogOut, Settings, Truck,
+  Pill, ShoppingCart, PackageOpen, LogOut, Settings, Truck,
   FlaskConical, Wallet, CalendarClock, ClipboardList, Printer, Pencil,
   Receipt, CreditCard, Building2, Users, PanelLeftClose, PanelLeft, ChevronRight,
   UserPlus, Trash2, Upload, ShieldCheck, Check, ArrowLeft, Menu, X, Download, Database, HeartPulse,
@@ -14,54 +14,10 @@ import { useTheme, ThemePicker, ThemeToggle } from '../../lib/theme'
 import { getSessionContext, pesanError, type SessionContext } from '../../lib/session'
 import { FULL_PLAN, lockedModules } from '../../lib/plan'
 import { subscriptionState, isLapsed, pesanLangganan } from '../../lib/subscription'
-import { bukaCetak, beritaAcaraPemusnahan, buktiPembayaranFaktur } from '../../lib/cetak'
-
-const menuItems = [
-  { id: 'dashboard', label: 'Dashboard', en: 'Dashboard', icon: LayoutDashboard },
-  { id: 'produk', label: 'Produk & Stok', en: 'Products & Stock', icon: Pill },
-  { id: 'transaksi', label: 'Transaksi', en: 'Sales', icon: ShoppingCart },
-  { id: 'layanan', label: 'Layanan Jasa', en: 'Services', icon: HeartPulse },
-  { id: 'pembelian', label: 'Pembelian', en: 'Purchasing', icon: PackageOpen },
-  { id: 'faktur', label: 'Pembayaran Faktur', en: 'Invoice Payments', icon: Receipt },
-  { id: 'supplier', label: 'Supplier', en: 'Suppliers', icon: Truck },
-  { id: 'tindaklanjut', label: 'Tindak Lanjut', en: 'Follow-up', icon: ClipboardList },
-  { id: 'laporan', label: 'Laporan', en: 'Reports', icon: BarChart2 },
-  { id: 'pengaturan', label: 'Pengaturan', en: 'Settings', icon: Settings },
-]
-
-// Hak akses per role: daftar id halaman yang boleh dibuka
-const ROLE_PAGES: Record<string, string[]> = {
-  pemilik:          ['dashboard','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
-  admin:            ['dashboard','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
-  apoteker:         ['dashboard','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan'],
-  asisten_apoteker: ['dashboard','produk','transaksi','layanan','tindaklanjut','laporan'],
-  kasir:            ['dashboard','transaksi','layanan'],
-}
-const ROLE_LABELS: Record<string,string> = { pemilik:'Pemilik', apoteker:'Apoteker', asisten_apoteker:'Asisten Apoteker', kasir:'Kasir', admin:'Admin', superadmin:'Super Admin' }
-
-// ── Gaya tabel seragam (profesional) ──
-const TBL_WRAP = 'bg-[var(--surface)]/80 backdrop-blur-sm border border-[var(--line)] rounded-2xl shadow-sm overflow-x-auto'
-const TBL = 'w-full text-sm border-collapse'
-const THEAD = 'bg-[var(--surface-2)] border-b border-[var(--line)]'
-const TH = 'px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--ink-faint)] whitespace-nowrap'
-const TH_L = TH + ' text-left'
-const TH_R = TH + ' text-right'
-const TH_C = TH + ' text-center'
-const TR = 'border-b border-[var(--surface-2)] last:border-0 hover:bg-[var(--surface)] transition-colors'
-const TD = 'px-4 py-2.5 align-middle'
-
-// Badge warna per kategori obat
-const KATEGORI_BADGE: Record<string, string> = {
-  bebas: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20',
-  bebas_terbatas: 'bg-blue-50 text-blue-700 ring-1 ring-blue-600/20',
-  keras: 'bg-red-50 text-red-700 ring-1 ring-red-600/20',
-  psikotropika: 'bg-purple-50 text-purple-700 ring-1 ring-purple-600/20',
-  narkotika: 'bg-rose-100 text-rose-800 ring-1 ring-rose-700/20',
-  prekursor: 'bg-orange-50 text-orange-700 ring-1 ring-orange-600/20',
-  suplemen: 'bg-teal-50 text-teal-700 ring-1 ring-teal-600/20',
-  alkes: 'bg-slate-100 text-slate-700 ring-1 ring-slate-500/20',
-  lainnya: 'bg-gray-100 text-gray-600 ring-1 ring-gray-400/20',
-}
+import { bukaCetak, beritaAcaraPemusnahan, buktiPembayaranFaktur, purchaseOrder } from '../../lib/cetak'
+import { parseCSV, unduhCSV } from '../../lib/csv'
+import { menuItems, ROLE_PAGES, ROLE_LABELS } from '../../lib/navigation'
+import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD, KATEGORI_BADGE } from '../../lib/ui'
 
 export default function Dashboard() {
   const { t, lang } = useLang()
@@ -524,71 +480,16 @@ export default function Dashboard() {
 
   const printPO = async (po: any) => {
     const { data: items } = await supabase.from('po_items').select('*').eq('po_id', po.id)
-    const supplier = po.suppliers
-    const win = window.open('', '_blank', 'width=800,height=900')
-    win?.document.write(`<html><head><title>PO - ${po.nomor_po}</title>
-    <style>
-      *{margin:0;padding:0;box-sizing:border-box;}
-      body{font-family:Arial,sans-serif;font-size:12px;padding:32px;}
-      .header{display:flex;justify-content:space-between;margin-bottom:24px;}
-      h1{font-size:18px;font-weight:bold;margin-bottom:4px;}
-      table{width:100%;border-collapse:collapse;margin:16px 0;}
-      th{background:#1e3a2c;color:white;padding:8px;text-align:left;font-size:11px;}
-      td{padding:8px;border-bottom:1px solid #eee;font-size:11px;}
-      .total-row td{font-weight:bold;border-top:2px solid #1e3a2c;}
-      .divider{border-top:2px solid #1e3a2c;margin:12px 0;}
-      .ttd{margin-top:48px;display:flex;justify-content:space-between;}
-      .ttd-box{text-align:center;}
-      .ttd-line{border-top:1px solid black;width:200px;margin:48px auto 4px;}
-    </style></head><body>
-    <div class="header">
-      <div>
-        <h1>${settingsData.nama_apotek}</h1>
-        <p>${settingsData.alamat}</p>
-        <p>SIA: ${settingsData.nomor_ijin} | Telp: ${settingsData.nomor_telepon}</p>
-      </div>
-      <div style="text-align:right;">
-        <h1>PURCHASE ORDER</h1>
-        <p><b>No. PO:</b> ${po.nomor_po}</p>
-        <p><b>Tanggal:</b> ${new Date(po.tanggal_po || po.created_at).toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'})}</p>
-        <p><b>Status:</b> ${po.status?.toUpperCase()}</p>
-      </div>
-    </div>
-    <div class="divider"></div>
-    <div style="margin:12px 0;">
-      <p><b>Kepada Yth:</b></p>
-      <p>${supplier?.nama_supplier || '-'}</p>
-      <p>${supplier?.alamat || ''}</p>
-      <p>${supplier?.telepon || ''}</p>
-    </div>
-    <table>
-      <thead><tr><th>No</th><th>Nama Produk</th><th>Satuan</th><th>Qty</th><th>Harga Beli</th><th>Subtotal</th></tr></thead>
-      <tbody>
-        ${items?.map((item: any, i: number) => `<tr>
-          <td>${i+1}</td><td>${item.nama_produk}</td><td>${item.satuan}</td>
-          <td>${item.qty_pesan}</td>
-          <td>Rp ${item.harga_beli?.toLocaleString('id-ID')}</td>
-          <td>Rp ${item.subtotal?.toLocaleString('id-ID')}</td>
-        </tr>`).join('')}
-        <tr class="total-row"><td colspan="5">TOTAL</td><td>Rp ${po.total_nilai?.toLocaleString('id-ID')}</td></tr>
-      </tbody>
-    </table>
-    ${po.catatan ? `<p><b>Catatan:</b> ${po.catatan}</p>` : ''}
-    <div class="ttd">
-      <div class="ttd-box">
-        <p>Hormat kami,</p>
-        <div class="ttd-line"></div>
-        <p><b>${settingsData.nama_apoteker || 'Apoteker'}</b></p>
-        <p>SIPA: ${settingsData.nomor_sipa || '-'}</p>
-      </div>
-      <div class="ttd-box">
-        <p>Diterima oleh,</p>
-        <div class="ttd-line"></div>
-        <p><b>${supplier?.nama_supplier || '-'}</b></p>
-      </div>
-    </div>
-    </body></html>`)
-    win?.document.close(); win?.print()
+    bukaCetak(purchaseOrder(settingsData, {
+      nomor_po: po.nomor_po,
+      tanggal: po.tanggal_po || po.created_at,
+      status: po.status,
+      total_nilai: po.total_nilai,
+      catatan: po.catatan,
+      supplier_nama: po.suppliers?.nama_supplier,
+      supplier_alamat: po.suppliers?.alamat,
+      supplier_telepon: po.suppliers?.telepon,
+    }, items || []))
   }
 
   const statusPOColor: Record<string, string> = {
@@ -764,38 +665,6 @@ export default function Dashboard() {
   }
 
   // ── Migrasi Data (import/export CSV) ──
-  const parseCSV = (text: string): Record<string, string>[] => {
-    text = text.replace(/\r\n?/g, '\n')
-    const rows: string[][] = []
-    let cur: string[] = [], field = '', inQ = false
-    for (let i = 0; i < text.length; i++) {
-      const c = text[i]
-      if (inQ) {
-        if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++ } else inQ = false }
-        else field += c
-      } else if (c === '"') inQ = true
-      else if (c === ',') { cur.push(field); field = '' }
-      else if (c === '\n') { cur.push(field); rows.push(cur); cur = []; field = '' }
-      else field += c
-    }
-    if (field.length || cur.length) { cur.push(field); rows.push(cur) }
-    const header = (rows.shift() || []).map(h => h.trim())
-    return rows.filter(r => r.some(c => c.trim() !== '')).map(r => {
-      const o: Record<string, string> = {}
-      header.forEach((h, i) => { o[h] = (r[i] ?? '').trim() })
-      return o
-    })
-  }
-
-  const downloadTemplate = (filename: string, headers: string[], examples: string[][]) => {
-    const esc = (v: string) => /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v
-    const lines = [headers.join(','), ...examples.map(r => r.map(esc).join(','))]
-    const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = filename; a.click()
-    URL.revokeObjectURL(url)
-  }
-
   const importProduk = async (file: File) => {
     const cid = (isSuper && migrasiCompany) ? migrasiCompany : null
     setImporting('produk'); setImportInfo(p => ({ ...p, produk: '' }))
@@ -927,22 +796,22 @@ export default function Dashboard() {
   const exportProduk = async () => {
     const { data } = await scopeExport(supabase.from('products').select('*').order('kode'))
     const headers = ['kode', 'nama_obat', 'nama_generik', 'kandungan', 'kategori', 'satuan', 'isi_kemasan', 'harga_beli', 'harga_jual', 'stok_total', 'stok_minimum']
-    downloadTemplate('export_produk.csv', headers, (data || []).map((p: any) => headers.map(h => String(p[h] ?? ''))))
+    unduhCSV('export_produk.csv', headers, (data || []).map((p: any) => headers.map(h => String(p[h] ?? ''))))
   }
   const exportSupplier = async () => {
     const { data } = await scopeExport(supabase.from('suppliers').select('*').order('kode'))
     const headers = ['kode', 'nama_supplier', 'jenis', 'alamat', 'telepon', 'email']
-    downloadTemplate('export_supplier.csv', headers, (data || []).map((s: any) => headers.map(h => String(s[h] ?? ''))))
+    unduhCSV('export_supplier.csv', headers, (data || []).map((s: any) => headers.map(h => String(s[h] ?? ''))))
   }
   const exportStok = async () => {
     const { data } = await scopeExport(supabase.from('product_batches').select('*, products(kode)').order('expired_date'))
     const headers = ['kode_produk', 'batch_number', 'expired_date', 'stok_batch']
-    downloadTemplate('export_stok_batch.csv', headers, (data || []).map((b: any) => [b.products?.kode || '', b.batch_number || '', b.expired_date || '', String(b.stok_batch ?? '')]))
+    unduhCSV('export_stok_batch.csv', headers, (data || []).map((b: any) => [b.products?.kode || '', b.batch_number || '', b.expired_date || '', String(b.stok_batch ?? '')]))
   }
   const exportTransaksi = async () => {
     const { data } = await scopeExport(supabase.from('transactions').select('*').order('created_at', { ascending: false }))
     const headers = ['nomor_transaksi', 'tanggal', 'total', 'bayar', 'kembalian', 'status', 'nama_pasien', 'kontak_pasien', 'alamat_pasien', 'nomor_resep']
-    downloadTemplate('export_transaksi.csv', headers, (data || []).map((t: any) => [
+    unduhCSV('export_transaksi.csv', headers, (data || []).map((t: any) => [
       t.nomor_transaksi || '', t.created_at || '', String(t.total ?? ''), String(t.bayar ?? ''), String(t.kembalian ?? ''),
       t.status || '', t.nama_pasien || '', t.kontak_pasien || '', t.alamat_pasien || '', t.nomor_resep || '',
     ]))
@@ -950,7 +819,7 @@ export default function Dashboard() {
   const exportFaktur = async () => {
     const { data } = await scopeExport(supabase.from('faktur').select('*, suppliers(nama_supplier), purchase_orders(nomor_po)').order('tanggal_faktur', { ascending: false }))
     const headers = ['nomor_faktur', 'supplier', 'nomor_po', 'tanggal_faktur', 'term_of_payment', 'tanggal_jatuh_tempo', 'total', 'status', 'tanggal_bayar', 'metode_bayar', 'catatan_bayar']
-    downloadTemplate('export_faktur.csv', headers, (data || []).map((f: any) => [
+    unduhCSV('export_faktur.csv', headers, (data || []).map((f: any) => [
       f.nomor_faktur || '', f.suppliers?.nama_supplier || '', f.purchase_orders?.nomor_po || '', f.tanggal_faktur || '',
       String(f.term_of_payment ?? ''), f.tanggal_jatuh_tempo || '', String(f.total ?? ''), f.status || '',
       f.tanggal_bayar || '', f.metode_bayar || '', f.catatan_bayar || '',
@@ -1498,7 +1367,7 @@ const batalRetur = async (row: any) => {
             </div>
             <p className="text-[10px] text-[var(--ink-faint)] mb-3">{c.hint}</p>
             <div className="mt-auto flex flex-col gap-2">
-              <button onClick={() => downloadTemplate(c.file, c.headers, c.examples)}
+              <button onClick={() => unduhCSV(c.file, c.headers, c.examples)}
                 className="inline-flex items-center justify-center gap-2 border border-[var(--line)] text-[var(--brand)] py-2 rounded-lg text-xs font-medium hover:bg-[var(--surface-2)] transition">
                 <Download size={14} /> {t('Download Template', 'Download Template')}
               </button>
@@ -4459,7 +4328,7 @@ const batalRetur = async (row: any) => {
                     </div>
                     <p className="text-[11px] text-[var(--ink-faint)] mb-4">{c.hint}</p>
                     <div className="mt-auto flex flex-col gap-2">
-                      <button onClick={() => downloadTemplate(c.file, c.headers, c.examples)}
+                      <button onClick={() => unduhCSV(c.file, c.headers, c.examples)}
                         className="inline-flex items-center justify-center gap-2 border border-[var(--line)] text-[var(--brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--surface-2)] transition">
                         <Download size={15} /> {t('Download Template', 'Download Template')}
                       </button>

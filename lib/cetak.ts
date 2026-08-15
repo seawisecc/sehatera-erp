@@ -132,6 +132,98 @@ ${kepalaApotek(p)}
 </body></html>`
 }
 
+export type BarisPO = {
+  nama_produk?: string | null
+  satuan?: string | null
+  qty_pesan?: number | null
+  harga_beli?: number | null
+  subtotal?: number | null
+}
+
+export type DataPO = {
+  nomor_po?: string | null
+  tanggal?: string | null
+  status?: string | null
+  total_nilai?: number | null
+  catatan?: string | null
+  supplier_nama?: string | null
+  supplier_alamat?: string | null
+  supplier_telepon?: string | null
+}
+
+/** Surat pesanan ke pemasok. */
+export function purchaseOrder(p: ProfilApotek, d: DataPO, items: BarisPO[]): string {
+  const baris = items
+    .map(
+      (it, i) => `<tr>
+      <td>${i + 1}</td><td>${teks(it.nama_produk)}</td><td>${teks(it.satuan, '')}</td>
+      <td>${teks(it.qty_pesan, '0')}</td>
+      <td>${rupiah(it.harga_beli)}</td>
+      <td>${rupiah(it.subtotal)}</td>
+    </tr>`,
+    )
+    .join('')
+
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8">
+<title>PO ${teks(d.nomor_po, '')}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,sans-serif;font-size:12px;padding:32px;color:#000;background:#fff;}
+.header{display:flex;justify-content:space-between;margin-bottom:24px;}
+h1{font-size:18px;font-weight:bold;margin-bottom:4px;}
+table{width:100%;border-collapse:collapse;margin:16px 0;}
+th{background:#333;color:#fff;padding:8px;text-align:left;font-size:11px;}
+td{padding:8px;border-bottom:1px solid #eee;font-size:11px;}
+.total-row td{font-weight:bold;border-top:2px solid #333;}
+.divider{border-top:2px solid #333;margin:12px 0;}
+.ttd{margin-top:48px;display:flex;justify-content:space-between;}
+.ttd-box{text-align:center;}
+.ttd-line{border-top:1px solid #000;width:200px;margin:48px auto 4px;}
+</style></head><body>
+<div class="header">
+  <div>
+    <h1>${teks(p.nama_apotek, 'Apotek')}</h1>
+    <p>${teks(p.alamat, '')}</p>
+    <p>SIA: ${teks(p.nomor_ijin)} | Telp: ${teks(p.nomor_telepon)}</p>
+  </div>
+  <div style="text-align:right;">
+    <h1>PURCHASE ORDER</h1>
+    <p><b>No. PO:</b> ${teks(d.nomor_po)}</p>
+    <p><b>Tanggal:</b> ${tanggalPanjang(d.tanggal)}</p>
+    <p><b>Status:</b> ${teks(d.status, '-').toUpperCase()}</p>
+  </div>
+</div>
+<div class="divider"></div>
+<div style="margin:12px 0;">
+  <p><b>Kepada Yth:</b></p>
+  <p>${teks(d.supplier_nama)}</p>
+  <p>${teks(d.supplier_alamat, '')}</p>
+  <p>${teks(d.supplier_telepon, '')}</p>
+</div>
+<table>
+  <thead><tr><th>No</th><th>Nama Produk</th><th>Satuan</th><th>Qty</th><th>Harga Beli</th><th>Subtotal</th></tr></thead>
+  <tbody>
+    ${baris}
+    <tr class="total-row"><td colspan="5">TOTAL</td><td>${rupiah(d.total_nilai)}</td></tr>
+  </tbody>
+</table>
+${d.catatan ? `<p><b>Catatan:</b> ${teks(d.catatan)}</p>` : ''}
+<div class="ttd">
+  <div class="ttd-box">
+    <p>Hormat kami,</p>
+    <div class="ttd-line"></div>
+    <p><b>${teks(p.nama_apoteker, 'Apoteker')}</b></p>
+    <p>SIPA: ${teks(p.nomor_sipa)}</p>
+  </div>
+  <div class="ttd-box">
+    <p>Diterima oleh,</p>
+    <div class="ttd-line"></div>
+    <p><b>${teks(d.supplier_nama)}</b></p>
+  </div>
+</div>
+</body></html>`
+}
+
 export type DataBuktiBayar = {
   nomor_faktur?: string | null
   nama_supplier?: string | null
