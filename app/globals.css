@@ -66,6 +66,49 @@
   color-scheme: light;
 }
 
+/* ---------- Vital Tide — terang, biru ke hijau ----------
+   Palet yang paling "kesehatan" dari keempatnya: biru azur ke teal ke hijau,
+   warna yang sudah lama dipakai rumah sakit dan alat medis. Ini tema yang
+   paling aman dipakai saat menemui calon klien klinik. */
+[data-theme="vital-tide"] {
+  --grad-1: #2f7ff5;
+  --grad-2: #17c1c4;
+  --grad-3: #4fd98f;
+  --grad: linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 50%, var(--grad-3) 100%);
+
+  /* Diturunkan dari ujung biru sampai teks putih di atasnya lolos kontras —
+     #2f7ff5 sendiri terlalu terang untuk itu. */
+  --brand:        #0a628f;
+  --brand-hover:  #084f74;
+  --brand-soft:   #2f9dc4;
+  --on-brand:     #eef9ff;
+  --on-brand-soft:#a8d8ea;
+
+  --accent:       #0f7a55;   /* diturunkan dari ujung hijau */
+  --accent-soft:  #dcf4e9;
+
+  --on-grad:      #06303f;
+  --on-grad-soft: #1d5265;
+
+  --paper:        #f4fbfb;
+  --surface:      #ffffff;
+  --surface-2:    #e6f5f6;
+  --surface-3:    #f0fafa;
+
+  --ink:          #0f272c;
+  --ink-mid:      #2d4b52;
+  --ink-soft:     #52737a;
+  --ink-faint:    #86a4aa;
+
+  --line:         #d0e7ea;
+  --line-soft:    #e4f2f4;
+
+  --shadow-sm: 0 1px 2px rgba(15, 39, 44, .05);
+  --shadow-md: 0 10px 30px -14px rgba(15, 39, 44, .3);
+
+  color-scheme: light;
+}
+
 /* ---------- Neon Pulse — gelap, untuk apotek 24 jam & shift malam ---------- */
 [data-theme="neon-pulse"] {
   --grad-1: #8a2387;
@@ -101,6 +144,54 @@
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, .5);
   --shadow-md: 0 12px 34px -14px rgba(138, 35, 135, .6);
+
+  color-scheme: dark;
+}
+
+/* ---------- Midnight Sage — gelap, tenang ----------
+   Kenapa ada tema gelap kedua: Neon Pulse itu tema gelap yang RAMAI, dan
+   sebagian orang tidak tahan menatapnya delapan jam. Ini padanannya yang diam —
+   hijau redup, kontras cukup, tanpa warna yang berteriak. Untuk apoteker yang
+   membaca tabel stok sepanjang shift malam, bukan untuk memukau siapa pun.
+
+   Empat tema jadinya dua terang dan dua gelap, masing-masing satu yang berani
+   dan satu yang tenang. Menambah tema kelima sebaiknya mengisi kotak yang
+   memang masih kosong, bukan menambah selera baru. */
+[data-theme="midnight-sage"] {
+  --grad-1: #0f3b33;
+  --grad-2: #2f7a63;
+  --grad-3: #7ec8a0;
+  --grad: linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 52%, var(--grad-3) 100%);
+
+  --brand:        #2e7d64;
+  --brand-hover:  #3a9a7b;
+  --brand-soft:   #5fb392;
+  --on-brand:     #eefaf4;
+  --on-brand-soft:#a9d8c2;
+
+  /* Amber hangat: satu-satunya warna di palet ini yang bukan hijau, jadi
+     peringatan dan sorotan benar-benar menonjol alih-alih tenggelam. */
+  --accent:       #d9a441;
+  --accent-soft:  #33280f;
+
+  --on-grad:      #f2fbf6;
+  --on-grad-soft: #bfdccb;
+
+  --paper:        #0a1310;
+  --surface:      #111d19;
+  --surface-2:    #182823;
+  --surface-3:    #14211c;
+
+  --ink:          #e9f3ee;
+  --ink-mid:      #c3d7ce;
+  --ink-soft:     #95afa4;
+  --ink-faint:    #6d8779;
+
+  --line:         #24382f;
+  --line-soft:    #1b2a24;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .45);
+  --shadow-md: 0 12px 34px -14px rgba(0, 0, 0, .7);
 
   color-scheme: dark;
 }

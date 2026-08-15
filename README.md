@@ -87,13 +87,20 @@ form akan dilewati begitu saja.
 
 ## Tema
 
-Dua tema, bisa diganti di Pengaturan → Tampilan:
+Empat tema, bisa diganti di Pengaturan → Tampilan. Dua terang dan dua gelap,
+masing-masing satu yang berani dan satu yang tenang:
 
-- **Sunrise Sorbet** (bawaan, terang) — `#c6ffdd` `#fbd786` `#f7797d`
-- **Neon Pulse** (gelap) — `#8a2387` `#e94057` `#f27121`
+| Tema | Mode | Warna | Untuk |
+| --- | --- | --- | --- |
+| **Sunrise Sorbet** *(bawaan)* | terang | `#c6ffdd` `#fbd786` `#f7797d` | jam buka biasa |
+| **Vital Tide** | terang | `#2f7ff5` `#17c1c4` `#4fd98f` | warna dunia kesehatan; paling aman saat menemui klien klinik |
+| **Neon Pulse** | gelap | `#8a2387` `#e94057` `#f27121` | shift malam, apotek 24 jam |
+| **Midnight Sage** | gelap | `#0f3b33` `#2f7a63` `#7ec8a0` | gelap yang diam, untuk menatap tabel seharian |
 
-Semua warna melewati token di `app/globals.css`. Menambah tema ketiga cukup
-menambah satu blok `[data-theme="..."]`; tidak ada komponen yang perlu disentuh.
+Semua warna melewati token di `app/globals.css`. Menambah tema kelima cukup
+menambah satu blok `[data-theme="..."]` dan satu entri di `THEMES`; tidak ada
+komponen yang perlu disentuh. Sebaiknya isi kotak yang memang masih kosong di
+matriks terang/gelap × berani/tenang, bukan menambah selera baru.
 
 Ketiga warna tiap palet dipakai sebagai **gradien identitas**, bukan warna teks
 — `#fbd786` di atas putih tidak terbaca siapa pun. Isi layar memakai netral

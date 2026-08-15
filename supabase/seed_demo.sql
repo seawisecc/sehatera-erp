@@ -11,13 +11,18 @@
 -- Aman dijalankan ulang: data demo dihapus dulu berdasarkan company_id.
 -- TIDAK membuat akun login apa pun — apotek disambungkan ke akun auth yang
 -- sudah ada.
+--
+-- ISI `v_email` DULU sebelum menjalankan, dan pastikan itu apotek yang memang
+-- untuk uji coba. Pernah sekali skrip ini diarahkan ke apotek milik calon klien
+-- yang batal, dan 36 obat beserta 64 transaksi karangan mendarat di sana.
 -- ============================================================
 
 do $$
 declare
   v_company   uuid;
   v_plan      uuid;
-  v_email     text := 'agussrinata26@gmail.com';   -- pemilik apotek demo
+  -- ↓ ganti dengan email pemilik apotek UJI COBA
+  v_email     text := 'GANTI_DENGAN_EMAIL_APOTEK_UJI';
   v_sup       uuid[];
   v_pid       uuid;
   v_trx       uuid;
@@ -30,10 +35,14 @@ declare
   v_golongan  boolean;
   v_po        uuid;
 begin
+  if v_email = 'GANTI_DENGAN_EMAIL_APOTEK_UJI' then
+    raise exception 'Isi dulu v_email dengan email apotek uji coba di baris atas.';
+  end if;
+
   select id into v_company from public.companies
    where lower(admin_email) = v_email and deleted_at is null limit 1;
   if v_company is null then
-    raise exception 'Apotek untuk % belum ada.', v_email;
+    raise exception 'Apotek untuk % belum ada, atau sudah ditandai terhapus.', v_email;
   end if;
 
   select id into v_plan from public.plans where code = 'starter';
@@ -71,7 +80,7 @@ begin
   delete from public.settings where company_id = v_company;
   insert into public.settings (company_id, nama_apotek, sektor_usaha, kota, alamat,
                                nomor_ijin, nomor_telepon, email, nama_apoteker, nomor_sipa)
-  values (v_company, 'Apotek Fit Farma', 'Apotek', 'Denpasar',
+  values (v_company, 'Apotek Uji Coba', 'Apotek', 'Denpasar',
           'Jl. Gatot Subroto Barat No. 88, Denpasar, Bali',
           '446/SIA/DPS/2025', '0361-234567', v_email,
           'apt. Ni Luh Putu Sari, S.Farm.', '19880412/SIPA/51.71/2025');
@@ -291,7 +300,7 @@ declare
   v_plan    uuid;
 begin
   select id into v_company from public.companies
-   where lower(admin_email) = 'hello@sejahtera.co.id' and deleted_at is null limit 1;
+   where lower(admin_email) = 'GANTI_DENGAN_EMAIL_APOTEK_BERBAYAR' and deleted_at is null limit 1;
   if v_company is null then return; end if;
 
   select id into v_plan from public.plans where code = 'growth';

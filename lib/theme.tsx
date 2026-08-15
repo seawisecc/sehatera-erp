@@ -11,10 +11,21 @@ import { createContext, useContext, useEffect, useState } from 'react'
  * ikut ditulis di sini, akan ada dua sumber kebenaran yang perlahan berbeda,
  * dan yang menang di layar selalu yang di CSS.
  */
-export type ThemeId = 'sunrise-sorbet' | 'neon-pulse'
+export type ThemeId = 'sunrise-sorbet' | 'vital-tide' | 'neon-pulse' | 'midnight-sage'
 
 export const DEFAULT_THEME: ThemeId = 'sunrise-sorbet'
 
+/**
+ * Empat tema: dua terang, dua gelap, masing-masing satu yang berani dan satu
+ * yang tenang. Susunan itu disengaja — tema kelima sebaiknya mengisi kotak yang
+ * memang masih kosong, bukan menambah selera baru.
+ *
+ * Nilai warnanya TIDAK ada di file ini — semuanya di `app/globals.css` sebagai
+ * token CSS. Yang disimpan di sini hanya daftar tema yang boleh dipilih beserta
+ * tiga warna contoh untuk kartu pratinjau. Kalau nilai warnanya ikut ditulis di
+ * sini, akan ada dua sumber kebenaran yang perlahan berbeda, dan yang menang di
+ * layar selalu yang di CSS.
+ */
 export const THEMES: {
   id: ThemeId
   label: string
@@ -34,6 +45,16 @@ export const THEMES: {
     swatch: ['#c6ffdd', '#fbd786', '#f7797d'],
   },
   {
+    id: 'vital-tide',
+    label: 'Vital Tide',
+    mode: 'terang',
+    hint: {
+      id: 'Biru ke hijau — warna yang sudah lama dipakai dunia kesehatan.',
+      en: 'Blue into green — the colours healthcare has long used.',
+    },
+    swatch: ['#2f7ff5', '#17c1c4', '#4fd98f'],
+  },
+  {
     id: 'neon-pulse',
     label: 'Neon Pulse',
     mode: 'gelap',
@@ -42,6 +63,16 @@ export const THEMES: {
       en: 'Deep and high contrast, for night shifts and 24-hour pharmacies.',
     },
     swatch: ['#8a2387', '#e94057', '#f27121'],
+  },
+  {
+    id: 'midnight-sage',
+    label: 'Midnight Sage',
+    mode: 'gelap',
+    hint: {
+      id: 'Gelap yang diam, untuk yang tidak tahan menatap Neon Pulse seharian.',
+      en: 'A quiet dark, for anyone who cannot stare at Neon Pulse all day.',
+    },
+    swatch: ['#0f3b33', '#2f7a63', '#7ec8a0'],
   },
 ]
 
@@ -117,8 +148,14 @@ export const useTheme = () => useContext(ThemeCtx)
  * karena gelap, tiap kali halaman dibuka.
  */
 export function ThemeScript() {
-  const js = `(function(){try{var t=localStorage.getItem('${STORAGE_KEY}');
-document.documentElement.dataset.theme=(t==='neon-pulse'||t==='sunrise-sorbet')?t:'${DEFAULT_THEME}';}
+  // Daftar tema dibangun dari THEMES, bukan ditulis ulang di dalam string.
+  // Versi sebelumnya menanam dua id secara harfiah di sini, jadi menambah tema
+  // ketiga akan membuat skrip ini menolaknya sebagai tidak dikenal dan
+  // mengembalikan semua orang ke tema bawaan tiap kali halaman dibuka —
+  // pilihan yang tersimpan rapi di localStorage, tapi tidak pernah dipakai.
+  const daftar = JSON.stringify(THEMES.map((t) => t.id))
+  const js = `(function(){try{var v=${daftar},t=localStorage.getItem('${STORAGE_KEY}');
+document.documentElement.dataset.theme=v.indexOf(t)>=0?t:'${DEFAULT_THEME}';}
 catch(e){document.documentElement.dataset.theme='${DEFAULT_THEME}';}})();`
   return <script dangerouslySetInnerHTML={{ __html: js }} />
 }
@@ -175,27 +212,32 @@ export function ThemePicker({
   )
 }
 
-/** Sakelar ringkas untuk topbar. */
+/**
+ * Sakelar ringkas untuk topbar — berputar melewati semua tema.
+ *
+ * Dulu ini menukar dua tema bolak-balik. Dengan empat tema, tukar-menukar tidak
+ * lagi bisa menjangkau semuanya, jadi tombolnya memutar urutan dan labelnya
+ * menyebut tema BERIKUTNYA — orang perlu tahu ke mana ia akan pergi sebelum
+ * menekan, bukan sesudahnya.
+ */
 export function ThemeToggle({ className = '' }: { className?: string }) {
   const { theme, setTheme } = useTheme()
-  const next: ThemeId = theme === 'sunrise-sorbet' ? 'neon-pulse' : 'sunrise-sorbet'
-  const nextLabel = THEMES.find((t) => t.id === next)!.label
+  const idx = THEMES.findIndex((t) => t.id === theme)
+  const next = THEMES[(idx + 1) % THEMES.length]
 
   return (
     <button
       type="button"
-      onClick={() => setTheme(next)}
-      title={`Ganti ke ${nextLabel}`}
-      aria-label={`Ganti ke ${nextLabel}`}
+      onClick={() => setTheme(next.id)}
+      title={`Ganti ke ${next.label}`}
+      aria-label={`Ganti ke ${next.label}`}
       className={`inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 transition hover:border-[var(--brand-soft)] ${className}`}
     >
       <span
-        className="w-4 h-4 rounded-full"
-        style={{
-          background: `linear-gradient(135deg, ${THEMES.find((t) => t.id === next)!.swatch.join(', ')})`,
-        }}
+        className="w-4 h-4 rounded-full shrink-0"
+        style={{ background: `linear-gradient(135deg, ${next.swatch.join(', ')})` }}
       />
-      <span className="text-xs font-medium text-[var(--ink-soft)]">{nextLabel}</span>
+      <span className="text-xs font-medium text-[var(--ink-soft)] whitespace-nowrap">{next.label}</span>
     </button>
   )
 }

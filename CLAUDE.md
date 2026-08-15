@@ -113,8 +113,16 @@ Semua warna melewati token di `app/globals.css`. **Jangan pernah menulis hex
 langsung di komponen** — dulu `#1e3a2c` muncul 309 kali dan "ganti tema" jadi
 praktis tidak bisa dilakukan.
 
-Dua tema: `sunrise-sorbet` (bawaan, terang) dan `neon-pulse` (gelap), dipilih
-lewat `data-theme` di `<html>`. Menambah tema ketiga cukup satu blok token.
+Empat tema, dipilih lewat `data-theme` di `<html>`: `sunrise-sorbet` (bawaan,
+terang), `vital-tide` (terang, biru–hijau kesehatan), `neon-pulse` (gelap,
+ramai), `midnight-sage` (gelap, tenang). Dua terang dua gelap, masing-masing
+satu berani satu tenang — tema kelima sebaiknya mengisi kotak yang kosong.
+
+Menambah tema: satu blok `[data-theme="..."]` di `globals.css` + satu entri di
+`THEMES` (`lib/theme.tsx`). **Jangan menulis daftar id tema di tempat kedua** —
+`ThemeScript` dulu menanam dua id secara harfiah di dalam string, jadi tema
+ketiga akan ditolak sebagai tidak dikenal dan semua orang dikembalikan ke tema
+bawaan tiap halaman dibuka. Sekarang daftarnya dibangun dari `THEMES`.
 
 Tiga warna tiap palet adalah **gradien identitas, bukan warna teks** —
 `#fbd786` di atas putih tidak terbaca siapa pun. Bedakan dua permukaan yang
