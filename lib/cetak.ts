@@ -1,0 +1,208 @@
+/**
+ * Dokumen cetak — berita acara, bukti bayar, dan seterusnya.
+ *
+ * Dipisah dari halaman karena isinya bukan React sama sekali, melainkan HTML
+ * lengkap yang dibuka di jendela lain. Selama ia menumpang di dalam komponen
+ * dashboard, dua hal terjadi: templat yang sama disalin dua kali (Berita Acara
+ * dicetak dari dua tempat — sesudah memusnahkan, dan dari riwayat), dan
+ * salinannya sudah mulai berbeda. Yang pertama menulis `${settingsData.alamat}`
+ * tanpa nilai cadangan, sehingga alamat yang belum diisi tercetak sebagai kata
+ * "undefined" pada dokumen yang ikut ditandatangani apoteker penanggung jawab.
+ *
+ * Dokumen di sini SELALU hitam di atas putih, tidak mengikuti tema aplikasi.
+ * Kertas tidak punya tema gelap.
+ */
+
+export type ProfilApotek = {
+  nama_apotek?: string | null
+  alamat?: string | null
+  nomor_ijin?: string | null
+  nomor_telepon?: string | null
+  nama_apoteker?: string | null
+  nomor_sipa?: string | null
+  kota?: string | null
+}
+
+/**
+ * Semua nilai yang masuk templat lewat sini.
+ *
+ * Selain menyeragamkan tanda "-" untuk yang kosong, ini juga meloloskan
+ * karakter HTML. Nama pasien dan keterangan pemusnahan diketik manusia, dan
+ * satu tanda `<` di dalamnya sudah cukup untuk merusak sisa dokumen.
+ */
+export const teks = (v: unknown, kosong = '-'): string => {
+  const s = v === null || v === undefined ? '' : String(v)
+  if (!s.trim()) return kosong
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+export const tanggalPanjang = (v: unknown, kosong = '-'): string => {
+  if (!v) return kosong
+  const d = new Date(v as string)
+  if (Number.isNaN(d.getTime())) return kosong
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+export const rupiah = (n: unknown): string => 'Rp ' + Number(n || 0).toLocaleString('id-ID')
+
+/** Membuka jendela cetak. Mengembalikan false kalau diblokir peramban. */
+export function bukaCetak(html: string, lebar = 800, tinggi = 900): boolean {
+  const win = window.open('', '_blank', `width=${lebar},height=${tinggi}`)
+  if (!win) return false
+  win.document.write(html)
+  win.document.close()
+  win.print()
+  return true
+}
+
+const GAYA_DOKUMEN = `
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,sans-serif;font-size:12px;padding:40px;color:#000;background:#fff;}
+h1{font-size:16px;text-align:center;font-weight:bold;}
+h2{font-size:13px;text-align:center;margin-bottom:20px;}
+.apotek{text-align:center;margin-bottom:16px;}
+.divider{border-top:2px solid #000;margin:12px 0;}
+table{width:100%;border-collapse:collapse;margin:16px 0;}
+td{padding:6px 8px;vertical-align:top;}
+.label{width:35%;font-weight:bold;}
+.ttd{margin-top:48px;display:flex;justify-content:space-around;}
+.ttd-box{text-align:center;}
+.ttd-line{border-top:1px solid #000;width:180px;margin:48px auto 4px;}
+`
+
+const kepalaApotek = (p: ProfilApotek) => `
+<div class="apotek">
+  <h1>${teks(p.nama_apotek, 'Apotek')}</h1>
+  <p>${teks(p.alamat, '')}</p>
+  <p>SIA: ${teks(p.nomor_ijin)} | Telp: ${teks(p.nomor_telepon)}</p>
+</div>
+<div class="divider"></div>`
+
+export type DataPemusnahan = {
+  nomor_ba?: string | null
+  tanggal_musnahkan?: string | null
+  nama_produk?: string | null
+  satuan?: string | null
+  batch_number?: string | null
+  expired_date?: string | null
+  qty_musnahkan?: number | null
+  metode?: string | null
+  keterangan?: string | null
+  saksi_1?: string | null
+  saksi_2?: string | null
+}
+
+/**
+ * Berita Acara Pemusnahan Obat.
+ *
+ * Satu templat untuk dua pemakaian: langsung sesudah pemusnahan dicatat, dan
+ * dicetak ulang dari riwayat. Bentuknya harus sama persis — dokumen yang sama
+ * dicetak dua kali dengan tata letak berbeda akan dipertanyakan saat
+ * pemeriksaan.
+ */
+export function beritaAcaraPemusnahan(p: ProfilApotek, d: DataPemusnahan): string {
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8">
+<title>Berita Acara Pemusnahan ${teks(d.nomor_ba, '')}</title>
+<style>${GAYA_DOKUMEN}</style></head><body>
+${kepalaApotek(p)}
+<h1>BERITA ACARA PEMUSNAHAN OBAT</h1>
+<h2>No: ${teks(d.nomor_ba)}</h2>
+<table>
+  <tr><td class="label">Tanggal Pemusnahan</td><td>: ${tanggalPanjang(d.tanggal_musnahkan)}</td></tr>
+  <tr><td class="label">Nama Produk</td><td>: ${teks(d.nama_produk)}</td></tr>
+  <tr><td class="label">No. Batch</td><td>: ${teks(d.batch_number)}</td></tr>
+  <tr><td class="label">Expired Date</td><td>: ${tanggalPanjang(d.expired_date)}</td></tr>
+  <tr><td class="label">Jumlah Dimusnahkan</td><td>: ${teks(d.qty_musnahkan, '0')} ${teks(d.satuan, '')}</td></tr>
+  <tr><td class="label">Metode Pemusnahan</td><td>: ${teks(d.metode)}</td></tr>
+  <tr><td class="label">Keterangan</td><td>: ${teks(d.keterangan)}</td></tr>
+</table>
+<p>Demikian berita acara ini dibuat dengan sebenarnya.</p>
+<div class="ttd">
+  <div class="ttd-box">
+    <p>Apoteker Penanggung Jawab</p><div class="ttd-line"></div>
+    <p><b>${teks(p.nama_apoteker)}</b></p><p>SIPA: ${teks(p.nomor_sipa)}</p>
+  </div>
+  <div class="ttd-box"><p>Saksi 1</p><div class="ttd-line"></div><p><b>${teks(d.saksi_1)}</b></p></div>
+  <div class="ttd-box"><p>Saksi 2</p><div class="ttd-line"></div><p><b>${teks(d.saksi_2)}</b></p></div>
+</div>
+</body></html>`
+}
+
+export type DataBuktiBayar = {
+  nomor_faktur?: string | null
+  nama_supplier?: string | null
+  nomor_po?: string | null
+  tanggal_faktur?: string | null
+  tanggal_jatuh_tempo?: string | null
+  tanggal_bayar?: string | null
+  metode_bayar?: string | null
+  catatan_bayar?: string | null
+  total?: number | null
+}
+
+export function buktiPembayaranFaktur(p: ProfilApotek, d: DataBuktiBayar): string {
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8">
+<title>Bukti Pembayaran ${teks(d.nomor_faktur, '')}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,sans-serif;font-size:12px;padding:40px;color:#000;background:#fff;}
+.head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+h1{font-size:16px;font-weight:bold;}
+.apotek p{font-size:11px;color:#555;}
+.divider{border-top:2px solid #000;margin:12px 0;}
+.title{text-align:center;margin:8px 0 18px;}
+.title h2{font-size:15px;letter-spacing:1px;}
+.title p{font-size:11px;color:#666;}
+table{width:100%;border-collapse:collapse;margin:6px 0;}
+td{padding:6px 8px;vertical-align:top;}
+.label{width:38%;color:#555;}
+.val{font-weight:600;}
+.total-box{margin-top:14px;background:#f4f4f4;border-radius:8px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;}
+.total-box .l{font-size:12px;color:#555;}
+.total-box .v{font-size:20px;font-weight:bold;}
+.stamp{display:inline-block;border:2px solid #16a34a;color:#16a34a;font-weight:bold;padding:4px 14px;border-radius:6px;letter-spacing:2px;transform:rotate(-4deg);}
+.ttd{margin-top:48px;display:flex;justify-content:flex-end;}
+.ttd-box{text-align:center;}
+.ttd-line{border-top:1px solid #000;width:200px;margin:56px auto 4px;}
+.foot{margin-top:32px;font-size:10px;color:#999;text-align:center;}
+</style></head><body>
+<div class="head">
+  <div class="apotek">
+    <h1>${teks(p.nama_apotek, 'Apotek')}</h1>
+    <p>${teks(p.alamat, '')}</p>
+    <p>SIA: ${teks(p.nomor_ijin)} | Telp: ${teks(p.nomor_telepon)}</p>
+  </div>
+  <div style="text-align:right;"><span class="stamp">LUNAS</span></div>
+</div>
+<div class="divider"></div>
+<div class="title">
+  <h2>BUKTI PEMBAYARAN FAKTUR</h2>
+  <p>No. Faktur: ${teks(d.nomor_faktur)}</p>
+</div>
+<table>
+  <tr><td class="label">Dibayarkan kepada</td><td class="val">${teks(d.nama_supplier)}</td></tr>
+  <tr><td class="label">No. Purchase Order</td><td>${teks(d.nomor_po)}</td></tr>
+  <tr><td class="label">Tanggal Faktur</td><td>${tanggalPanjang(d.tanggal_faktur)}</td></tr>
+  <tr><td class="label">Jatuh Tempo</td><td>${tanggalPanjang(d.tanggal_jatuh_tempo)}</td></tr>
+  <tr><td class="label">Tanggal Pembayaran</td><td class="val">${tanggalPanjang(d.tanggal_bayar)}</td></tr>
+  <tr><td class="label">Metode Pembayaran</td><td>${teks(d.metode_bayar)}</td></tr>
+  ${d.catatan_bayar ? `<tr><td class="label">Catatan</td><td>${teks(d.catatan_bayar)}</td></tr>` : ''}
+</table>
+<div class="total-box">
+  <span class="l">Jumlah Dibayar</span>
+  <span class="v">${rupiah(d.total)}</span>
+</div>
+<div class="ttd">
+  <div class="ttd-box">
+    <p>Penerima / Penanggung Jawab,</p>
+    <div class="ttd-line"></div>
+    <p><b>${teks(p.nama_apoteker)}</b></p>
+  </div>
+</div>
+<div class="foot">Dokumen ini dicetak otomatis oleh Sehatera by Seawise Studio.</div>
+</body></html>`
+}

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "../lib/i18n";
+import { ThemeProvider, ThemeScript } from "../lib/theme";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,22 +14,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = "https://apotek-erp.vercel.app";
-const TITLE = "Pharmacy Store | Seawise Studio";
+const SITE_URL = "https://sehatera.vercel.app";
+const TITLE = "Sehatera — sistem apotek, klinik, dan faskes";
 const DESCRIPTION =
-  "Sistem manajemen apotek: dashboard analitik real-time, kasir & resep, stok & kadaluarsa, order terpandu, pembayaran faktur, hingga laporan SIPNAP, dalam satu aplikasi.";
+  "Sistem manajemen apotek: kasir & resep, stok dengan batch dan kadaluarsa, order terpandu, pembayaran faktur, hingga laporan SIPNAP, dalam satu aplikasi.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: TITLE,
-    template: "%s | Pharmacy Store",
+    template: "%s | Sehatera",
   },
   description: DESCRIPTION,
-  applicationName: "Pharmacy Store",
+  applicationName: "Sehatera",
   keywords: [
     "aplikasi apotek", "software apotek", "ERP apotek", "sistem manajemen apotek",
-    "POS apotek", "laporan SIPNAP", "stok obat", "kadaluarsa obat", "pharmacy management system",
+    "POS apotek", "laporan SIPNAP", "stok obat", "kadaluarsa obat",
+    "sistem klinik", "rekam medis elektronik", "pharmacy management system",
   ],
   authors: [{ name: "Seawise Creative" }],
   creator: "Seawise Creative",
@@ -36,7 +38,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "id_ID",
     url: SITE_URL,
-    siteName: "Pharmacy Store",
+    siteName: "Sehatera",
     title: TITLE,
     description: DESCRIPTION,
   },
@@ -51,7 +53,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#1e3a2c",
+  // Warna bilah browser mengikuti tema aktif, bukan satu hex tetap yang akan
+  // salah separuh waktu begitu ada tema kedua.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fdf7f3" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e0714" },
+  ],
 };
 
 export default function RootLayout({
@@ -61,10 +68,22 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="id"
+      // Tema bawaan ditulis di server juga, bukan hanya oleh ThemeScript.
+      // Kalau hanya skrip yang mengisinya, halaman pertama sempat terlukis
+      // tanpa satu pun token warna.
+      data-theme="sunrise-sorbet"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col"><LanguageProvider>{children}</LanguageProvider></body>
+      <head>
+        <ThemeScript />
+      </head>
+      <body className="min-h-full flex flex-col">
+        <ThemeProvider>
+          <LanguageProvider>{children}</LanguageProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

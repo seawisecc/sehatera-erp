@@ -24,10 +24,10 @@ export const useLang = () => useContext(LangCtx)
 export function LangToggle({ className = '', dark = false }: { className?: string; dark?: boolean }) {
   const { lang, setLang } = useLang()
   const base = 'px-2.5 py-1 text-xs font-semibold rounded-md transition'
-  const on = dark ? 'bg-white/20 text-white' : 'bg-[#1e3a2c] text-white'
-  const off = dark ? 'text-white/60 hover:text-white' : 'text-[#6b7280] hover:text-[#1e3a2c]'
+  const on = dark ? 'bg-white/20 text-white' : 'bg-[var(--brand)] text-[var(--on-brand)]'
+  const off = dark ? 'text-white/60 hover:text-white' : 'text-[var(--ink-soft)] hover:text-[var(--brand)]'
   return (
-    <div className={`inline-flex items-center gap-0.5 rounded-lg ${dark ? 'bg-white/10' : 'bg-white/70 border border-black/5'} p-0.5 ${className}`}>
+    <div className={`inline-flex items-center gap-0.5 rounded-lg ${dark ? 'bg-white/10' : 'bg-[var(--surface)] border border-[var(--line)]'} p-0.5 ${className}`}>
       <button onClick={() => setLang('id')} className={`${base} ${lang === 'id' ? on : off}`}>ID</button>
       <button onClick={() => setLang('en')} className={`${base} ${lang === 'en' ? on : off}`}>EN</button>
     </div>

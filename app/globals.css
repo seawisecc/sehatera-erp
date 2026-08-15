@@ -1,42 +1,180 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ============================================================
+   Sehatera — sistem tema
+   ============================================================
+
+   Sebelum ini setiap warna ditulis langsung di kelas Tailwind: `bg-[#1e3a2c]`
+   muncul 309 kali, `#6b7280` 223 kali, dan seterusnya di 14 warna lain.
+   Selama begitu, "ganti tema" berarti menyunting ribuan tempat dan berharap
+   tidak ada yang terlewat — jadi praktis tidak bisa dilakukan.
+
+   Sekarang semua warna melewati token di bawah. Menambah tema ketiga nanti
+   cukup menambah satu blok `[data-theme="..."]`; tidak ada satu pun komponen
+   yang perlu disentuh.
+
+   CATATAN KONTRAS — ketiga warna Sunrise Sorbet (#c6ffdd, #fbd786, #f7797d)
+   terlalu terang untuk dipakai sebagai warna teks; #fbd786 di atas putih tidak
+   akan terbaca siapa pun. Jadi ketiganya dipakai sebagai GRADIEN IDENTITAS
+   (--grad) di sidebar, tombol utama, dan logo, sementara isi layar memakai
+   netral hangat yang diturunkan dari palet itu. Aturan yang sama berlaku untuk
+   Neon Pulse.
+   ============================================================ */
+
+/* ---------- Sunrise Sorbet — tema bawaan, terang ---------- */
+:root,
+[data-theme="sunrise-sorbet"] {
+  --grad-1: #c6ffdd;
+  --grad-2: #fbd786;
+  --grad-3: #f7797d;
+  --grad: linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 48%, var(--grad-3) 100%);
+
+  /* Warna tanda tangan: diturunkan dari ujung coral supaya teks putih di
+     atasnya lolos kontras, sesuatu yang #f7797d sendiri tidak bisa. */
+  --brand:        #a93c50;
+  --brand-hover:  #8f2f42;
+  --brand-soft:   #d1657a;
+  --on-brand:     #fff5f0;
+  --on-brand-soft:#f4c6bb;
+
+  --accent:       #b06a12;   /* diturunkan dari ujung amber */
+  --accent-soft:  #fdf0d8;
+
+  /* Teks DI ATAS gradien identitas — bukan di atas --brand.
+     Keduanya perlu dibedakan: gradien Sunrise Sorbet terang, jadi teks putih di
+     atasnya hilang, sementara di atas --brand yang pekat teks putih justru yang
+     benar. Satu token untuk dua permukaan berbeda selalu salah di salah satunya. */
+  --on-grad:      #40202b;
+  --on-grad-soft: #6d4038;
+
+  --paper:        #fdf7f3;
+  --surface:      #ffffff;
+  --surface-2:    #fdefe8;
+  --surface-3:    #fff7f1;
+
+  --ink:          #2b1d22;
+  --ink-mid:      #4d3b41;
+  --ink-soft:     #6f5a60;
+  --ink-faint:    #a58e94;
+
+  --line:         #eed8ce;
+  --line-soft:    #f8e8e0;
+
+  --shadow-sm: 0 1px 2px rgba(43, 29, 34, .05);
+  --shadow-md: 0 10px 30px -14px rgba(43, 29, 34, .28);
+
+  color-scheme: light;
 }
 
+/* ---------- Neon Pulse — gelap, untuk apotek 24 jam & shift malam ---------- */
+[data-theme="neon-pulse"] {
+  --grad-1: #8a2387;
+  --grad-2: #e94057;
+  --grad-3: #f27121;
+  --grad: linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 52%, var(--grad-3) 100%);
+
+  --brand:        #8a2387;
+  --brand-hover:  #a02da0;
+  --brand-soft:   #c04bb6;
+  --on-brand:     #fdeef9;
+  --on-brand-soft:#e9b3de;
+
+  --accent:       #f27121;
+  --accent-soft:  #38210f;
+
+  /* Gradien Neon Pulse pekat, jadi di sini teks terang yang benar. */
+  --on-grad:      #fff2fb;
+  --on-grad-soft: #f0c4e6;
+
+  --paper:        #0e0714;
+  --surface:      #180e1f;
+  --surface-2:    #22142b;
+  --surface-3:    #1c1024;
+
+  --ink:          #f7ecf6;
+  --ink-mid:      #d6c2d8;
+  --ink-soft:     #b49ab8;
+  --ink-faint:    #8a7290;
+
+  --line:         #3a2246;
+  --line-soft:    #2b1936;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .5);
+  --shadow-md: 0 12px 34px -14px rgba(138, 35, 135, .6);
+
+  color-scheme: dark;
+}
+
+/* Token didaftarkan ke Tailwind supaya `bg-surface`, `text-ink`, `border-line`
+   tersedia sebagai utility di samping bentuk `bg-[var(--surface)]` yang dipakai
+   kode lama. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-brand:         var(--brand);
+  --color-brand-hover:   var(--brand-hover);
+  --color-brand-soft:    var(--brand-soft);
+  --color-on-brand:      var(--on-brand);
+  --color-on-brand-soft: var(--on-brand-soft);
+  --color-accent:        var(--accent);
+  --color-accent-soft:   var(--accent-soft);
+  --color-paper:         var(--paper);
+  --color-surface:       var(--surface);
+  --color-surface-2:     var(--surface-2);
+  --color-surface-3:     var(--surface-3);
+  --color-ink:           var(--ink);
+  --color-ink-mid:       var(--ink-mid);
+  --color-ink-soft:      var(--ink-soft);
+  --color-ink-faint:     var(--ink-faint);
+  --color-line:          var(--line);
+  --color-line-soft:     var(--line-soft);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-/* Normalkan semua dropdown <select> agar seragam dengan input lain
-   (hilangkan tampilan native, pakai chevron & padding konsisten) */
+/* Latar ambient halaman. Dulu nilainya dihard-code di lib/theme.ts sebagai
+   objek style React, jadi ia tidak ikut berganti saat tema diganti. */
+.sw-ambient {
+  background:
+    radial-gradient(1100px 560px at 10% -10%, var(--grad-1) 0%, transparent 55%),
+    radial-gradient(1000px 520px at 102% -4%, var(--grad-2) 0%, transparent 52%),
+    radial-gradient(900px 720px at 104% 112%, var(--grad-3) 0%, transparent 55%),
+    var(--paper);
+}
+/* Di tema terang gradiennya pastel dan boleh tampil apa adanya. Di tema gelap
+   ketiga warnanya pekat dan akan menenggelamkan teks, jadi diredupkan. */
+[data-theme="neon-pulse"] .sw-ambient {
+  background:
+    radial-gradient(1100px 560px at 10% -10%, color-mix(in oklab, var(--grad-1) 26%, transparent) 0%, transparent 55%),
+    radial-gradient(1000px 520px at 102% -4%, color-mix(in oklab, var(--grad-2) 20%, transparent) 0%, transparent 52%),
+    radial-gradient(900px 720px at 104% 112%, color-mix(in oklab, var(--grad-3) 18%, transparent) 0%, transparent 55%),
+    var(--paper);
+}
+
+.sw-grad { background: var(--grad); }
+
+/* Normalkan semua dropdown <select> agar seragam dengan input lain.
+   Panah chevron ikut warna teks lewat `currentColor` — versi lama menanam
+   #6b7280 di dalam data URI, jadi panahnya tetap abu-abu gelap dan hilang di
+   tema gelap. */
 select {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
   background-repeat: no-repeat;
   background-position: right 0.7rem center;
   background-size: 1rem 1rem;
   padding-right: 2.25rem;
 }
+
+::selection { background: var(--brand-soft); color: var(--on-brand); }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
 
 /* ── Animasi masuk halaman (Sign In / Sign Up) ── */
 @keyframes swFadeUp {
@@ -77,7 +215,13 @@ select {
 }
 
 /* ── Auth sliding overlay (Sign In ⇄ Sign Up) ── */
-.sw-auth { position: relative; width: 100%; max-width: 64rem; min-height: 600px; background: #f5f3ee; border-radius: 28px; overflow: hidden; box-shadow: 0 25px 60px -20px rgba(30,58,44,.45); }
+.sw-auth {
+  position: relative; width: 100%; max-width: 64rem; min-height: 600px;
+  background: var(--surface-3); border-radius: 28px; overflow: hidden;
+  box-shadow: 0 25px 60px -20px color-mix(in oklab, var(--brand) 45%, transparent);
+  animation: swFadeUp .5s cubic-bezier(.22,.61,.36,1) both;
+}
+@media (prefers-reduced-motion: reduce) { .sw-auth { animation: none; } }
 .sw-form { position: absolute; top: 0; height: 100%; width: 50%; overflow-y: auto; display: flex; flex-direction: column; justify-content: center;
   transition: opacity .7s cubic-bezier(.77,0,.18,1), transform .7s cubic-bezier(.77,0,.18,1), filter .7s ease; }
 .sw-form--login  { left: 0; z-index: 2; }
@@ -85,15 +229,22 @@ select {
 .sw-auth.active .sw-form--login  { opacity: 0; transform: translateX(-40px); filter: blur(5px); pointer-events: none; z-index: 1; }
 .sw-auth.active .sw-form--signup { opacity: 1; transform: none; pointer-events: auto; z-index: 2; }
 
+/* Panel miring memakai gradien identitas. Teksnya TIDAK putih polos melainkan
+   --on-brand, karena gradien Sunrise Sorbet cukup terang dan putih di atasnya
+   nyaris hilang. */
 .sw-overlay { position: absolute; top: 0; left: 50%; width: 50%; height: 100%; z-index: 5; overflow: hidden;
-  background: linear-gradient(135deg, #1b3426 0%, #22392a 45%, #6f5236 100%);
+  background: var(--grad);
   clip-path: polygon(14% 0, 100% 0, 100% 100%, 0 100%);
   transition: transform .9s cubic-bezier(.77,0,.18,1), clip-path .9s cubic-bezier(.77,0,.18,1); }
 .sw-auth.active .sw-overlay { transform: translateX(-100%); clip-path: polygon(0 0, 86% 0, 100% 100%, 0 100%); }
-.sw-overlay-face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2.5rem; color: #fff; transition: opacity .5s ease; }
-.sw-overlay-face--login { opacity: 0; }
-.sw-auth.active .sw-overlay-face--signup { opacity: 0; }
-.sw-auth.active .sw-overlay-face--login  { opacity: 1; }
+.sw-overlay-face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2.5rem;
+  color: var(--on-grad); transition: opacity .5s ease; }
+/* Muka yang sedang tidak terlihat harus ikut mati untuk klik dan untuk pembaca
+   layar — kalau hanya opacity-nya nol, tombol "Daftar" yang tak terlihat masih
+   bisa ditekan dan masih dibacakan. */
+.sw-overlay-face--login { opacity: 0; pointer-events: none; }
+.sw-auth.active .sw-overlay-face--signup { opacity: 0; pointer-events: none; }
+.sw-auth.active .sw-overlay-face--login  { opacity: 1; pointer-events: auto; }
 
 @media (max-width: 768px) {
   .sw-auth { min-height: 0; }
@@ -107,14 +258,12 @@ select {
   .sw-form, .sw-overlay, .sw-overlay-face { transition: none; }
 }
 
+/* Struk dan laporan selalu dicetak hitam di atas putih, apa pun temanya.
+   Kertas tidak punya tema gelap, dan tinta apotek mahal. */
 @media print {
-  body * {
-    visibility: hidden;
-  }
+  body * { visibility: hidden; }
   #struk-print,
-  #struk-print * {
-    visibility: visible;
-  }
+  #struk-print * { visibility: visible; color: #000 !important; background: #fff !important; }
   #struk-print {
     position: fixed;
     top: 0;

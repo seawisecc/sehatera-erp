@@ -49,16 +49,16 @@ const CSS = `
 // Mini mockup jendela aplikasi (memakai tema asli)
 function AppWindow({ children }: { children: React.ReactNode }) {
   return (
-    <div className="kn-win rounded-2xl overflow-hidden border border-black/5 bg-white/80 backdrop-blur-sm w-full">
-      <div className="h-9 flex items-center gap-2 px-4 bg-[#eef0ea] border-b border-black/5">
-        <span className="w-3 h-3 rounded-full bg-[#e2726a]" />
-        <span className="w-3 h-3 rounded-full bg-[#e6b95c]" />
-        <span className="w-3 h-3 rounded-full bg-[#8fbf7f]" />
+    <div className="kn-win rounded-2xl overflow-hidden border border-black/5 bg-[var(--surface)]/80 backdrop-blur-sm w-full">
+      <div className="h-9 flex items-center gap-2 px-4 bg-[var(--paper)] border-b border-black/5">
+        <span className="w-3 h-3 rounded-full bg-[var(--brand-soft)]" />
+        <span className="w-3 h-3 rounded-full bg-[var(--accent)]" />
+        <span className="w-3 h-3 rounded-full bg-[var(--brand-soft)]" />
       </div>
       <div className="flex min-h-[240px]">
-        <div className="w-16 sm:w-20 shrink-0 bg-gradient-to-b from-[#1e3a2c] to-[#2c3320] flex flex-col items-center py-4 gap-4">
-          <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center"><FlaskConical size={16} className="text-white" /></div>
-          {[Pill, ShoppingCart, ClipboardList, BarChart2].map((I, i) => <I key={i} size={16} className="text-[#9db3a5]" />)}
+        <div className="w-16 sm:w-20 shrink-0 bg-gradient-to-b from-[var(--brand)] to-[var(--brand-hover)] flex flex-col items-center py-4 gap-4">
+          <div className="w-8 h-8 rounded-xl bg-[var(--surface)]/10 flex items-center justify-center"><FlaskConical size={16} className="text-white" /></div>
+          {[Pill, ShoppingCart, ClipboardList, BarChart2].map((I, i) => <I key={i} size={16} className="text-[var(--on-brand-soft)]" />)}
         </div>
         <div className="flex-1 p-5">{children}</div>
       </div>
@@ -68,10 +68,10 @@ function AppWindow({ children }: { children: React.ReactNode }) {
 
 function Stat({ chip, label, value, Icon }: any) {
   return (
-    <div className="bg-white/70 border border-white/60 shadow-sm rounded-xl p-3">
+    <div className="bg-[var(--surface)]/70 border border-white/60 shadow-sm rounded-xl p-3">
       <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${chip}`}><Icon size={15} /></div>
-      <p className="text-[10px] text-[#6b7280] uppercase tracking-wide">{label}</p>
-      <p className="text-base font-bold text-[#1c2620]">{value}</p>
+      <p className="text-[10px] text-[var(--ink-soft)] uppercase tracking-wide">{label}</p>
+      <p className="text-base font-bold text-[var(--ink)]">{value}</p>
     </div>
   )
 }
@@ -88,10 +88,10 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
     [Settings, t('Pengaturan', 'Settings'), false],
   ] as const
   const stats = [
-    [Pill, 'bg-[#dce5db] text-[#2f5741]', t('TOTAL PRODUK', 'TOTAL PRODUCTS'), '100'],
-    [ShoppingCart, 'bg-[#dce5db] text-[#2f5741]', t('PENJUALAN HARI INI', 'SALES TODAY'), '3'],
-    [CalendarClock, 'bg-[#f5e6c8] text-[#8a6d1f]', t('EXPIRED ≤60 HARI', 'EXPIRING ≤60 DAYS'), '3'],
-    [Wallet, 'bg-[#f0dcd2] text-[#a75a34]', t('OMZET HARI INI', 'REVENUE TODAY'), 'Rp 10.095.000'],
+    [Pill, 'bg-[var(--surface-2)] text-[var(--brand-soft)]', t('TOTAL PRODUK', 'TOTAL PRODUCTS'), '100'],
+    [ShoppingCart, 'bg-[var(--surface-2)] text-[var(--brand-soft)]', t('PENJUALAN HARI INI', 'SALES TODAY'), '3'],
+    [CalendarClock, 'bg-[var(--accent-soft)] text-[var(--accent)]', t('EXPIRED ≤60 HARI', 'EXPIRING ≤60 DAYS'), '3'],
+    [Wallet, 'bg-[var(--surface-2)] text-[var(--accent)]', t('OMZET HARI INI', 'REVENUE TODAY'), 'Rp 10.095.000'],
   ] as const
   const sellers: [string, number][] = [['Sarung Tangan Latex (M)', 160], ['Tolak Angin Cair 15 ml', 10], ['Simvastatin 20 mg', 10], ['Konidin Tablet', 10]]
   const bars = [3, 3, 3, 3, 3, 2, 62]
@@ -108,17 +108,17 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
         <div className="mb-lid">
           <span className="mb-cam" />
           <div className="mb-screen">
-          <div className="flex h-full text-[#1c2620] bg-[#f3f1ea]">
+          <div className="flex h-full text-[var(--ink)] bg-[var(--surface-3)]">
             {/* Sidebar */}
-            <div className="w-[24%] shrink-0 bg-gradient-to-b from-[#1e3a2c] to-[#26301f] px-[3%] py-[3.5%] flex flex-col">
+            <div className="w-[24%] shrink-0 bg-gradient-to-b from-[var(--brand)] to-[var(--brand-hover)] px-[3%] py-[3.5%] flex flex-col">
               <div className="flex items-center gap-1.5 mb-[8%]">
-                <div className="w-[18%] aspect-square rounded-md bg-white/10 flex items-center justify-center"><FlaskConical className="text-white w-1/2 h-1/2" /></div>
-                <div className="leading-none"><div className="text-white font-bold text-[0.62vw] sm:text-[0.6vw]" style={{ fontSize: 'clamp(6px,0.85vw,11px)' }}>Pharmacy Store</div><div className="text-[#9db3a5]" style={{ fontSize: 'clamp(5px,0.7vw,9px)' }}>by Seawise Studio</div></div>
+                <div className="w-[18%] aspect-square rounded-md bg-[var(--surface)]/10 flex items-center justify-center"><FlaskConical className="text-white w-1/2 h-1/2" /></div>
+                <div className="leading-none"><div className="text-white font-bold text-[0.62vw] sm:text-[0.6vw]" style={{ fontSize: 'clamp(6px,0.85vw,11px)' }}>Sehatera</div><div className="text-[var(--on-brand-soft)]" style={{ fontSize: 'clamp(5px,0.7vw,9px)' }}>by Seawise Studio</div></div>
               </div>
-              <div className="rounded-md bg-white/10 text-white/90 px-2 py-1 mb-[7%] truncate" style={{ fontSize: 'clamp(5px,0.75vw,10px)' }}>Apotek Rakyat Sejahtera</div>
+              <div className="rounded-md bg-[var(--surface)]/10 text-white/90 px-2 py-1 mb-[7%] truncate" style={{ fontSize: 'clamp(5px,0.75vw,10px)' }}>Apotek Rakyat Sejahtera</div>
               <div className="space-y-[4%]">
                 {nav.map(([Ic, label, active], i) => (
-                  <div key={i} className={`flex items-center gap-1.5 rounded-md px-2 py-1 ${active ? 'bg-white/12 text-white' : 'text-[#9db3a5]'}`} style={{ fontSize: 'clamp(5px,0.78vw,10px)' }}>
+                  <div key={i} className={`flex items-center gap-1.5 rounded-md px-2 py-1 ${active ? 'bg-[var(--surface)]/12 text-white' : 'text-[var(--on-brand-soft)]'}`} style={{ fontSize: 'clamp(5px,0.78vw,10px)' }}>
                     <Ic className="w-[11px] h-[11px] shrink-0" /> <span className="truncate">{label}</span>
                   </div>
                 ))}
@@ -126,27 +126,27 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
             </div>
             {/* Main */}
             <div className="flex-1 min-w-0 px-[3.2%] py-[2.8%] flex flex-col overflow-hidden">
-              <p className="font-bold text-[#1c2620] leading-none shrink-0" style={{ fontSize: 'clamp(11px,1.7vw,24px)' }}>Dashboard</p>
-              <p className="text-[#6b7280] mt-1 mb-[3%] shrink-0" style={{ fontSize: 'clamp(6px,0.78vw,11px)' }}>Hello, apt. Anessa Beckham 👋, {t('ringkasan aktivitas apotek', "today's pharmacy summary")}</p>
+              <p className="font-bold text-[var(--ink)] leading-none shrink-0" style={{ fontSize: 'clamp(11px,1.7vw,24px)' }}>Dashboard</p>
+              <p className="text-[var(--ink-soft)] mt-1 mb-[3%] shrink-0" style={{ fontSize: 'clamp(6px,0.78vw,11px)' }}>Hello, apt. Anessa Beckham 👋, {t('ringkasan aktivitas apotek', "today's pharmacy summary")}</p>
               {/* Stat cards */}
               <div className="grid grid-cols-4 gap-[2.2%] mb-[3%] shrink-0">
                 {stats.map(([Ic, chip, label, val], i) => (
-                  <div key={i} className="bg-white/80 border border-white/70 rounded-lg px-[8%] py-[7%]">
+                  <div key={i} className="bg-[var(--surface)]/80 border border-white/70 rounded-lg px-[8%] py-[7%]">
                     <div className={`rounded-md flex items-center justify-center mb-[12%] ${chip}`} style={{ width: 'clamp(14px,1.7vw,28px)', height: 'clamp(14px,1.7vw,28px)' }}><Ic className="w-1/2 h-1/2" /></div>
-                    <p className="text-[#6b7280] uppercase tracking-wide leading-tight" style={{ fontSize: 'clamp(4.5px,0.6vw,8px)' }}>{label}</p>
-                    <p className="font-bold text-[#1c2620] leading-tight mt-0.5" style={{ fontSize: 'clamp(7px,1vw,14px)' }}>{val}</p>
+                    <p className="text-[var(--ink-soft)] uppercase tracking-wide leading-tight" style={{ fontSize: 'clamp(4.5px,0.6vw,8px)' }}>{label}</p>
+                    <p className="font-bold text-[var(--ink)] leading-tight mt-0.5" style={{ fontSize: 'clamp(7px,1vw,14px)' }}>{val}</p>
                   </div>
                 ))}
               </div>
               {/* Chart + Best sellers */}
               <div className="grid grid-cols-3 gap-[2.2%] flex-1 min-h-0">
-                <div className="col-span-2 bg-white/80 border border-white/70 rounded-lg p-[3.2%] flex flex-col min-h-0">
+                <div className="col-span-2 bg-[var(--surface)]/80 border border-white/70 rounded-lg p-[3.2%] flex flex-col min-h-0">
                   <div className="flex items-center justify-between mb-[2%] shrink-0">
                     <div>
-                      <p className="font-bold text-[#1c2620]" style={{ fontSize: 'clamp(6px,0.85vw,12px)' }}>Sales, Last 7 Days</p>
-                      <div className="flex items-center gap-2 mt-0.5" style={{ fontSize: 'clamp(4.5px,0.62vw,8px)' }}><span className="text-[#2f5741]">● Revenue</span><span className="text-[#c2632f]">━ Transactions</span></div>
+                      <p className="font-bold text-[var(--ink)]" style={{ fontSize: 'clamp(6px,0.85vw,12px)' }}>Sales, Last 7 Days</p>
+                      <div className="flex items-center gap-2 mt-0.5" style={{ fontSize: 'clamp(4.5px,0.62vw,8px)' }}><span className="text-[var(--brand-soft)]">● Revenue</span><span className="text-[var(--accent)]">━ Transactions</span></div>
                     </div>
-                    <p className="font-bold text-[#1e3a2c]" style={{ fontSize: 'clamp(6px,0.9vw,13px)' }}>Rp 10.095.000</p>
+                    <p className="font-bold text-[var(--brand)]" style={{ fontSize: 'clamp(6px,0.9vw,13px)' }}>Rp 10.095.000</p>
                   </div>
                   <svg viewBox="0 0 260 92" preserveAspectRatio="xMidYMid meet" className="w-full flex-1 min-h-0">
                     {[0, 0.5, 1].map((g, i) => <line key={i} x1="8" x2="252" y1={78 - g * 62} y2={78 - g * 62} stroke="#eceae3" strokeWidth="1" />)}
@@ -155,13 +155,13 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
                     {[[22, 75], [56, 75], [90, 75], [124, 75], [158, 75], [192, 77], [226, 16]].map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="2.6" fill="#fff" stroke="#c2632f" strokeWidth="1.8" />)}
                   </svg>
                 </div>
-                <div className="bg-white/80 border border-white/70 rounded-lg p-[6%] min-h-0 overflow-hidden">
-                  <p className="font-bold text-[#1c2620] mb-[9%]" style={{ fontSize: 'clamp(6px,0.85vw,12px)' }}>Best Sellers</p>
+                <div className="bg-[var(--surface)]/80 border border-white/70 rounded-lg p-[6%] min-h-0 overflow-hidden">
+                  <p className="font-bold text-[var(--ink)] mb-[9%]" style={{ fontSize: 'clamp(6px,0.85vw,12px)' }}>Best Sellers</p>
                   <div className="space-y-[10%]">
                     {sellers.map(([nm, q], i) => (
                       <div key={i}>
-                        <div className="flex justify-between text-[#1c2620] mb-0.5" style={{ fontSize: 'clamp(4.5px,0.6vw,8px)' }}><span className="truncate pr-1">{i + 1}. {nm}</span><span>{q}</span></div>
-                        <div className="h-[3px] rounded-full bg-[#eef0ea]"><div className="h-full rounded-full bg-[#2f5741]" style={{ width: `${Math.max(8, (q / 160) * 100)}%` }} /></div>
+                        <div className="flex justify-between text-[var(--ink)] mb-0.5" style={{ fontSize: 'clamp(4.5px,0.6vw,8px)' }}><span className="truncate pr-1">{i + 1}. {nm}</span><span>{q}</span></div>
+                        <div className="h-[3px] rounded-full bg-[var(--paper)]"><div className="h-full rounded-full bg-[var(--brand-soft)]" style={{ width: `${Math.max(8, (q / 160) * 100)}%` }} /></div>
                       </div>
                     ))}
                   </div>
@@ -180,23 +180,23 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
         <span className="ip-side ip-pw" /><span className="ip-side ip-cam" />
         <span className="ip-side ip-v1" /><span className="ip-side ip-v2" /><span className="ip-side ip-v3" />
         <div className="iphone-inner">
-          <div className="bg-[#1e3a2c] text-white flex items-center gap-1.5 px-[6%] pt-[14%] pb-[5%]"><Menu className="w-3 h-3" /> <span style={{ fontSize: 'clamp(6px,1.4vw,11px)' }}>Apotek Sejahtera</span></div>
+          <div className="bg-[var(--brand)] text-[var(--on-brand)] flex items-center gap-1.5 px-[6%] pt-[14%] pb-[5%]"><Menu className="w-3 h-3" /> <span style={{ fontSize: 'clamp(6px,1.4vw,11px)' }}>Apotek Sejahtera</span></div>
           <div className="px-[6%] py-[5%]">
-            <p className="font-bold text-[#1c2620]" style={{ fontSize: 'clamp(9px,2vw,15px)' }}>Cashier</p>
-            <p className="text-[#6b7280] mb-[5%]" style={{ fontSize: 'clamp(5px,1.1vw,9px)' }}>Medicine sales transactions</p>
-            <div className="bg-white/80 border border-white/70 rounded-lg p-[4%]">
-              <div className="rounded-md border border-[#d1cdc4] bg-white px-2 py-1.5 mb-[4%] text-[#1c2620]" style={{ fontSize: 'clamp(6px,1.3vw,10px)' }}>Para</div>
+            <p className="font-bold text-[var(--ink)]" style={{ fontSize: 'clamp(9px,2vw,15px)' }}>Cashier</p>
+            <p className="text-[var(--ink-soft)] mb-[5%]" style={{ fontSize: 'clamp(5px,1.1vw,9px)' }}>Medicine sales transactions</p>
+            <div className="bg-[var(--surface)]/80 border border-white/70 rounded-lg p-[4%]">
+              <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 mb-[4%] text-[var(--ink)]" style={{ fontSize: 'clamp(6px,1.3vw,10px)' }}>Para</div>
               {cashItems.map(([nm, sub, pr], i) => (
-                <div key={i} className="flex items-center justify-between py-[3%] border-b border-[#f0ede6] last:border-0">
-                  <div className="min-w-0 pr-1"><p className="text-[#1c2620] truncate" style={{ fontSize: 'clamp(5.5px,1.2vw,10px)' }}>{nm}</p><p className="text-[#9ca3af] truncate" style={{ fontSize: 'clamp(4.5px,0.95vw,8px)' }}>{sub}</p></div>
-                  <span className="text-[#1c2620] shrink-0" style={{ fontSize: 'clamp(5.5px,1.2vw,10px)' }}>{pr}</span>
+                <div key={i} className="flex items-center justify-between py-[3%] border-b border-[var(--line-soft)] last:border-0">
+                  <div className="min-w-0 pr-1"><p className="text-[var(--ink)] truncate" style={{ fontSize: 'clamp(5.5px,1.2vw,10px)' }}>{nm}</p><p className="text-[var(--ink-faint)] truncate" style={{ fontSize: 'clamp(4.5px,0.95vw,8px)' }}>{sub}</p></div>
+                  <span className="text-[var(--ink)] shrink-0" style={{ fontSize: 'clamp(5.5px,1.2vw,10px)' }}>{pr}</span>
                 </div>
               ))}
             </div>
-            <div className="bg-white/80 border border-white/70 rounded-lg p-[5%] mt-[5%]">
-              <p className="font-bold text-[#1c2620] mb-[5%]" style={{ fontSize: 'clamp(6px,1.4vw,11px)' }}>Transaction Summary</p>
-              <div className="flex justify-between text-[#6b7280] mb-1" style={{ fontSize: 'clamp(5.5px,1.2vw,10px)' }}><span>Total Items</span><span>0 items</span></div>
-              <div className="flex justify-between font-semibold text-[#1c2620] border-t border-[#f0ede6] pt-1" style={{ fontSize: 'clamp(5.5px,1.2vw,10px)' }}><span>Total</span><span>Rp 0</span></div>
+            <div className="bg-[var(--surface)]/80 border border-white/70 rounded-lg p-[5%] mt-[5%]">
+              <p className="font-bold text-[var(--ink)] mb-[5%]" style={{ fontSize: 'clamp(6px,1.4vw,11px)' }}>Transaction Summary</p>
+              <div className="flex justify-between text-[var(--ink-soft)] mb-1" style={{ fontSize: 'clamp(5.5px,1.2vw,10px)' }}><span>Total Items</span><span>0 items</span></div>
+              <div className="flex justify-between font-semibold text-[var(--ink)] border-t border-[var(--line-soft)] pt-1" style={{ fontSize: 'clamp(5.5px,1.2vw,10px)' }}><span>Total</span><span>Rp 0</span></div>
             </div>
           </div>
         </div>
@@ -219,10 +219,10 @@ export default function Kenapa() {
     { tag: t('DASHBOARD ANALITIK', 'ANALYTICS DASHBOARD'), title: t('Kondisi apotek, dalam sekali pandang.', 'Your whole pharmacy, at a glance.'), body: t('Grafik penjualan interaktif, batang omzet dipadu garis jumlah transaksi, bisa ganti rentang 7 atau 30 hari. Di bawahnya: produk terlaris, stok yang menipis, barang segera expired, dan tagihan yang akan jatuh tempo. Semua real-time, tanpa perlu buka laporan.', 'An interactive sales chart, revenue bars paired with a transaction-count line, switchable between 7 or 30 days. Below it: best sellers, low stock, items expiring soon, and invoices coming due. All real-time, no report needed.'), Icon: TrendingUp,
       visual: (<AppWindow><div className="space-y-3">
         <div className="grid grid-cols-3 gap-1.5">
-          {[[t('Omzet','Revenue'),'Rp8,4jt','bg-[#f0dcd2] text-[#a75a34]'],[t('Transaksi','Sales'),'87','bg-[#dce5db] text-[#2f5741]'],[t('Produk','Products'),'1.240','bg-[#dce5db] text-[#2f5741]']].map((c,i)=>(<div key={i} className="rounded-lg border border-[#eceae3] p-2"><p className="text-[8px] text-[#9ca3af] uppercase tracking-wide">{c[0]}</p><p className="text-[11px] font-bold text-[#1c2620]">{c[1]}</p></div>))}
+          {[[t('Omzet','Revenue'),'Rp8,4jt','bg-[var(--surface-2)] text-[var(--accent)]'],[t('Transaksi','Sales'),'87','bg-[var(--surface-2)] text-[var(--brand-soft)]'],[t('Produk','Products'),'1.240','bg-[var(--surface-2)] text-[var(--brand-soft)]']].map((c,i)=>(<div key={i} className="rounded-lg border border-[var(--line-soft)] p-2"><p className="text-[8px] text-[var(--ink-faint)] uppercase tracking-wide">{c[0]}</p><p className="text-[11px] font-bold text-[var(--ink)]">{c[1]}</p></div>))}
         </div>
-        <div className="rounded-lg border border-[#eceae3] p-2.5">
-          <div className="flex items-center justify-between mb-1"><span className="text-[9px] font-semibold text-[#1c2620]">{t('Penjualan 7 Hari','Sales, 7 Days')}</span><div className="flex gap-1.5 text-[7px]"><span className="text-[#2f5741]">▉ {t('Omzet','Revenue')}</span><span className="text-[#c2632f]">━ {t('Transaksi','Trx')}</span></div></div>
+        <div className="rounded-lg border border-[var(--line-soft)] p-2.5">
+          <div className="flex items-center justify-between mb-1"><span className="text-[9px] font-semibold text-[var(--ink)]">{t('Penjualan 7 Hari','Sales, 7 Days')}</span><div className="flex gap-1.5 text-[7px]"><span className="text-[var(--brand-soft)]">▉ {t('Omzet','Revenue')}</span><span className="text-[var(--accent)]">━ {t('Transaksi','Trx')}</span></div></div>
           <svg viewBox="0 0 240 74" className="w-full">
             {[24,40,32,54,46,66,58].map((h,i)=>(<rect key={i} x={12+i*32} y={68-h} width="16" height={h} rx="3" fill="#1e3a2c" />))}
             <path d="M20,42 C36,34 40,32 52,30 C68,27 72,40 84,38 C100,35 104,24 116,22 C132,20 136,32 148,30 C164,27 168,16 180,15 C196,14 200,22 212,24" fill="none" stroke="#c2632f" strokeWidth="2.4" strokeLinecap="round" />
@@ -230,26 +230,26 @@ export default function Kenapa() {
           </svg>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
-          <div className="rounded-lg border border-[#eceae3] p-2"><p className="text-[8px] text-[#9ca3af] mb-0.5">{t('Stok Minim','Low Stock')}</p><p className="text-[10px] text-[#1c2620]">Amoxicillin <span className="text-red-500 font-semibold">2/10</span></p></div>
-          <div className="rounded-lg border border-[#eceae3] p-2"><p className="text-[8px] text-[#9ca3af] mb-0.5">{t('Jatuh Tempo','Due')}</p><p className="text-[10px] text-[#1c2620]">PBF Sehat <span className="text-amber-600 font-semibold">3 {t('hari','d')}</span></p></div>
+          <div className="rounded-lg border border-[var(--line-soft)] p-2"><p className="text-[8px] text-[var(--ink-faint)] mb-0.5">{t('Stok Minim','Low Stock')}</p><p className="text-[10px] text-[var(--ink)]">Amoxicillin <span className="text-red-500 font-semibold">2/10</span></p></div>
+          <div className="rounded-lg border border-[var(--line-soft)] p-2"><p className="text-[8px] text-[var(--ink-faint)] mb-0.5">{t('Jatuh Tempo','Due')}</p><p className="text-[10px] text-[var(--ink)]">PBF Sehat <span className="text-amber-600 font-semibold">3 {t('hari','d')}</span></p></div>
         </div>
       </div></AppWindow>) },
     { tag: t('ORDER TERPANDU', 'GUIDED ORDER'), title: t('Restok otomatis. PO terpecah sendiri.', 'Auto-restock. POs split themselves.'), body: t('Satu klik, sistem mengumpulkan semua barang yang mencapai stok minimum, menyarankan jumlah order, lalu otomatis membagi ke distributor masing-masing. Tinggal review, order langsung terpecah menjadi PO per supplier, siap kirim. Tak perlu lagi cek kartu stok satu per satu.', 'One click, the system gathers every item at minimum stock, suggests order quantities, then auto-assigns each to its distributor. Just review, the order splits into a PO per supplier, ready to send. No more checking stock cards one by one.'), Icon: Wand2,
       visual: (<AppWindow><div className="space-y-2">
-        <div className="flex items-center gap-1.5 mb-1">{[t('Pilih','Select'),t('Bagi','Assign'),t('Buat','Create')].map((s,i)=>(<div key={i} className="flex items-center gap-1.5 flex-1"><span className={`w-4 h-4 rounded-full text-[8px] flex items-center justify-center ${i===0?'bg-[#1e3a2c] text-white':'bg-[#eceae3] text-[#9ca3af]'}`}>{i+1}</span><span className="text-[8px] text-[#6b7280]">{s}</span>{i<2&&<div className="flex-1 h-px bg-[#eceae3]" />}</div>))}</div>
-        {[['Amoxicillin 500','2/10','PBF Sehat'],['Paracetamol','5/20','PBF Sehat'],['Vitamin C','3/15','PT Kimia']].map((r,i)=>(<div key={i} className="flex items-center justify-between text-[10px] rounded-lg border border-[#eceae3] px-2.5 py-1.5"><span className="text-[#1c2620]">{r[0]}</span><span className="text-red-500">{r[1]}</span><span className="text-[9px] px-1.5 py-0.5 rounded bg-[#eef0ea] text-[#2f5741]">{r[2]}</span></div>))}
-        <div className="text-[9px] text-center text-[#2f5741] font-medium">→ 2 PO {t('siap kirim','ready to send')}</div>
+        <div className="flex items-center gap-1.5 mb-1">{[t('Pilih','Select'),t('Bagi','Assign'),t('Buat','Create')].map((s,i)=>(<div key={i} className="flex items-center gap-1.5 flex-1"><span className={`w-4 h-4 rounded-full text-[8px] flex items-center justify-center ${i===0?'bg-[var(--brand)] text-[var(--on-brand)]':'bg-[var(--line-soft)] text-[var(--ink-faint)]'}`}>{i+1}</span><span className="text-[8px] text-[var(--ink-soft)]">{s}</span>{i<2&&<div className="flex-1 h-px bg-[var(--line-soft)]" />}</div>))}</div>
+        {[['Amoxicillin 500','2/10','PBF Sehat'],['Paracetamol','5/20','PBF Sehat'],['Vitamin C','3/15','PT Kimia']].map((r,i)=>(<div key={i} className="flex items-center justify-between text-[10px] rounded-lg border border-[var(--line-soft)] px-2.5 py-1.5"><span className="text-[var(--ink)]">{r[0]}</span><span className="text-red-500">{r[1]}</span><span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--paper)] text-[var(--brand-soft)]">{r[2]}</span></div>))}
+        <div className="text-[9px] text-center text-[var(--brand-soft)] font-medium">→ 2 PO {t('siap kirim','ready to send')}</div>
       </div></AppWindow>) },
     { tag: t('KASIR & KEPATUHAN', 'POS & COMPLIANCE'), title: t('Jual cepat, tetap patuh aturan.', 'Sell fast, stay compliant.'), body: t('Kasir ringan dengan metode bayar Tunai, QRIS, Transfer. Untuk obat Narkotika, Psikotropika & Prekursor, data pasien dan nomor resep wajib terisi otomatis, tercatat rapi untuk pelaporan.', 'A light POS with Cash, QRIS, and Transfer payments. For Narcotics, Psychotropics & Precursors, patient data and prescription number are required automatically, neatly recorded for reporting.'), Icon: ShoppingCart,
-      visual: (<AppWindow><div className="space-y-2"><div className="h-8 rounded-lg bg-[#f5f2eb] flex items-center px-3 text-xs text-[#9ca3af]">Cari obat…</div><div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800">⚠ Narkotika, isi data pasien & resep</div><div className="grid grid-cols-3 gap-1.5">{['Tunai','QRIS','Transfer'].map(m=><div key={m} className="text-[10px] text-center py-1.5 rounded-lg bg-[#1e3a2c] text-white">{m}</div>)}</div></div></AppWindow>) },
+      visual: (<AppWindow><div className="space-y-2"><div className="h-8 rounded-lg bg-[var(--surface-2)] flex items-center px-3 text-xs text-[var(--ink-faint)]">Cari obat…</div><div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800">⚠ Narkotika, isi data pasien & resep</div><div className="grid grid-cols-3 gap-1.5">{['Tunai','QRIS','Transfer'].map(m=><div key={m} className="text-[10px] text-center py-1.5 rounded-lg bg-[var(--brand)] text-[var(--on-brand)]">{m}</div>)}</div></div></AppWindow>) },
     { tag: t('STOK & EXPIRED', 'STOCK & EXPIRY'), title: t('Tak ada lagi obat kadaluarsa terbuang.', 'No more expired medicine wasted.'), body: t('Pantau batch & tanggal expired, dapat peringatan dini, lalu tindak lanjuti: musnahkan dengan Berita Acara resmi atau retur ke supplier, stok berkurang hanya setelah dikonfirmasi.', 'Track batches & expiry dates, get early alerts, then follow up: destroy with an official report or return to supplier, stock is only reduced after confirmation.'), Icon: CalendarClock,
-      visual: (<AppWindow><table className="w-full text-[11px]"><thead><tr className="text-[#9ca3af]"><th className="text-left font-medium pb-1">Batch</th><th className="text-left font-medium pb-1">Exp</th><th className="text-right font-medium pb-1">Aksi</th></tr></thead><tbody>{[['BT-2401','30 hari','#dc2626'],['BT-2312','≤60 hari','#b45309'],['BT-2408','Aman','#16a34a']].map((r,i)=>(<tr key={i} className="border-t border-[#f0ede6]"><td className="py-1.5 font-mono text-[#1c2620]">{r[0]}</td><td className="py-1.5" style={{color:r[2]}}>{r[1]}</td><td className="py-1.5 text-right"><span className="text-[10px] px-2 py-0.5 rounded bg-[#1e3a2c] text-white">Tindak Lanjut</span></td></tr>))}</tbody></table></AppWindow>) },
+      visual: (<AppWindow><table className="w-full text-[11px]"><thead><tr className="text-[var(--ink-faint)]"><th className="text-left font-medium pb-1">Batch</th><th className="text-left font-medium pb-1">Exp</th><th className="text-right font-medium pb-1">Aksi</th></tr></thead><tbody>{[['BT-2401','30 hari','#dc2626'],['BT-2312','≤60 hari','#b45309'],['BT-2408','Aman','#16a34a']].map((r,i)=>(<tr key={i} className="border-t border-[var(--line-soft)]"><td className="py-1.5 font-mono text-[var(--ink)]">{r[0]}</td><td className="py-1.5" style={{color:r[2]}}>{r[1]}</td><td className="py-1.5 text-right"><span className="text-[10px] px-2 py-0.5 rounded bg-[var(--brand)] text-[var(--on-brand)]">Tindak Lanjut</span></td></tr>))}</tbody></table></AppWindow>) },
     { tag: t('LAPORAN SIPNAP', 'SIPNAP REPORT'), title: t('Laporan SIPNAP, otomatis.', 'SIPNAP reports, automated.'), body: t('Narkotika, Psikotropika, dan Prekursor per periode, penerimaan dari pembelian, pengeluaran lengkap dengan data pasien & resep, siap cetak dengan tanda tangan Apoteker Penanggung Jawab. Hemat berjam-jam kerja manual.', 'Narcotics, Psychotropics, and Precursors per period, receipts from purchases, dispensing complete with patient & prescription data, ready to print with the Responsible Pharmacist signature. Save hours of manual work.'), Icon: BarChart2,
-      visual: (<AppWindow><div className="text-center"><p className="text-[11px] font-bold text-[#1c2620]">LAPORAN PENGGUNAAN NARKOTIKA</p><p className="text-[9px] text-[#9ca3af] mb-2">Periode: Bulan berjalan</p><div className="border border-[#e2ddd3] rounded"><div className="grid grid-cols-4 text-[8px] bg-[#f5f2eb] text-[#6b7280]"><span className="p-1 border-r border-[#e2ddd3]">Sediaan</span><span className="p-1 border-r border-[#e2ddd3]">Masuk</span><span className="p-1 border-r border-[#e2ddd3]">Keluar</span><span className="p-1">Sisa</span></div>{[['Codein 10mg','20','5','15'],['Pethidin 50ml','10','2','8']].map((r,i)=>(<div key={i} className="grid grid-cols-4 text-[8px] border-t border-[#f0ede6]">{r.map((c,j)=><span key={j} className={`p-1 ${j<3?'border-r border-[#f0ede6]':''}`}>{c}</span>)}</div>))}</div></div></AppWindow>) },
+      visual: (<AppWindow><div className="text-center"><p className="text-[11px] font-bold text-[var(--ink)]">LAPORAN PENGGUNAAN NARKOTIKA</p><p className="text-[9px] text-[var(--ink-faint)] mb-2">Periode: Bulan berjalan</p><div className="border border-[var(--line)] rounded"><div className="grid grid-cols-4 text-[8px] bg-[var(--surface-2)] text-[var(--ink-soft)]"><span className="p-1 border-r border-[var(--line)]">Sediaan</span><span className="p-1 border-r border-[var(--line)]">Masuk</span><span className="p-1 border-r border-[var(--line)]">Keluar</span><span className="p-1">Sisa</span></div>{[['Codein 10mg','20','5','15'],['Pethidin 50ml','10','2','8']].map((r,i)=>(<div key={i} className="grid grid-cols-4 text-[8px] border-t border-[var(--line-soft)]">{r.map((c,j)=><span key={j} className={`p-1 ${j<3?'border-r border-[var(--line-soft)]':''}`}>{c}</span>)}</div>))}</div></div></AppWindow>) },
     { tag: t('PEMBELIAN & KEUANGAN', 'PURCHASING & FINANCE'), title: t('Pembelian sampai bayar faktur, terpantau.', 'From purchasing to invoice payment, all tracked.'), body: t('Buat PO ke supplier, terima barang beserta batch & faktur, lalu kelola pembayaran faktur, diurutkan berdasarkan jatuh tempo, dengan pengingat yang lewat tempo dan bukti pembayaran yang bisa dicetak.', 'Create POs to suppliers, receive goods with batches & invoices, then manage invoice payments, sorted by due date, with overdue reminders and printable payment receipts.'), Icon: Receipt,
-      visual: (<AppWindow><div className="space-y-1.5">{[['INV/0087','Jatuh tempo 3 hari','#b45309'],['INV/0091','Terlambat','#dc2626'],['INV/0080','Lunas','#16a34a']].map((r,i)=>(<div key={i} className="flex items-center justify-between text-[11px] bg-white/70 border border-[#f0ede6] rounded-lg px-3 py-2"><span className="font-mono text-[#1c2620]">{r[0]}</span><span style={{color:r[2]}}>{r[1]}</span></div>))}</div></AppWindow>) },
+      visual: (<AppWindow><div className="space-y-1.5">{[['INV/0087','Jatuh tempo 3 hari','#b45309'],['INV/0091','Terlambat','#dc2626'],['INV/0080','Lunas','#16a34a']].map((r,i)=>(<div key={i} className="flex items-center justify-between text-[11px] bg-[var(--surface)]/70 border border-[var(--line-soft)] rounded-lg px-3 py-2"><span className="font-mono text-[var(--ink)]">{r[0]}</span><span style={{color:r[2]}}>{r[1]}</span></div>))}</div></AppWindow>) },
     { tag: t('ONBOARDING', 'ONBOARDING'), title: t('Pindah data lama? Cukup satu klik.', 'Migrating old data? Just one click.'), body: t('Unduh template, isi di Excel, upload CSV, daftar produk, supplier, stok awal, hingga saldo hutang langsung masuk. Client baru bisa langsung jalan tanpa input manual berhari-hari.', 'Download a template, fill it in Excel, upload the CSV, products, suppliers, opening stock, even outstanding debts come straight in. New clients get running without days of manual entry.'), Icon: Database,
-      visual: (<AppWindow><div className="grid grid-cols-2 gap-2">{['Produk','Supplier','Stok Awal','Faktur Awal'].map((t,i)=>(<div key={i} className="rounded-lg border border-[#e2ddd3] p-2.5"><Database size={14} className="text-[#2f5741] mb-1"/><p className="text-[11px] font-semibold text-[#1c2620]">{t}</p><p className="text-[9px] text-[#9ca3af]">Template + Upload CSV</p></div>))}</div></AppWindow>) },
+      visual: (<AppWindow><div className="grid grid-cols-2 gap-2">{['Produk','Supplier','Stok Awal','Faktur Awal'].map((t,i)=>(<div key={i} className="rounded-lg border border-[var(--line)] p-2.5"><Database size={14} className="text-[var(--brand-soft)] mb-1"/><p className="text-[11px] font-semibold text-[var(--ink)]">{t}</p><p className="text-[9px] text-[var(--ink-faint)]">Template + Upload CSV</p></div>))}</div></AppWindow>) },
   ]
 
   const grid = [
@@ -268,38 +268,38 @@ export default function Kenapa() {
   ]
 
   return (
-    <div className="kn-ambient min-h-screen text-[#1c2620]">
+    <div className="kn-ambient min-h-screen text-[var(--ink)]">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
       {/* Nav */}
-      <nav className="kn-nav sticky top-0 z-30 bg-white/60 border-b border-black/5">
+      <nav className="kn-nav sticky top-0 z-30 bg-[var(--surface)]/60 border-b border-black/5">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="relative w-9 h-9 rounded-xl bg-[#1e3a2c] flex items-center justify-center">
-              <FlaskConical size={18} className="text-white" /><span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-[#c2632f]" />
+            <div className="relative w-9 h-9 rounded-xl bg-[var(--brand)] flex items-center justify-center">
+              <FlaskConical size={18} className="text-white" /><span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
             </div>
-            <div className="leading-tight"><div className="font-bold text-sm">Pharmacy Store</div><div className="text-[10px] text-[#8a8f88]">by Seawise Studio</div></div>
+            <div className="leading-tight"><div className="font-bold text-sm">Sehatera</div><div className="text-[10px] text-[var(--ink-faint)]">by Seawise Studio</div></div>
           </div>
           <div className="flex items-center gap-2">
             <LangToggle />
-            <a href="/" className="hidden sm:inline text-sm font-medium text-[#1e3a2c] px-3 py-2">{t('Masuk', 'Sign In')}</a>
-            <a href="/" className="text-sm font-semibold bg-[#1e3a2c] text-white px-4 py-2 rounded-xl hover:bg-[#24462f] transition">{t('Daftarkan Apotek', 'Register Pharmacy')}</a>
+            <a href="/" className="hidden sm:inline text-sm font-medium text-[var(--brand)] px-3 py-2">{t('Masuk', 'Sign In')}</a>
+            <a href="/" className="text-sm font-semibold bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-xl hover:bg-[var(--brand-hover)] transition">{t('Daftarkan Apotek', 'Register Pharmacy')}</a>
           </div>
         </div>
       </nav>
 
       {/* Hero */}
       <header className="max-w-5xl mx-auto px-5 pt-20 sm:pt-28 pb-16 text-center">
-        <p className="reveal text-[#c2632f] text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] mb-5">{t('Sistem Manajemen Apotek', 'Pharmacy Management System')}</p>
+        <p className="reveal text-[var(--accent)] text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] mb-5">{t('Sistem Manajemen Apotek', 'Pharmacy Management System')}</p>
         <h1 className="reveal kn-headline text-4xl sm:text-6xl md:text-7xl font-bold mb-6" style={{ transitionDelay: '.05s' }}>
           {t('Apotek Anda,', 'Your pharmacy,')}<br />{t('dikelola dengan tenang.', 'managed with ease.')}
         </h1>
-        <p className="reveal text-lg sm:text-xl text-[#4b5563] max-w-2xl mx-auto mb-9" style={{ transitionDelay: '.1s' }}>
+        <p className="reveal text-lg sm:text-xl text-[var(--ink-mid)] max-w-2xl mx-auto mb-9" style={{ transitionDelay: '.1s' }}>
           {t('Dashboard analitik real-time, kasir, stok, order terpandu, kepatuhan SIPNAP, semuanya dalam satu aplikasi yang dirancang khusus untuk apotek Indonesia.', 'A real-time analytics dashboard, POS, stock, guided ordering, and SIPNAP compliance, all in one app built specifically for Indonesian pharmacies.')}
         </p>
         <div className="reveal flex items-center justify-center gap-3 mb-14" style={{ transitionDelay: '.15s' }}>
-          <a href="/" className="inline-flex items-center gap-2 bg-[#1e3a2c] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#24462f] transition">{t('Coba Sekarang', 'Try Now')} <ArrowRight size={17} /></a>
-          <a href="#harga" className="px-6 py-3 rounded-xl font-semibold border border-[#d1cdc4] hover:bg-white/60 transition">{t('Lihat Harga', 'See Pricing')}</a>
+          <a href="/" className="inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-6 py-3 rounded-xl font-semibold hover:bg-[var(--brand-hover)] transition">{t('Coba Sekarang', 'Try Now')} <ArrowRight size={17} /></a>
+          <a href="#harga" className="px-6 py-3 rounded-xl font-semibold border border-[var(--line)] hover:bg-[var(--surface)]/60 transition">{t('Lihat Harga', 'See Pricing')}</a>
         </div>
         <div className="reveal px-2 sm:px-8 pb-16" style={{ transitionDelay: '.2s' }}>
           <DeviceShowcase t={t} />
@@ -310,7 +310,7 @@ export default function Kenapa() {
       <section className="kn-dark text-white py-20 sm:py-28">
         <div className="max-w-4xl mx-auto px-5 text-center">
           <h2 className="reveal kn-headline text-3xl sm:text-5xl font-bold mb-6">{t('Mengelola apotek nggak harus ribet.', 'Managing a pharmacy should not be hard.')}</h2>
-          <p className="reveal text-[#c9d6cc] text-lg max-w-2xl mx-auto mb-12" style={{ transitionDelay: '.05s' }}>{t('Kebocoran yang diam-diam menggerus keuntungan, dan bikin repot saat audit.', 'Silent leaks that eat into profit, and cause headaches at audit time.')}</p>
+          <p className="reveal text-[var(--on-brand-soft)] text-lg max-w-2xl mx-auto mb-12" style={{ transitionDelay: '.05s' }}>{t('Kebocoran yang diam-diam menggerus keuntungan, dan bikin repot saat audit.', 'Silent leaks that eat into profit, and cause headaches at audit time.')}</p>
           <div className="grid sm:grid-cols-3 gap-5 text-left">
             {[
               [t('Obat kadaluarsa terbuang', 'Expired medicine wasted'), t('Tanpa pantauan batch & expired, stok mati jadi kerugian.', 'Without batch & expiry tracking, dead stock becomes loss.')],
@@ -319,7 +319,7 @@ export default function Kenapa() {
             ].map((p, i) => (
               <div key={i} className="reveal bg-white/[0.06] border border-white/10 rounded-2xl p-6" style={{ transitionDelay: `${i * .07}s` }}>
                 <p className="font-semibold text-lg mb-1.5">{p[0]}</p>
-                <p className="text-[#9db3a5] text-sm leading-relaxed">{p[1]}</p>
+                <p className="text-[var(--on-brand-soft)] text-sm leading-relaxed">{p[1]}</p>
               </div>
             ))}
           </div>
@@ -332,9 +332,9 @@ export default function Kenapa() {
           <div key={i} className="max-w-6xl mx-auto px-5 py-14 sm:py-20">
             <div className={`grid md:grid-cols-2 gap-10 sm:gap-14 items-center ${i % 2 ? 'md:[&>*:first-child]:order-2' : ''}`}>
               <div className="reveal">
-                <p className="text-[#c2632f] text-xs font-semibold uppercase tracking-[0.18em] mb-3">{s.tag}</p>
+                <p className="text-[var(--accent)] text-xs font-semibold uppercase tracking-[0.18em] mb-3">{s.tag}</p>
                 <h3 className="kn-headline text-3xl sm:text-4xl font-bold mb-4">{s.title}</h3>
-                <p className="text-[#4b5563] text-lg leading-relaxed">{s.body}</p>
+                <p className="text-[var(--ink-mid)] text-lg leading-relaxed">{s.body}</p>
               </div>
               <div className="reveal" style={{ transitionDelay: '.08s' }}>{s.visual}</div>
             </div>
@@ -345,13 +345,13 @@ export default function Kenapa() {
       {/* Feature grid */}
       <section className="max-w-6xl mx-auto px-5 py-16">
         <h2 className="reveal kn-headline text-3xl sm:text-5xl font-bold text-center mb-3">{t('Semua yang apotek Anda butuhkan.', 'Everything your pharmacy needs.')}</h2>
-        <p className="reveal text-center text-[#4b5563] text-lg mb-12" style={{ transitionDelay: '.05s' }}>{t('Satu langganan, seluruh operasional tercakup.', 'One subscription, all operations covered.')}</p>
+        <p className="reveal text-center text-[var(--ink-mid)] text-lg mb-12" style={{ transitionDelay: '.05s' }}>{t('Satu langganan, seluruh operasional tercakup.', 'One subscription, all operations covered.')}</p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {grid.map((g, i) => (
-            <div key={i} className="reveal bg-white/70 border border-white/60 shadow-sm rounded-2xl p-6" style={{ transitionDelay: `${(i % 3) * .06}s` }}>
-              <div className="w-11 h-11 rounded-xl bg-[#dce5db] text-[#2f5741] flex items-center justify-center mb-4"><g.Icon size={20} /></div>
+            <div key={i} className="reveal bg-[var(--surface)]/70 border border-white/60 shadow-sm rounded-2xl p-6" style={{ transitionDelay: `${(i % 3) * .06}s` }}>
+              <div className="w-11 h-11 rounded-xl bg-[var(--surface-2)] text-[var(--brand-soft)] flex items-center justify-center mb-4"><g.Icon size={20} /></div>
               <p className="font-bold text-lg mb-1">{g.title}</p>
-              <p className="text-[#6b7280] text-sm leading-relaxed">{g.d}</p>
+              <p className="text-[var(--ink-soft)] text-sm leading-relaxed">{g.d}</p>
             </div>
           ))}
         </div>
@@ -360,28 +360,28 @@ export default function Kenapa() {
       {/* Pricing */}
       <section id="harga" className="kn-dark text-white py-20 sm:py-28">
         <div className="max-w-3xl mx-auto px-5 text-center">
-          <p className="reveal text-[#e0b48f] text-xs font-semibold uppercase tracking-[0.2em] mb-4">{t('Harga', 'Pricing')}</p>
-          <h2 className="reveal kn-headline text-4xl sm:text-6xl font-bold mb-3" style={{ transitionDelay: '.05s' }}>{t('Hanya', 'Only')} Rp6.000<span className="text-[#9db3a5] text-2xl sm:text-3xl font-semibold">{t('/hari', '/day')}</span></h2>
-          <p className="reveal text-[#c9d6cc] text-lg mb-10" style={{ transitionDelay: '.1s' }}>{t('Lebih murah dari satu strip obat yang terbuang karena kadaluarsa.', 'Cheaper than a single strip of medicine wasted to expiry.')}</p>
+          <p className="reveal text-[var(--on-brand-soft)] text-xs font-semibold uppercase tracking-[0.2em] mb-4">{t('Harga', 'Pricing')}</p>
+          <h2 className="reveal kn-headline text-4xl sm:text-6xl font-bold mb-3" style={{ transitionDelay: '.05s' }}>{t('Hanya', 'Only')} Rp6.000<span className="text-[var(--on-brand-soft)] text-2xl sm:text-3xl font-semibold">{t('/hari', '/day')}</span></h2>
+          <p className="reveal text-[var(--on-brand-soft)] text-lg mb-10" style={{ transitionDelay: '.1s' }}>{t('Lebih murah dari satu strip obat yang terbuang karena kadaluarsa.', 'Cheaper than a single strip of medicine wasted to expiry.')}</p>
           <div className="reveal grid sm:grid-cols-2 gap-5 text-left" style={{ transitionDelay: '.15s' }}>
             <div className="bg-white/[0.06] border border-white/10 rounded-2xl p-7">
-              <p className="text-[#9db3a5] text-sm mb-1">{t('Bulanan', 'Monthly')}</p>
-              <p className="text-3xl font-bold mb-1">Rp216.000<span className="text-base text-[#9db3a5] font-medium">{t('/bulan', '/month')}</span></p>
-              <p className="text-[#9db3a5] text-sm">{t('Fleksibel, bisa berhenti kapan saja.', 'Flexible, cancel anytime.')}</p>
+              <p className="text-[var(--on-brand-soft)] text-sm mb-1">{t('Bulanan', 'Monthly')}</p>
+              <p className="text-3xl font-bold mb-1">Rp216.000<span className="text-base text-[var(--on-brand-soft)] font-medium">{t('/bulan', '/month')}</span></p>
+              <p className="text-[var(--on-brand-soft)] text-sm">{t('Fleksibel, bisa berhenti kapan saja.', 'Flexible, cancel anytime.')}</p>
             </div>
-            <div className="relative bg-white text-[#1c2620] rounded-2xl p-7 shadow-xl">
-              <span className="absolute -top-3 right-5 bg-[#c2632f] text-white text-xs font-semibold px-3 py-1 rounded-full">{t('Hemat 2 bulan', 'Save 2 months')}</span>
-              <p className="text-[#6b7280] text-sm mb-1">{t('Tahunan', 'Yearly')}</p>
-              <p className="text-3xl font-bold mb-1">Rp2.160.000<span className="text-base text-[#6b7280] font-medium">{t('/tahun', '/year')}</span></p>
-              <p className="text-[#16a34a] text-sm font-medium">{t('Setara Rp6.000/hari · gratis 2 bulan (hemat Rp432.000).', 'Equals Rp6,000/day · 2 months free (save Rp432,000).')}</p>
+            <div className="relative bg-[var(--surface)] text-[var(--ink)] rounded-2xl p-7 shadow-xl">
+              <span className="absolute -top-3 right-5 bg-[var(--accent)] text-white text-xs font-semibold px-3 py-1 rounded-full">{t('Hemat 2 bulan', 'Save 2 months')}</span>
+              <p className="text-[var(--ink-soft)] text-sm mb-1">{t('Tahunan', 'Yearly')}</p>
+              <p className="text-3xl font-bold mb-1">Rp2.160.000<span className="text-base text-[var(--ink-soft)] font-medium">{t('/tahun', '/year')}</span></p>
+              <p className="text-[var(--brand)] text-sm font-medium">{t('Setara Rp6.000/hari · gratis 2 bulan (hemat Rp432.000).', 'Equals Rp6,000/day · 2 months free (save Rp432,000).')}</p>
             </div>
           </div>
           <div className="reveal mt-8 space-y-2 text-left max-w-md mx-auto" style={{ transitionDelay: '.2s' }}>
             {[t('Semua fitur, tanpa batasan', 'All features, no limits'), t('Dashboard analitik & laporan real-time', 'Real-time analytics dashboard & reports'), t('Order terpandu & dwibahasa ID/EN', 'Guided ordering & bilingual ID/EN'), t('Multi-pengguna dengan hak akses', 'Multi-user with role-based access'), t('Migrasi data & pendampingan awal', 'Data migration & onboarding support'), t('Update fitur berkelanjutan', 'Continuous feature updates')].map((f, i) => (
-              <div key={i} className="flex items-center gap-2.5 text-[#e8efe9]"><Check size={16} className="text-[#8fbf7f] shrink-0" /> <span className="text-sm">{f}</span></div>
+              <div key={i} className="flex items-center gap-2.5 text-[var(--on-brand)]"><Check size={16} className="text-[var(--brand-soft)] shrink-0" /> <span className="text-sm">{f}</span></div>
             ))}
           </div>
-          <a href="/" className="reveal inline-flex items-center gap-2 mt-10 bg-white text-[#1e3a2c] px-7 py-3.5 rounded-xl font-bold hover:bg-[#f0ede6] transition" style={{ transitionDelay: '.25s' }}>
+          <a href="/" className="reveal inline-flex items-center gap-2 mt-10 bg-[var(--surface)] text-[var(--brand)] px-7 py-3.5 rounded-xl font-bold hover:bg-[var(--line-soft)] transition" style={{ transitionDelay: '.25s' }}>
             {t('Daftarkan Apotek Sekarang', 'Register Your Pharmacy Now')} <ArrowRight size={18} />
           </a>
         </div>
@@ -390,15 +390,15 @@ export default function Kenapa() {
       {/* Closing */}
       <section className="max-w-4xl mx-auto px-5 py-24 text-center">
         <h2 className="reveal kn-headline text-3xl sm:text-5xl font-bold mb-5">{t('Siap membuat apotek lebih tenang?', 'Ready for a calmer pharmacy?')}</h2>
-        <p className="reveal text-[#4b5563] text-lg mb-8" style={{ transitionDelay: '.05s' }}>{t('Mulai hari ini. Aktivasi dibantu langsung oleh tim Seawise.', 'Start today. Activation is assisted directly by the Seawise team.')}</p>
-        <a href="/" className="reveal inline-flex items-center gap-2 bg-[#1e3a2c] text-white px-7 py-3.5 rounded-xl font-bold hover:bg-[#24462f] transition">{t('Mulai Sekarang', 'Start Now')} <ArrowRight size={18} /></a>
+        <p className="reveal text-[var(--ink-mid)] text-lg mb-8" style={{ transitionDelay: '.05s' }}>{t('Mulai hari ini. Aktivasi dibantu langsung oleh tim Seawise.', 'Start today. Activation is assisted directly by the Seawise team.')}</p>
+        <a href="/" className="reveal inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-7 py-3.5 rounded-xl font-bold hover:bg-[var(--brand-hover)] transition">{t('Mulai Sekarang', 'Start Now')} <ArrowRight size={18} /></a>
       </section>
 
-      <footer className="border-t border-black/5 py-8 text-center text-sm text-[#9ca3af]">
+      <footer className="border-t border-black/5 py-8 text-center text-sm text-[var(--ink-faint)]">
         <div className="flex items-center justify-center gap-2 mb-2">
-          <FlaskConical size={16} className="text-[#1e3a2c]" /> <span className="font-semibold text-[#1c2620]">Pharmacy Store</span>
+          <FlaskConical size={16} className="text-[var(--brand)]" /> <span className="font-semibold text-[var(--ink)]">Sehatera</span>
         </div>
-        © {new Date().getFullYear()} Seawise Studio · Pharmacy Store
+        © {new Date().getFullYear()} Seawise Studio · Sehatera
       </footer>
     </div>
   )

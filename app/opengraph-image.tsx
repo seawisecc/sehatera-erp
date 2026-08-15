@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og'
 
-export const alt = 'Pharmacy Store by Seawise Studio'
+export const alt = 'Sehatera by Seawise Studio'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -41,7 +41,7 @@ export default function OpengraphImage() {
             </svg>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.5px' }}>Pharmacy Store</div>
+            <div style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.5px' }}>Sehatera</div>
             <div style={{ fontSize: 24, color: '#9db3a5' }}>by Seawise Studio</div>
           </div>
         </div>
