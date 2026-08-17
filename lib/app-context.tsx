@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from './supabase'
-import { getSessionContext, type SessionContext } from './session'
+import { getSessionContext, pesanError, KUNCI_UNDANGAN, type SessionContext } from './session'
 import { FULL_PLAN, lockedModules, type PlanFeatures } from './plan'
 import { subscriptionState, isLapsed, pesanLangganan, type SubscriptionState } from './subscription'
 import { menuItems, ROLE_PAGES } from './navigation'
@@ -128,15 +128,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       let ctx = await getSessionContext()
       if (!ctx.signedIn) { window.location.href = '/'; return }
 
-      // Pendaftaran yang tertunda karena konfirmasi email diselesaikan di sini.
+      // Pendaftaran dan undangan yang tertunda karena konfirmasi email
+      // diselesaikan di sini. Keduanya bermuara pada keadaan yang sama: orang
+      // sudah punya akun tapi belum terhubung ke apotek mana pun, karena
+      // langkah keduanya terjadi di tab yang sudah lama ditutup.
       if (!ctx.isSuper && !ctx.company) {
-        const namaApotek = (user.user_metadata as any)?.nama_apotek
-        if (namaApotek) {
+        const meta = (user.user_metadata as any) || {}
+        let token: string | null = meta.undangan_token || null
+        if (!token) { try { token = localStorage.getItem(KUNCI_UNDANGAN) } catch {} }
+
+        if (meta.nama_apotek) {
           await supabase.rpc('register_apotek', {
-            p_nama_apotek: namaApotek,
-            p_nama_admin: (user.user_metadata as any)?.nama_lengkap || '',
+            p_nama_apotek: meta.nama_apotek,
+            p_nama_admin: meta.nama_lengkap || '',
           })
           ctx = await getSessionContext()
+        } else if (token) {
+          const { error } = await supabase.rpc('terima_undangan', { p_token: token })
+          try { localStorage.removeItem(KUNCI_UNDANGAN) } catch {}
+          if (error) {
+            alert(pesanError(error))
+          } else {
+            ctx = await getSessionContext()
+          }
         }
       }
       setSession(ctx)

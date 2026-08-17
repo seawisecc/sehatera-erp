@@ -7,6 +7,7 @@ import { useLang } from '@/lib/i18n'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TH_R, TR } from '@/lib/ui'
 import { rupiah, tanggal, tanggalInput } from '@/lib/format'
+import JejakAudit from '@/components/JejakAudit'
 
 /**
  * Klien: daftar faskes yang berlangganan. Hanya untuk super admin.
@@ -31,6 +32,8 @@ export default function HalamanKlien() {
   const [tanggalAktif, setTanggalAktif] = useState('')
   const [paket, setPaket] = useState('')
   const [simpanan, setSimpanan] = useState(false)
+  const [sibuk, setSibuk] = useState(false)
+  const [tab, setTab] = useState<'daftar' | 'jejak'>('daftar')
 
   // Paket dibaca dari database, bukan dihard-code: harga dan batasnya memang
   // dirancang bisa diubah tanpa deploy ulang.
@@ -64,50 +67,49 @@ export default function HalamanKlien() {
   const batasAktif = (c: any): string | null =>
     c.status === 'trial' ? c.trial_ends_at : c.subscription_ends_at
 
+  /**
+   * Menangguhkan atau mengaktifkan apotek.
+   *
+   * Lewat `set_company_status()`, bukan UPDATE langsung dari peramban.
+   * Alasannya bukan kerapian: ini tindakan yang MEMATIKAN kasir sebuah apotek
+   * yang mungkin sedang buka, dan riwayat siapa melakukannya kapan harus ada
+   * tanpa bergantung pada peramban ingat mencatatnya.
+   */
   const ubahStatus = async (c: any) => {
     const next = c.status === 'suspended' ? 'active' : 'suspended'
     const aksi = next === 'active' ? t('Aktifkan', 'Activate') : t('Tangguhkan', 'Suspend')
-    if (!confirm(`${aksi} ${t('faskes', 'facility')} "${c.nama}"?`)) return
-    const { error } = await supabase.from('companies').update({ status: next }).eq('id', c.id)
+    const ingat = next === 'suspended'
+      ? t('\n\nKasir apotek ini langsung berhenti bisa menjual.',
+           '\n\nThis pharmacy cashier stops being able to sell immediately.')
+      : ''
+    if (!confirm(`${aksi} ${t('faskes', 'facility')} "${c.nama}"?${ingat}`)) return
+    setSibuk(true)
+    const { error } = await supabase.rpc('set_company_status', { p_company: c.id, p_status: next })
+    setSibuk(false)
     if (error) { alert(pesanError(error)); return }
-    await supabase.from('subscription_events').insert([{
-      company_id: c.id, plan_id: c.plan_id,
-      action: next === 'active' ? 'reactivate' : 'cancel',
-      actor_email: app.session?.email,
-    }])
     app.muatCompanies()
   }
 
   /**
-   * Memperpanjang masa aktif.
+   * Memperpanjang masa aktif dan mengubah paket.
    *
-   * Menulis ke `subscription_ends_at` DAN memindahkan status ke 'active'.
+   * Status ikut berpindah ke 'active', dan itu dikerjakan di dalam fungsinya.
    * Keduanya harus bergerak bersama: faskes yang statusnya masih 'trial' dibaca
    * dari `trial_ends_at`, jadi memperpanjang tanpa memindahkan status berarti
-   * tanggal barunya tidak dilihat siapa pun (lihat company_lapsed_at, migrasi 0003).
+   * tanggal barunya tidak dilihat siapa pun (lihat company_lapsed_at,
+   * migrasi 0003).
    */
   const simpan = async (tanpaBatas: boolean) => {
     if (!edit) return
     setSimpanan(true)
-    const sebelumnya = edit.plan_id
-    const payload: any = {
-      subscription_ends_at: tanpaBatas
-        ? null
-        : (tanggalAktif ? new Date(tanggalAktif + 'T23:59:59').toISOString() : null),
-      status: 'active',
-    }
-    if (paket) payload.plan_id = paket
-    const { error } = await supabase.from('companies').update(payload).eq('id', edit.id)
-    if (error) { setSimpanan(false); alert(pesanError(error)); return }
-    await supabase.from('subscription_events').insert([{
-      company_id: edit.id,
-      action: paket && paket !== sebelumnya ? 'upgrade' : 'renew',
-      plan_id: paket || sebelumnya,
-      from_plan_id: sebelumnya,
-      actor_email: app.session?.email,
-      note: tanpaBatas ? 'Masa aktif tanpa batas.' : `Diperpanjang sampai ${tanggalAktif}.`,
-    }])
+    const { error } = await supabase.rpc('set_company_plan', {
+      p_company: edit.id,
+      p_plan: paket || null,
+      p_sampai: tanpaBatas ? null : (tanggalAktif || null),
+      p_tanpa_batas: tanpaBatas,
+    })
     setSimpanan(false)
+    if (error) { alert(pesanError(error)); return }
     setEdit(null)
     app.muatCompanies()
   }
@@ -138,6 +140,21 @@ export default function HalamanKlien() {
         </p>
       </div>
 
+      <div className="flex gap-1 mb-5">
+        {([
+          { id: 'daftar', label: t('Daftar Klien', 'Client List') },
+          { id: 'jejak',  label: t('Jejak Audit', 'Audit Trail') },
+        ] as const).map(x => (
+          <button key={x.id} onClick={() => setTab(x.id)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${tab === x.id ? 'bg-[var(--brand)] text-[var(--on-brand)]' : 'text-[var(--ink-soft)] hover:bg-[var(--surface)]/60'}`}>
+            {x.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'jejak' && <JejakAudit tampilkanFaskes />}
+
+      {tab === 'daftar' && (<>
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <input
           value={cari}
@@ -217,6 +234,7 @@ export default function HalamanKlien() {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => ubahStatus(c)}
+                        disabled={sibuk}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
                           c.status === 'suspended'
                             ? 'border-green-300 text-green-700 hover:bg-green-50'
@@ -243,6 +261,7 @@ export default function HalamanKlien() {
           </tbody>
         </table>
       </div>
+      </>)}
 
       {edit && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">

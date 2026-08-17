@@ -22,6 +22,15 @@ export type SessionContext = {
   company: CompanyContext | null
 }
 
+/**
+ * Tempat token undangan dititipkan selama menunggu konfirmasi email.
+ *
+ * Ada di sini, bukan di halaman undangannya, karena yang menuliskan dan yang
+ * membacanya adalah dua halaman berbeda yang dipisah oleh satu tab yang
+ * ditutup dan satu tautan di kotak masuk.
+ */
+export const KUNCI_UNDANGAN = 'sw_undangan_token'
+
 export const SESSION_KOSONG: SessionContext = {
   signedIn: false,
   email: null,

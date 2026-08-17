@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import {
-  ChevronRight, CreditCard, LayoutGrid, LogOut, Menu, Settings, ShieldCheck, X, AlertTriangle,
+  AlertTriangle, ChevronRight, CreditCard, Eye, LayoutGrid, LogOut, Menu, Settings, ShieldCheck, X,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
@@ -72,6 +72,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="sw-ambient min-h-screen">
+      {/* ══ SPANDUK MENGINTIP ══
+          Super admin yang sedang "melihat sebagai" satu apotek memegang data
+          orang lain, dan setiap tombol simpan di layar itu menulis ke apotek
+          itu, bukan ke miliknya. Selama ini keadaan itu hanya ditandai oleh
+          satu dropdown kecil di topbar yang mudah luput, terutama sesudah
+          beberapa kali pindah halaman. Spanduk ini menempel di paling atas,
+          tidak bisa ditutup, dan membawa jalan keluarnya sendiri. */}
+      {app.isSuper && app.superViewCompany && (
+        <div
+          role="status"
+          className="sticky top-0 z-40 flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 bg-amber-500 text-amber-950"
+        >
+          <Eye size={15} className="shrink-0" />
+          <p className="text-sm font-semibold">
+            {t('Kamu sedang melihat sebagai', 'You are viewing as')} {app.namaFaskes}
+          </p>
+          <p className="text-xs opacity-80">
+            {t('Semua yang kamu simpan masuk ke apotek ini, bukan ke akunmu.',
+               'Everything you save goes to this pharmacy, not to your own account.')}
+          </p>
+          <button
+            onClick={() => app.setSuperViewCompany('')}
+            className="ml-auto shrink-0 px-3 py-1 rounded-lg bg-amber-950/15 hover:bg-amber-950/25 text-xs font-semibold transition"
+          >
+            {t('Keluar dari tampilan ini', 'Exit this view')}
+          </button>
+        </div>
+      )}
+
       {/* ── Topbar mobile ── */}
       <div className="md:hidden sticky top-0 z-30 flex items-center gap-3 h-14 px-4 bg-[var(--brand)] text-[var(--on-brand)]">
         <button onClick={() => setMobileNavOpen(true)} aria-label="Menu"><Menu size={22} /></button>
@@ -172,7 +201,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           <Settings size={15} /> {t('Pengaturan', 'Settings')}
                         </Link>
                       )}
-                      <Link href="/pengaturan/langganan" className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--ink-mid)] hover:bg-[var(--surface-2)]">
+                      <Link href="/pengaturan?tab=langganan" className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--ink-mid)] hover:bg-[var(--surface-2)]">
                         <CreditCard size={15} /> {t('Langganan', 'Subscription')}
                       </Link>
                       <button onClick={keluar} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--accent)] hover:bg-[var(--surface-2)] text-left border-t border-[var(--line-soft)]">
@@ -200,7 +229,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <p className="text-sm font-semibold">{banner.judul}</p>
                   <p className="text-xs mt-0.5 leading-relaxed opacity-90">{banner.isi}</p>
                 </div>
-                <Link href="/pengaturan/langganan" className="ml-auto shrink-0 self-center text-xs font-semibold underline underline-offset-2 whitespace-nowrap">
+                <Link href="/pengaturan?tab=langganan" className="ml-auto shrink-0 self-center text-xs font-semibold underline underline-offset-2 whitespace-nowrap">
                   {t('Lihat langganan', 'View subscription')}
                 </Link>
               </div>

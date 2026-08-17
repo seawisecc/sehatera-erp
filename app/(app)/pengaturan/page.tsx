@@ -4,14 +4,16 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowLeft, Building2, Check, ChevronRight, CreditCard, Database,
-  LayoutGrid, Pencil, ShieldCheck, Trash2, Upload, UserPlus, Users,
+  LayoutGrid, Pencil, ScrollText, Send, ShieldCheck, Trash2, Upload, UserPlus, Users,
 } from 'lucide-react'
-import { supabase, createSignupClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
 import { useTheme, ThemePicker } from '@/lib/theme'
 import { pesanError } from '@/lib/session'
 import { menuItems, ROLE_PAGES } from '@/lib/navigation'
+import { tanggal } from '@/lib/format'
+import JejakAudit from '@/components/JejakAudit'
 
 /**
  * Pengaturan: profil apotek, pengguna, data apoteker, tampilan, langganan.
@@ -31,7 +33,7 @@ import { menuItems, ROLE_PAGES } from '@/lib/navigation'
  * 3. Nonaktifkan dan hapus pengguna tidak pernah melaporkan kegagalan.
  */
 
-const TAB_SAH = ['profil', 'pengguna', 'apoteker', 'tampilan', 'langganan'] as const
+const TAB_SAH = ['profil', 'pengguna', 'apoteker', 'tampilan', 'langganan', 'jejak'] as const
 type Tab = typeof TAB_SAH[number]
 
 export default function HalamanPengaturan() {
@@ -52,6 +54,9 @@ export default function HalamanPengaturan() {
   const [savingUser, setSavingUser] = useState(false)
   const [kuota, setKuota] = useState<any>(null)
   const [sibuk, setSibuk] = useState(false)
+  const [undangan, setUndangan] = useState<any[]>([])
+  const [undanganBaru, setUndanganBaru] = useState<{ tautan: string; email: string } | null>(null)
+  const [tersalin, setTersalin] = useState(false)
 
   const scope = app.scope
 
@@ -112,33 +117,53 @@ export default function HalamanPengaturan() {
     setShowUserForm(true)
   }
 
-  const handleTambahUser = async () => {
-    if (!userForm.nama.trim() || !userForm.email.trim() || !userForm.password) {
-      alert(t('Email, kata sandi, dan nama wajib diisi.', 'Email, password, and name are required.')); return
-    }
-    if (userForm.password.length < 6) { alert(t('Kata sandi minimal 6 karakter.', 'Password must be at least 6 characters.')); return }
+  /**
+   * Mengundang anggota tim.
+   *
+   * Menggantikan cara lama, yaitu pemilik mengetik kata sandi awal orang itu
+   * lalu memberitahukannya. Sejak itu pemilik mengetahui kata sandi kasirnya,
+   * dan biasanya kata sandi itu tidak pernah diganti; setiap transaksi atas
+   * nama kasir jadi tidak membuktikan siapa yang menyerahkan obat. Untuk
+   * apotek yang menjual narkotika dan psikotropika itu bukan detail sepele.
+   */
+  const handleUndang = async () => {
+    if (!userForm.email.trim()) { alert(t('Email wajib diisi.', 'Email is required.')); return }
     setSavingUser(true)
-    // Akun login dibuat lewat client terpisah supaya sesi admin yang sedang
-    // membuka halaman ini tidak ikut berganti ke akun baru.
-    const tmp = createSignupClient()
-    const { error: authErr } = await tmp.auth.signUp({
-      email: userForm.email.trim(),
-      password: userForm.password,
-      options: { data: { nama_lengkap: userForm.nama.trim() } },
+    const { data, error } = await supabase.rpc('buat_undangan', {
+      p_email: userForm.email.trim(),
+      p_nama: userForm.nama.trim() || null,
+      p_role: userForm.role,
+      p_modules: userForm.modules,
     })
-    if (authErr && !/already registered|already been registered/i.test(authErr.message)) {
-      setSavingUser(false); alert(t('Gagal membuat akun login: ', 'Failed to create the login account: ') + authErr.message); return
-    }
-    const { error } = await supabase.from('app_users').insert([{
-      nama: userForm.nama.trim(), email: userForm.email.trim().toLowerCase(),
-      role: userForm.role, status: 'aktif', modules: userForm.modules, ...app.cid(),
-    }])
     setSavingUser(false)
-    if (error) { alert(t('Akun login dibuat, tapi datanya gagal disimpan: ', 'Login account created, but its data failed to save: ') + pesanError(error)); return }
+    if (error) { alert(pesanError(error)); return }
+
+    // Tokennya hanya dikembalikan SEKALI, karena sesudah ini yang tersimpan di
+    // database cuma sidiknya. Jadi tautannya ditampilkan sekarang, bukan nanti.
+    const tautan = `${window.location.origin}/undangan/${(data as any).token}`
+    setUndanganBaru({ tautan, email: (data as any).email })
     setShowUserForm(false)
-    fetchUsers()
-    alert(t('Pengguna dibuat. Ia bisa langsung masuk dengan email dan kata sandi itu.',
-            'User created. They can sign in immediately with that email and password.'))
+    muatUndangan()
+  }
+
+  const muatUndangan = useCallback(async () => {
+    const { data } = await scope(supabase.from('invitations')
+      .select('*')
+      .is('accepted_at', null)
+      .is('revoked_at', null)
+      .order('created_at', { ascending: false }))
+    setUndangan(data || [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [app.superViewCompany])
+
+  useEffect(() => { muatUndangan() }, [muatUndangan])
+
+  const cabutUndangan = async (u: any) => {
+    if (!confirm(t(`Cabut undangan untuk ${u.email}? Tautannya langsung tidak bisa dipakai.`,
+                   `Revoke the invitation for ${u.email}? The link stops working immediately.`))) return
+    const { error } = await supabase.rpc('cabut_undangan', { p_id: u.id })
+    if (error) { alert(pesanError(error)); return }
+    muatUndangan()
   }
 
   const handleUpdateUser = async () => {
@@ -190,6 +215,7 @@ export default function HalamanPengaturan() {
     { id: 'apoteker',  label: t('Data Apoteker', 'Pharmacist Data'),    desc: t('SIA, SIPA, penanggung jawab', 'SIA, SIPA, responsible person'), Icon: ShieldCheck },
     { id: 'tampilan',  label: t('Tampilan', 'Appearance'),              desc: t('Tema warna aplikasi', 'App colour theme'),                  Icon: LayoutGrid },
     { id: 'langganan', label: t('Langganan', 'Subscription'),           desc: t('Paket, masa aktif, kuota', 'Plan, validity, quota'),        Icon: CreditCard },
+    { id: 'jejak',     label: t('Jejak Audit', 'Audit Trail'),          desc: t('Siapa melakukan apa, kapan', 'Who did what, and when'),      Icon: ScrollText },
   ]
 
   return (
@@ -229,6 +255,17 @@ export default function HalamanPengaturan() {
         </div>
 
         <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-[var(--line)] shadow-sm rounded-2xl p-6">
+                  {tab === 'jejak' && (
+                    <div>
+                      <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Jejak Audit', 'Audit Trail')}</h2>
+                      <p className="text-sm text-[var(--ink-soft)] mb-6 leading-relaxed">
+                        {t('Tindakan yang tidak bisa dibatalkan, dan siapa yang melakukannya. Dicatat oleh database saat kejadiannya berlangsung, bukan oleh aplikasi sesudahnya, jadi tidak ada cara melewatinya.',
+                           'Irreversible actions, and who performed them. Recorded by the database as they happen rather than by the app afterwards, so there is no way to skip it.')}
+                      </p>
+                      <JejakAudit />
+                    </div>
+                  )}
+
                   {/* TAMPILAN: tema warna */}
                   {tab === 'tampilan' && (
                     <div>
@@ -466,17 +503,16 @@ export default function HalamanPengaturan() {
                     if (showUserForm) return (
                       <div>
                         <button onClick={() => setShowUserForm(false)} className="inline-flex items-center gap-1.5 text-sm text-[var(--ink-soft)] hover:text-[var(--brand)] mb-3"><ArrowLeft size={15} /> {t('Kembali ke Pengguna', 'Back to Users')}</button>
-                        <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Tambah Pengguna', 'Add User')}</h2>
-                        <p className="text-sm text-[var(--ink-soft)] mb-5">{t('User baru langsung bisa login dengan email & password ini.', 'The new user can sign in immediately with this email & password.')}</p>
+                        <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Undang Anggota Tim', 'Invite a Team Member')}</h2>
+                        <p className="text-sm text-[var(--ink-soft)] mb-5 leading-relaxed">
+                          {t('Kamu membuat tautan undangan, dan yang diundang menentukan kata sandinya sendiri. Kamu tidak akan mengetahuinya, dan memang tidak seharusnya: selama kata sandi kasir diketahui orang lain, transaksi atas namanya tidak membuktikan siapa yang menyerahkan obat.',
+                             'You create an invitation link and the invitee sets their own password. You will not know it, and should not: while someone else knows a cashier password, a sale under their name proves nothing about who handed over the medicine.')}
+                        </p>
                         <div className="space-y-5">
                           <div className="border border-[var(--line)] rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                               <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">Email</label>
                               <input type="email" value={userForm.email} onChange={e => setUserForm({...userForm, email: e.target.value})} placeholder="nama@apotek.com" className={inputCls} />
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">{t('Password Awal', 'Initial Password')}</label>
-                              <input type="text" value={userForm.password} onChange={e => setUserForm({...userForm, password: e.target.value})} placeholder={t('Minimal 6 karakter', 'At least 6 characters')} className={inputCls} />
                             </div>
                             <div>
                               <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">{t('Nama', 'Name')}</label>
@@ -497,9 +533,9 @@ export default function HalamanPengaturan() {
                             onToggle={(id) => toggleFormModule('new', id)}
                             onClear={() => setUserForm({...userForm, modules: []})}
                             onAll={() => setUserForm({...userForm, modules: menuItems.map(m => m.id)})} />
-                          <button onClick={handleTambahUser} disabled={savingUser}
+                          <button onClick={handleUndang} disabled={savingUser}
                             className="w-full bg-[var(--brand)] text-[var(--on-brand)] py-3 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                            {savingUser ? t('Membuat…', 'Creating…') : t('Buat Pengguna', 'Create User')}
+                            {savingUser ? t('Membuat undangan…', 'Creating the invitation…') : t('Buat Tautan Undangan', 'Create Invitation Link')}
                           </button>
                         </div>
                       </div>
@@ -557,10 +593,83 @@ export default function HalamanPengaturan() {
                         <h2 className="text-xl font-bold text-[var(--ink)]">{t('Manajemen pengguna', 'User management')}</h2>
                         <button onClick={openTambahUser}
                           className="inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">
-                          <UserPlus size={15} /> {t('Tambah Pengguna', 'Add User')}
+                          <UserPlus size={15} /> {t('Undang Anggota', 'Invite Member')}
                         </button>
                       </div>
                       <p className="text-sm text-[var(--ink-soft)] mb-5">{t('Atur anggota tim apotek beserta hak akses modul masing-masing.', 'Manage pharmacy team members and their module access.')}</p>
+
+                      {/* Tautan undangan hanya bisa ditampilkan SEKALI: yang
+                          tersimpan di database cuma sidiknya, jadi tidak ada
+                          cara memunculkannya lagi nanti. Kotak ini bertahan
+                          sampai ditutup sendiri, bukan hilang setelah beberapa
+                          detik. */}
+                      {undanganBaru && (
+                        <div className="mb-5 rounded-2xl border border-green-300 bg-green-50 p-4">
+                          <p className="text-sm font-semibold text-green-900 mb-1">
+                            {t('Undangan untuk', 'Invitation for')} {undanganBaru.email} {t('sudah dibuat.', 'created.')}
+                          </p>
+                          <p className="text-xs text-green-800 mb-3 leading-relaxed">
+                            {t('Salin tautan ini dan kirim sendiri lewat WhatsApp atau email. Tautannya hanya bisa dilihat sekarang: yang tersimpan di database cuma sidiknya, jadi kalau kotak ini ditutup, tautannya tidak bisa dimunculkan lagi. Buat undangan baru kalau terlanjur hilang.',
+                               'Copy this link and send it yourself over WhatsApp or email. It can only be seen now: the database keeps only its fingerprint, so once this box closes the link cannot be shown again. Create a new invitation if it gets lost.')}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <input readOnly value={undanganBaru.tautan}
+                              onFocus={e => e.currentTarget.select()}
+                              className="flex-1 min-w-[16rem] border border-green-300 bg-white rounded-lg px-3 py-2 text-xs num" />
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await navigator.clipboard.writeText(undanganBaru.tautan)
+                                  setTersalin(true); setTimeout(() => setTersalin(false), 2000)
+                                } catch {
+                                  alert(t('Peramban menolak menyalin. Pilih teksnya lalu salin sendiri.',
+                                          'The browser refused to copy. Select the text and copy it manually.'))
+                                }
+                              }}
+                              className="px-3 py-2 rounded-lg bg-green-700 text-white text-xs font-medium hover:bg-green-800 transition">
+                              {tersalin ? t('Tersalin', 'Copied') : t('Salin', 'Copy')}
+                            </button>
+                            <button onClick={() => setUndanganBaru(null)}
+                              className="px-3 py-2 rounded-lg border border-green-300 text-green-800 text-xs font-medium hover:bg-green-100 transition">
+                              {t('Tutup', 'Close')}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {undangan.length > 0 && (
+                        <div className="mb-5 border border-[var(--line)] rounded-xl overflow-hidden">
+                          <div className="px-4 py-2.5 bg-[var(--surface-2)] flex items-center gap-2">
+                            <Send size={14} className="text-[var(--ink-soft)]" />
+                            <p className="text-xs font-semibold text-[var(--ink-soft)] uppercase tracking-wide">
+                              {t('Undangan menunggu dijawab', 'Invitations awaiting a reply')} ({undangan.length})
+                            </p>
+                          </div>
+                          <div className="divide-y divide-[var(--line-soft)]">
+                            {undangan.map((u: any) => {
+                              const lewat = new Date(u.expires_at) <= new Date()
+                              return (
+                                <div key={u.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium text-[var(--ink)] truncate">{u.email}</p>
+                                    <p className="text-xs text-[var(--ink-faint)]">
+                                      {roleLabels[u.role] || u.role} ·{' '}
+                                      <span className={lewat ? 'text-red-600 font-medium' : ''}>
+                                        {lewat ? t('sudah kedaluwarsa', 'expired')
+                                               : `${t('berlaku sampai', 'valid until')} ${tanggal(u.expires_at)}`}
+                                      </span>
+                                    </p>
+                                  </div>
+                                  <button onClick={() => cabutUndangan(u)}
+                                    className="px-2.5 py-1 rounded-lg border border-[var(--line)] text-[var(--ink-soft)] text-xs font-medium hover:bg-[var(--surface-2)] transition">
+                                    {t('Cabut', 'Revoke')}
+                                  </button>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
                       {users.length === 0 ? (
                         <div className="text-center py-12 text-sm text-[var(--ink-faint)]">
                           <Users size={32} className="mx-auto mb-2 text-[var(--ink-faint)]" />
