@@ -63,19 +63,13 @@ export default function Dashboard() {
   const [bayar, setBayar] = useState(0)
   const [metodeBayar, setMetodeBayar] = useState('Tunai')
   const [pasienForm, setPasienForm] = useState({ nama_pasien: '', alamat_pasien: '', kontak_pasien: '', nomor_resep: '' })
-  const [laporanTab, setLaporanTab] = useState<'penjualan'|'metode'|'sipnap'>('penjualan')
   // Filter kolom produk
   const [filterKategori, setFilterKategori] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterStok, setFilterStok] = useState('')
   // Filter laporan penjualan / metode bayar
-  const [lapDari, setLapDari] = useState('')
-  const [lapSampai, setLapSampai] = useState('')
-  const [lapMetode, setLapMetode] = useState('')
-  const [lapStatus, setLapStatus] = useState('')
   // Kasir: tandai transaksi resep
   const [isResep, setIsResep] = useState(false)
-  const [sipnapForm, setSipnapForm] = useState({ golongan: 'narkotika', bulan: new Date().getMonth() + 1, tahun: new Date().getFullYear() })
   const [importInfo, setImportInfo] = useState<Record<string, string>>({})
   const [importing, setImporting] = useState<string | null>(null)
   const [migrasiCompany, setMigrasiCompany] = useState('')
@@ -83,7 +77,6 @@ export default function Dashboard() {
   const [showStruk, setShowStruk] = useState(false)
   const [lastTrx, setLastTrx] = useState<any>(null)
   const [lastItems, setLastItems] = useState<any[]>([])
-  const [riwayat, setRiwayat] = useState<any[]>([])
   const [settingsData, setSettingsData] = useState<any>({
     nama_apotek: '', alamat: '', nomor_ijin: '', nomor_telepon: ''
   })
@@ -135,7 +128,6 @@ export default function Dashboard() {
   useEffect(() => { fetchSettings() }, [])
   useEffect(() => { if (activePage === 'tindaklanjut') { fetchRiwayatMusnah(); fetchRiwayatRetur() } }, [activePage])
   useEffect(() => { if (activePage === 'produk') { fetchProducts(); fetchExpiredAlerts() } }, [activePage])
-  useEffect(() => { if (activePage === 'laporan') fetchRiwayat() }, [activePage])
   // Kasir masih memerlukan daftar layanan untuk dijual. Selama halaman ini
   // belum ikut pindah, ia mengambilnya sendiri.
   const [services, setServices] = useState<any[]>([])
@@ -154,7 +146,6 @@ export default function Dashboard() {
     fetchSettings()
     if (activePage === 'produk') { fetchProducts(); fetchExpiredAlerts() }
     else if (activePage === 'pembelian') fetchPOList()
-    else if (activePage === 'laporan') fetchRiwayat()
     else if (activePage === 'tindaklanjut') { fetchRiwayatMusnah(); fetchRiwayatRetur() }
     else if (activePage === 'pengaturan') fetchUsers()
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -305,8 +296,6 @@ export default function Dashboard() {
   const [guidedStep, setGuidedStep] = useState(1)
   const [guidedItems, setGuidedItems] = useState<any[]>([])
   const [guidedLoading, setGuidedLoading] = useState(false)
-  const [showTrxDetail, setShowTrxDetail] = useState<any>(null)
-  const [trxDetailItems, setTrxDetailItems] = useState<any[]>([])
 
   // Faktur States
   const [fakturForm, setFakturForm] = useState({ nomor_faktur: '', tanggal_faktur: new Date().toISOString().split('T')[0], term_of_payment: 30 })
@@ -943,121 +932,6 @@ const batalRetur = async (row: any) => {
     }))
   }
 
-  const fetchRiwayat = async () => {
-    const { data } = await scopeQ(supabase.from('transactions').select('*').order('created_at', { ascending: false }))
-    setRiwayat(data || [])
-  }
-
-  const cetakSIPNAP = async () => {
-    const { golongan, bulan, tahun } = sipnapForm
-    const monthStart = new Date(tahun, bulan - 1, 1)
-    const monthEnd = new Date(tahun, bulan, 1)
-    const inMonth = (d: any) => { const t = new Date(d); return t >= monthStart && t < monthEnd }
-    const before = (d: any) => new Date(d) < monthStart
-    const fmt = (d: any) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''
-    const fmtED = (d: any) => d ? new Date(d).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }) : '-'
-
-    const { data: prods } = await scopeQ(supabase.from('products').select('*').eq('kategori', golongan).order('nama_obat'))
-    if (!prods || prods.length === 0) { alert(t('Belum ada produk berkategori ', 'No products in category ') + golongan + '.'); return }
-    const ids = prods.map((p: any) => p.id)
-
-    const { data: penerimaan } = await supabase.from('po_items')
-      .select('product_id, qty_terima, purchase_orders(tanggal_terima, suppliers(nama_supplier))').in('product_id', ids)
-    const { data: pengeluaran } = await supabase.from('transaction_items')
-      .select('product_id, jumlah, transactions(created_at, nama_pasien, alamat_pasien, kontak_pasien, nomor_resep, status)').in('product_id', ids)
-    const { data: batches } = await supabase.from('product_batches')
-      .select('product_id, batch_number, expired_date').in('product_id', ids)
-
-    let rowsHtml = ''
-    prods.forEach((p: any, idx: number) => {
-      const recAll = (penerimaan || []).filter((r: any) => r.product_id === p.id && r.purchase_orders?.tanggal_terima)
-      const outAll = (pengeluaran || []).filter((r: any) => r.product_id === p.id && r.transactions?.status !== 'dibatalkan' && r.transactions?.created_at)
-
-      const awal = recAll.filter((r: any) => before(r.purchase_orders.tanggal_terima)).reduce((a: number, r: any) => a + (r.qty_terima || 0), 0)
-                 - outAll.filter((r: any) => before(r.transactions.created_at)).reduce((a: number, r: any) => a + (r.jumlah || 0), 0)
-
-      const recMonth = recAll.filter((r: any) => inMonth(r.purchase_orders.tanggal_terima))
-        .map((r: any) => ({ tgl: fmt(r.purchase_orders.tanggal_terima), sumber: r.purchase_orders?.suppliers?.nama_supplier || '-', jml: r.qty_terima || 0 }))
-      const outMonth = outAll.filter((r: any) => inMonth(r.transactions.created_at))
-        .map((r: any) => ({
-          tgl: fmt(r.transactions.created_at), resep: r.transactions?.nomor_resep || '-',
-          pasien: [r.transactions?.nama_pasien, r.transactions?.alamat_pasien, r.transactions?.kontak_pasien].filter(Boolean).join(' / ') || '-',
-          jml: r.jumlah || 0,
-        }))
-
-      const masuk = recMonth.reduce((a: number, r: any) => a + r.jml, 0)
-      const keluar = outMonth.reduce((a: number, r: any) => a + r.jml, 0)
-      const totalP = awal + masuk
-      const akhir = totalP - keluar
-      const batchStr = (batches || []).filter((b: any) => b.product_id === p.id).map((b: any) => `${b.batch_number || '-'} (ED ${fmtED(b.expired_date)})`).join('<br>') || '-'
-
-      const n = Math.max(recMonth.length, outMonth.length, 1)
-      for (let i = 0; i < n; i++) {
-        const rec = recMonth[i]; const out = outMonth[i]
-        rowsHtml += '<tr>'
-        if (i === 0) {
-          rowsHtml += `<td rowspan="${n}" class="c">${idx + 1}</td><td rowspan="${n}" class="l">${p.nama_obat}</td><td rowspan="${n}" class="c">${p.satuan || ''}</td><td rowspan="${n}" class="c">${awal}</td>`
-        }
-        rowsHtml += `<td class="c">${rec ? rec.tgl : ''}</td><td class="l">${rec ? rec.sumber : ''}</td><td class="c">${rec ? rec.jml : ''}</td>`
-        if (i === 0) rowsHtml += `<td rowspan="${n}" class="c">${totalP}</td>`
-        rowsHtml += `<td class="c">${out ? out.tgl + '<br>' + out.resep : ''}</td><td class="l">${out ? out.pasien : ''}</td><td class="c">${out ? out.jml : ''}</td>`
-        if (i === 0) rowsHtml += `<td rowspan="${n}" class="c">${akhir}</td><td rowspan="${n}" class="l">${batchStr}</td>`
-        rowsHtml += '</tr>'
-      }
-    })
-
-    const namaBulan = new Date(tahun, bulan - 1, 1).toLocaleDateString('id-ID', { month: 'long' })
-    const judul = golongan === 'narkotika' ? 'NARKOTIKA' : golongan === 'psikotropika' ? 'PSIKOTROPIKA' : 'PREKURSOR'
-    const tglCetak = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-    const win = window.open('', '_blank', 'width=1200,height=800')
-    win?.document.write(`<html><head><title>Laporan SIPNAP ${judul} ${namaBulan} ${tahun}</title><style>
-      @page { size: A4 landscape; margin: 12mm; }
-      *{box-sizing:border-box;} body{font-family:Arial,sans-serif;font-size:11px;color:#000;padding:10px;}
-      h1{text-align:center;font-size:15px;margin-bottom:16px;}
-      .info td{padding:1px 4px;font-size:11px;}
-      table.rep{width:100%;border-collapse:collapse;margin-top:8px;}
-      table.rep th, table.rep td{border:1px solid #000;padding:3px 5px;font-size:10px;}
-      table.rep th{text-align:center;font-weight:bold;}
-      .c{text-align:center;} .l{text-align:left;}
-      .sign{margin-top:40px;width:100%;}
-      .sign .box{width:280px;float:right;text-align:center;}
-      .sign .nm{font-weight:bold;text-decoration:underline;margin-top:56px;}
-    </style></head><body>
-      <h1>LAPORAN PENGGUNAAN ${judul}</h1>
-      <table class="info">
-        <tr><td>Nama Sarana</td><td>: ${settingsData.nama_apotek || '-'}</td></tr>
-        <tr><td>Alamat</td><td>: ${settingsData.alamat || '-'}</td></tr>
-        <tr><td>Bulan/Tahun</td><td>: ${namaBulan} ${tahun}</td></tr>
-      </table>
-      <table class="rep">
-        <thead>
-          <tr>
-            <th rowspan="2">No</th><th rowspan="2">Nama Sediaan</th><th rowspan="2">Satuan</th><th rowspan="2">Persediaan Awal</th>
-            <th colspan="3">Penerimaan</th>
-            <th rowspan="2">Total Persediaan</th>
-            <th colspan="3">Pengeluaran</th>
-            <th rowspan="2">Persediaan Akhir Bulan</th>
-            <th rowspan="2">No. Batch &amp; ED</th>
-          </tr>
-          <tr>
-            <th>Tanggal</th><th>Sumber</th><th>Jumlah</th>
-            <th>Tanggal/No. Resep</th><th>Nama /Alamat Pasien</th><th>Jumlah</th>
-          </tr>
-        </thead>
-        <tbody>${rowsHtml}</tbody>
-      </table>
-      <div class="sign">
-        <div class="box">
-          <p>${settingsData.kota || ''}${settingsData.kota ? ', ' : ''}${tglCetak}</p>
-          <p>Penanggung Jawab Farmasi</p>
-          <p class="nm">${settingsData.nama_apoteker || '-'}</p>
-          <p>SIPA: ${settingsData.nomor_sipa || '-'}</p>
-        </div>
-      </div>
-    </body></html>`)
-    win?.document.close(); win?.print()
-  }
-
   const fetchSuppliers = async () => {
     const { data } = await scopeQ(supabase.from('suppliers').select('*').order('kode'))
     setSuppliers(data || [])
@@ -1103,16 +977,6 @@ const batalRetur = async (row: any) => {
       if (filterStok === 'minim' && !(stok > 0 && stok <= min)) return false
       if (filterStok === 'aman' && !(stok > min)) return false
     }
-    return true
-  })
-
-  // Filter laporan penjualan (dipakai tab Penjualan & Metode Bayar)
-  const riwayatFiltered = riwayat.filter(x => {
-    const d = (x.created_at || '').split('T')[0]
-    if (lapDari && d < lapDari) return false
-    if (lapSampai && d > lapSampai) return false
-    if (lapMetode && (x.metode_bayar || 'Tunai') !== lapMetode) return false
-    if (lapStatus && (x.status || 'selesai') !== lapStatus) return false
     return true
   })
 
@@ -1686,72 +1550,6 @@ const batalRetur = async (row: any) => {
                 Simpan Perubahan
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Detail Transaksi */}
-      {showTrxDetail && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-[var(--brand)]">{t('Detail Transaksi', 'Transaction Details')}</h2>
-                <p className="text-xs text-[var(--ink-soft)]">{showTrxDetail.nomor_transaksi}</p>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                showTrxDetail.status === 'dibatalkan' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'
-              }`}>{showTrxDetail.status === 'dibatalkan' ? t('dibatalkan', 'cancelled') : (showTrxDetail.status || t('selesai', 'completed'))}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-4 p-4 bg-[var(--surface-2)] rounded-xl text-sm">
-              <div>
-                <p className="text-xs text-[var(--ink-soft)] mb-0.5">{t('Waktu', 'Time')}</p>
-                <p className="font-medium text-[var(--brand)]">{new Date(showTrxDetail.created_at).toLocaleString('id-ID')}</p>
-              </div>
-              <div>
-                <p className="text-xs text-[var(--ink-soft)] mb-0.5">Total</p>
-                <p className="font-bold text-[var(--brand)]">Rp {showTrxDetail.total?.toLocaleString('id-ID')}</p>
-              </div>
-              <div>
-                <p className="text-xs text-[var(--ink-soft)] mb-0.5">{t('Bayar', 'Paid')}</p>
-                <p className="font-medium text-[var(--brand)]">Rp {showTrxDetail.bayar?.toLocaleString('id-ID')}</p>
-              </div>
-              <div>
-                <p className="text-xs text-[var(--ink-soft)] mb-0.5">{t('Kembalian', 'Change')}</p>
-                <p className="font-medium text-[var(--brand)]">Rp {showTrxDetail.kembalian?.toLocaleString('id-ID')}</p>
-              </div>
-            </div>
-
-            <table className="w-full text-sm mb-4">
-              <thead>
-                <tr className="bg-[var(--brand)]">
-                  <th className="text-left px-3 py-2 text-xs text-[var(--on-brand)]">{t('Produk', 'Product')}</th>
-                  <th className="text-center px-3 py-2 text-xs text-[var(--on-brand)]">Qty</th>
-                  <th className="text-right px-3 py-2 text-xs text-[var(--on-brand)]">{t('Harga', 'Price')}</th>
-                  <th className="text-right px-3 py-2 text-xs text-[var(--on-brand)]">Subtotal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {trxDetailItems.map((item, i) => (
-                  <tr key={i} className={TR}>
-                    <td className="px-3 py-2 font-medium text-[var(--brand)]">{item.nama_obat}</td>
-                    <td className="px-3 py-2 text-center text-[var(--ink-soft)]">{item.jumlah}</td>
-                    <td className="px-3 py-2 text-right text-[var(--ink-soft)]">Rp {item.harga_jual?.toLocaleString('id-ID')}</td>
-                    <td className="px-3 py-2 text-right font-medium text-[var(--brand)]">Rp {item.subtotal?.toLocaleString('id-ID')}</td>
-                  </tr>
-                ))}
-                <tr className="border-t-2 border-[var(--brand)] bg-[var(--surface-2)]">
-                  <td colSpan={3} className="px-3 py-2 font-bold text-sm text-[var(--brand)]">TOTAL</td>
-                  <td className="px-3 py-2 text-right font-bold text-[var(--brand)]">
-                    Rp {trxDetailItems.reduce((a, b) => a + (b.subtotal || 0), 0).toLocaleString('id-ID')}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            <button onClick={() => { setShowTrxDetail(null); setTrxDetailItems([]) }}
-              className="w-full border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">{t('Tutup', 'Close')}</button>
           </div>
         </div>
       )}
@@ -3193,363 +2991,6 @@ const batalRetur = async (row: any) => {
               </div>
             </div>
           )}
-
-          {/* LAPORAN */}
-          {activePage === 'laporan' && (
-            <div>
-              <h1 className="text-3xl font-bold text-[var(--ink)] mb-1">{t('Laporan', 'Reports')}</h1>
-              <p className="text-[var(--ink-soft)] text-sm mb-5">{t('Laporan penjualan & laporan SIPNAP (Narkotika/Psikotropika/Prekursor)', 'Sales reports & SIPNAP reports (Narcotics/Psychotropics/Precursors)')}</p>
-
-              <div className="flex gap-1 mb-5">
-                {([{id:'penjualan',label:t('Penjualan','Sales')},{id:'metode',label:t('Metode Bayar','Payment Methods')},{id:'sipnap',label:'SIPNAP'}] as const).map(tab => (
-                  <button key={tab.id} onClick={() => setLaporanTab(tab.id)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition ${laporanTab === tab.id ? 'bg-[var(--brand)] text-[var(--on-brand)]' : 'text-[var(--ink-soft)] hover:bg-[var(--surface)]/60'}`}>
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Filter bar (Penjualan & Metode Bayar) */}
-              {(laporanTab === 'penjualan' || laporanTab === 'metode') && (
-                <div className="mb-5 flex flex-wrap items-end gap-3 bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 rounded-xl shadow-sm p-3">
-                  <div>
-                    <label className="text-[11px] font-medium text-[var(--ink-soft)] mb-1 block uppercase tracking-wide">{t('Dari Tgl', 'From')}</label>
-                    <input type="date" value={lapDari} onChange={e => setLapDari(e.target.value)}
-                      className="border border-[var(--line)] bg-[var(--surface)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-medium text-[var(--ink-soft)] mb-1 block uppercase tracking-wide">{t('Sampai Tgl', 'To')}</label>
-                    <input type="date" value={lapSampai} onChange={e => setLapSampai(e.target.value)}
-                      className="border border-[var(--line)] bg-[var(--surface)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-medium text-[var(--ink-soft)] mb-1 block uppercase tracking-wide">{t('Metode', 'Method')}</label>
-                    <select value={lapMetode} onChange={e => setLapMetode(e.target.value)}
-                      className="border border-[var(--line)] bg-[var(--surface)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">
-                      <option value="">{t('Semua', 'All')}</option>
-                      {['Tunai','QRIS','Transfer','Debit','Kartu Kredit'].map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-medium text-[var(--ink-soft)] mb-1 block uppercase tracking-wide">Status</label>
-                    <select value={lapStatus} onChange={e => setLapStatus(e.target.value)}
-                      className="border border-[var(--line)] bg-[var(--surface)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">
-                      <option value="">{t('Semua', 'All')}</option>
-                      <option value="selesai">{t('Selesai', 'Completed')}</option>
-                      <option value="dibatalkan">{t('Dibatalkan', 'Cancelled')}</option>
-                    </select>
-                  </div>
-                  {(lapDari || lapSampai || lapMetode || lapStatus) && (
-                    <button onClick={() => { setLapDari(''); setLapSampai(''); setLapMetode(''); setLapStatus('') }}
-                      className="px-3 py-2 rounded-lg text-sm text-[var(--ink-soft)] border border-[var(--line)] hover:bg-gray-50">{t('Reset', 'Reset')}</button>
-                  )}
-                </div>
-              )}
-
-              {/* Tab Metode Bayar, rekap uang per metode */}
-              {laporanTab === 'metode' && (() => {
-                const aktif = riwayatFiltered.filter(x => x.status !== 'dibatalkan')
-                const metodeList = ['Tunai','QRIS','Transfer','Debit','Kartu Kredit']
-                const rekap = metodeList.map(m => {
-                  const rows = aktif.filter(x => (x.metode_bayar || 'Tunai') === m)
-                  return { metode: m, count: rows.length, total: rows.reduce((a, b) => a + (b.total || 0), 0) }
-                })
-                const grand = rekap.reduce((a, b) => a + b.total, 0)
-                const grandCount = rekap.reduce((a, b) => a + b.count, 0)
-                const ikon: Record<string, string> = { Tunai: '💵', QRIS: '📱', Transfer: '🏦', Debit: '💳', 'Kartu Kredit': '💳' }
-                return (
-                  <div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
-                      {rekap.map(r => (
-                        <div key={r.metode} className="bg-[var(--surface)]/80 backdrop-blur-sm border border-[var(--line)] rounded-2xl shadow-sm p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-lg">{ikon[r.metode]}</span>
-                            <span className="text-xs font-semibold text-[var(--ink-soft)] uppercase tracking-wide">{r.metode}</span>
-                          </div>
-                          <p className="text-lg font-bold text-[var(--ink)] tabular-nums leading-none">Rp {r.total.toLocaleString('id-ID')}</p>
-                          <p className="text-xs text-[var(--ink-faint)] mt-1.5">{r.count} {t('transaksi', 'transactions')}</p>
-                          {grand > 0 && (
-                            <div className="mt-2 h-1.5 rounded-full bg-[var(--paper)] overflow-hidden">
-                              <div className="h-full rounded-full bg-[var(--brand-soft)]" style={{ width: `${grand ? (r.total / grand) * 100 : 0}%` }} />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <div className={TBL_WRAP}>
-                      <table className={TBL}>
-                        <thead className={THEAD}>
-                          <tr>
-                            <th className={TH_L}>{t('Metode Pembayaran', 'Payment Method')}</th>
-                            <th className={TH_C}>{t('Jumlah Transaksi', 'Transactions')}</th>
-                            <th className={TH_R}>{t('Total Diterima', 'Total Received')}</th>
-                            <th className={TH_R}>{t('% dari Total', '% of Total')}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {rekap.map(r => (
-                            <tr key={r.metode} className={TR}>
-                              <td className={TD + ' font-medium text-[var(--ink)]'}>{ikon[r.metode]} {r.metode}</td>
-                              <td className={TD + ' text-center text-[var(--ink-soft)] tabular-nums'}>{r.count}</td>
-                              <td className={TD + ' text-right font-medium text-[var(--ink)] tabular-nums'}>Rp {r.total.toLocaleString('id-ID')}</td>
-                              <td className={TD + ' text-right text-[var(--ink-soft)] tabular-nums'}>{grand ? ((r.total / grand) * 100).toFixed(1) : '0.0'}%</td>
-                            </tr>
-                          ))}
-                          <tr className="bg-[var(--surface-2)] border-t-2 border-[var(--brand)]">
-                            <td className={TD + ' font-bold text-[var(--brand)]'}>TOTAL</td>
-                            <td className={TD + ' text-center font-bold text-[var(--brand)] tabular-nums'}>{grandCount}</td>
-                            <td className={TD + ' text-right font-bold text-[var(--brand)] tabular-nums'}>Rp {grand.toLocaleString('id-ID')}</td>
-                            <td className={TD + ' text-right font-bold text-[var(--brand)]'}>100%</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    <p className="text-xs text-[var(--ink-faint)] mt-3">{t('Rekap uang masuk per metode pembayaran (transaksi dibatalkan tidak dihitung). Gunakan untuk mencocokkan uang tunai & saldo QRIS/transfer dengan fisik.', 'Money-in recap per payment method (cancelled transactions excluded). Use it to reconcile cash & QRIS/transfer balances with actuals.')}</p>
-                  </div>
-                )
-              })()}
-
-              {laporanTab === 'sipnap' && (
-                <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 rounded-2xl shadow-sm p-6 max-w-2xl">
-                  <h2 className="text-lg font-bold text-[var(--ink)] mb-1">Laporan SIPNAP</h2>
-                  <p className="text-sm text-[var(--ink-soft)] mb-5">Pilih golongan &amp; periode. Penerimaan diambil dari pembelian supplier, pengeluaran dari transaksi (beserta data pasien &amp; no. resep).</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                    <div>
-                      <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">Golongan</label>
-                      <select value={sipnapForm.golongan} onChange={e => setSipnapForm({...sipnapForm, golongan: e.target.value})}
-                        className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">
-                        <option value="narkotika">Narkotika</option>
-                        <option value="psikotropika">Psikotropika</option>
-                        <option value="prekursor">Prekursor</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">Bulan</label>
-                      <select value={sipnapForm.bulan} onChange={e => setSipnapForm({...sipnapForm, bulan: +e.target.value})}
-                        className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">
-                        {['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'].map((m,i) => (
-                          <option key={i} value={i+1}>{m}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">Tahun</label>
-                      <input type="number" value={sipnapForm.tahun} onChange={e => setSipnapForm({...sipnapForm, tahun: +e.target.value})}
-                        className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-                    </div>
-                  </div>
-                  <button onClick={cetakSIPNAP}
-                    className="inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">
-                    <Printer size={15} /> Cetak Laporan SIPNAP
-                  </button>
-                  <p className="text-xs text-[var(--ink-faint)] mt-3">Tanda tangan hanya oleh Apoteker Penanggung Jawab (APJ). Pastikan Nama Apoteker &amp; SIPA sudah diisi di Pengaturan → Data Apoteker.</p>
-                </div>
-              )}
-
-              {laporanTab === 'penjualan' && (<>
-              <div className={TBL_WRAP}>
-                <table className={TBL}>
-                  <thead className={THEAD}>
-                    <tr>
-                      <th className={TH_L}>{t('No. Transaksi', 'Transaction No.')}</th>
-                      <th className={TH_L}>{t('Waktu', 'Time')}</th>
-                      <th className={TH_C}>{t('Metode', 'Method')}</th>
-                      <th className={TH_R}>Total</th>
-                      <th className={TH_R}>{t('Bayar', 'Paid')}</th>
-                      <th className={TH_R}>{t('Kembalian', 'Change')}</th>
-                      <th className={TH_C}>Status</th>
-                      <th className={TH_C}>{t('Aksi', 'Action')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {riwayatFiltered.length === 0 ? (
-                      <tr><td colSpan={8} className="px-4 py-8 text-center text-[var(--ink-faint)]">{t('Belum ada transaksi', 'No transactions yet')}</td></tr>
-                    ) : (
-                      riwayatFiltered.map(trx => (
-                        <tr key={trx.id} className={TR}>
-                          <td className="px-4 py-3 font-mono text-xs text-[var(--brand)] font-medium">{trx.nomor_transaksi}</td>
-                          <td className="px-4 py-3 text-[var(--ink-soft)]">
-                            {new Date(trx.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--paper)] text-[var(--brand-soft)]">{trx.metode_bayar || 'Tunai'}</span>
-                          </td>
-                          <td className="px-4 py-3 text-right font-medium text-[var(--brand)]">Rp {trx.total?.toLocaleString('id-ID')}</td>
-                          <td className="px-4 py-3 text-right text-[var(--ink-soft)]">Rp {trx.bayar?.toLocaleString('id-ID')}</td>
-                          <td className="px-4 py-3 text-right text-[var(--ink-soft)]">Rp {trx.kembalian?.toLocaleString('id-ID')}</td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                              trx.status === 'dibatalkan' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'
-                            }`}>{trx.status}</span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <button onClick={async () => {
-                                const { data: items } = await supabase.from('transaction_items').select('*').eq('transaction_id', trx.id)
-                                setTrxDetailItems(items || [])
-                                setShowTrxDetail(trx)
-                              }} className="text-xs text-[var(--brand)] hover:underline font-medium">Detail</button>
-                              {trx.status !== 'dibatalkan' && (
-                                <>
-                                  <span className="text-[var(--line)]">|</span>
-                                  <button onClick={async () => {
-                                    if (!confirm(t(`Yakin batalkan transaksi ${trx.nomor_transaksi}? Stok akan dikembalikan.`, `Cancel transaction ${trx.nomor_transaksi}? Stock will be restored.`))) return
-                                    const { data: items } = await supabase.from('transaction_items').select('*, products(stok_total)').eq('transaction_id', trx.id)
-                                    if (items) {
-                                      for (const item of items) {
-                                        await supabase.from('products').update({
-                                          stok_total: (item.products?.stok_total || 0) + item.jumlah
-                                        }).eq('id', item.product_id)
-                                      }
-                                    }
-                                    await supabase.from('transactions').update({ status: 'dibatalkan' }).eq('id', trx.id)
-                                    fetchRiwayat()
-                                    alert(t('✅ Transaksi dibatalkan, stok dikembalikan.', '✅ Transaction cancelled, stock restored.'))
-                                  }} className="text-xs text-red-500 hover:underline font-medium">{t('Batalkan', 'Cancel')}</button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              {riwayatFiltered.length > 0 && (
-                <div className="mt-4 bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 rounded-xl shadow-sm p-4 flex justify-between items-center">
-                  <span className="text-sm text-[var(--ink-soft)]">Total {riwayatFiltered.length} {t('transaksi', 'transactions')}</span>
-                  <span className="text-sm font-semibold text-[var(--brand)]">
-                    {t('Total Omzet', 'Total Revenue')}: Rp {riwayatFiltered.filter(x => x.status !== 'dibatalkan').reduce((a, b) => a + b.total, 0).toLocaleString('id-ID')}
-                  </span>
-                </div>
-              )}
-              </>)}
-            </div>
-          )}
-
-          {/* MIGRASI DATA, dipindah ke Settings → Migrasi Data (lihat migrasiPane) */}
-          {false && (() => {
-            const cards = [
-              {
-                key: 'produk', title: t('Daftar Produk', 'Product List'), Icon: Pill,
-                desc: t('Impor katalog obat: nama, kategori, harga, dan stok awal.', 'Import the drug catalog: name, category, price, and opening stock.'),
-                cols: 'kode (opsional), nama_obat, nama_generik, kandungan, kategori, satuan, isi_kemasan, harga_beli, harga_jual, stok_total, stok_minimum',
-                hint: 'Kategori: bebas, bebas_terbatas, keras, suplemen, psikotropika, narkotika, prekursor, alkes, lainnya.',
-                file: 'template_produk.csv',
-                headers: ['kode', 'nama_obat', 'nama_generik', 'kandungan', 'kategori', 'satuan', 'isi_kemasan', 'harga_beli', 'harga_jual', 'stok_total', 'stok_minimum'],
-                examples: [['', 'Paracetamol 500mg', 'Paracetamol', 'Paracetamol 500 mg', 'bebas', 'Tablet', '100', '500', '1000', '150', '10']],
-                onUpload: importProduk,
-              },
-              {
-                key: 'supplier', title: t('Daftar Supplier', 'Supplier List'), Icon: Truck,
-                desc: t('Impor daftar PBF / supplier obat.', 'Import the list of distributors / drug suppliers.'),
-                cols: 'nama_supplier, jenis, alamat, telepon, email',
-                hint: 'Jenis yang valid: PBF, Subdistributor, atau Lainnya (nilai lain otomatis disesuaikan).',
-                file: 'template_supplier.csv',
-                headers: ['nama_supplier', 'jenis', 'alamat', 'telepon', 'email'],
-                examples: [['PT Bina San Prima', 'PBF', 'Jl. Industri No. 1', '021-1234567', 'sales@binasan.co.id']],
-                onUpload: importSupplier,
-              },
-              {
-                key: 'stok', title: t('Stok Awal (Batch)', 'Opening Stock (Batch)'), Icon: PackageOpen,
-                desc: t('Impor stok awal per batch + expired date. Dicocokkan ke produk lewat kode.', 'Import opening stock per batch + expiry date. Matched to products by code.'),
-                cols: 'kode_produk, batch_number, expired_date (YYYY-MM-DD), stok_batch',
-                hint: 'Impor Produk dulu agar kode-nya tersedia. Stok batch akan menambah stok total produk.',
-                file: 'template_stok_awal.csv',
-                headers: ['kode_produk', 'batch_number', 'expired_date', 'stok_batch'],
-                examples: [['OBT-0001', 'BT-2401', '2026-12-31', '150']],
-                onUpload: importStok,
-              },
-              {
-                key: 'mapping', title: t('Mapping Produk–Supplier', 'Product–Supplier Mapping'), Icon: ClipboardList,
-                desc: t('Kaitkan tiap produk ke supplier-nya, agar pembuatan PO otomatis tahu daftar produk per supplier.', 'Link each product to its supplier, so creating a PO automatically knows the products per supplier.'),
-                cols: 'kode_produk, nama_supplier (atau kode_supplier)',
-                hint: 'Import Produk & Supplier dulu. Nama supplier harus sama persis dengan yang terdaftar.',
-                file: 'template_mapping_produk_supplier.csv',
-                headers: ['kode_produk', 'nama_supplier'],
-                examples: [['OBT-0001', 'PT Bina San Prima']],
-                onUpload: importMapping,
-              },
-              {
-                key: 'fakturawal', title: t('Faktur / Hutang Awal', 'Opening Invoices / Debts'), Icon: Receipt,
-                desc: t('Impor faktur pembelian yang belum lunas, langsung muncul di menu Pembayaran Faktur dengan jatuh tempo.', 'Import unpaid purchase invoices, they appear in Invoice Payments with due dates.'),
-                cols: 'nomor_faktur, nama_supplier, tanggal_faktur (YYYY-MM-DD), term_of_payment, total',
-                hint: 'Import Supplier dulu. Jatuh tempo dihitung dari tanggal_faktur + term_of_payment bila kolom tanggal_jatuh_tempo tidak diisi.',
-                file: 'template_faktur_awal.csv',
-                headers: ['nomor_faktur', 'nama_supplier', 'tanggal_faktur', 'term_of_payment', 'total'],
-                examples: [['INV/2025/0087', 'PT Bina San Prima', '2026-06-15', '30', '2500000']],
-                onUpload: importFakturAwal,
-              },
-            ]
-            return (
-            <div>
-              <h1 className="text-3xl font-bold text-[var(--ink)] mb-1">{t('Migrasi Data', 'Data Migration')}</h1>
-              <p className="text-[var(--ink-soft)] text-sm mb-6">{t('Onboarding cepat: unduh template, isi di Excel/Sheets, lalu upload CSV. Data otomatis masuk ke apotek Anda.', 'Fast onboarding: download a template, fill it in Excel/Sheets, then upload the CSV. Data goes straight into your pharmacy.')}</p>
-
-              {isSuper && (
-                <div className="mb-5 p-4 rounded-xl border border-amber-300 bg-amber-50 flex flex-col sm:flex-row sm:items-center gap-3">
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-amber-800">{t('Mode Super Admin', 'Super Admin Mode')}</p>
-                    <p className="text-xs text-amber-700">{t('Pilih apotek tujuan, data import/export akan masuk/diambil dari apotek ini.', 'Select a target pharmacy, imported/exported data goes to/from this pharmacy.')}</p>
-                  </div>
-                  <select value={migrasiCompany} onChange={e => setMigrasiCompany(e.target.value)}
-                    className="border border-amber-300 rounded-lg px-3 py-2 text-sm bg-[var(--surface)] min-w-[220px] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">
-                    <option value="">{t('Pilih Apotek', 'Select Pharmacy')}</option>
-                    {companies.map((c: any) => <option key={c.id} value={c.id}>{c.nama}</option>)}
-                  </select>
-                </div>
-              )}
-              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                {cards.map(c => (
-                  <div key={c.key} className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl p-5 flex flex-col">
-                    <div className="w-11 h-11 rounded-xl bg-[var(--surface-2)] text-[var(--brand-soft)] flex items-center justify-center mb-3"><c.Icon size={20} strokeWidth={1.9} /></div>
-                    <h2 className="font-bold text-[var(--ink)]">{c.title}</h2>
-                    <p className="text-sm text-[var(--ink-soft)] mt-1 mb-3">{c.desc}</p>
-                    <div className="bg-[var(--surface-2)] rounded-lg p-3 mb-3">
-                      <p className="text-[11px] font-medium text-[var(--ink-soft)] mb-1">{t('Kolom CSV:', 'CSV Columns:')}</p>
-                      <p className="text-[11px] text-[var(--ink)] font-mono leading-relaxed break-words">{c.cols}</p>
-                    </div>
-                    <p className="text-[11px] text-[var(--ink-faint)] mb-4">{c.hint}</p>
-                    <div className="mt-auto flex flex-col gap-2">
-                      <button onClick={() => unduhCSV(c.file, c.headers, c.examples)}
-                        className="inline-flex items-center justify-center gap-2 border border-[var(--line)] text-[var(--brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--surface-2)] transition">
-                        <Download size={15} /> {t('Download Template', 'Download Template')}
-                      </button>
-                      <label className={`inline-flex items-center justify-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition cursor-pointer ${importing === c.key ? 'opacity-60 pointer-events-none' : ''}`}>
-                        <Upload size={15} /> {importing === c.key ? t('Mengimpor…', 'Importing…') : t('Upload CSV', 'Upload CSV')}
-                        <input type="file" accept=".csv,text/csv" className="hidden"
-                          onChange={e => {
-                            if (isSuper && !migrasiCompany) { alert(t('Pilih apotek tujuan dulu di atas.', 'Select a target pharmacy above first.')); e.target.value = ''; return }
-                            if (e.target.files?.[0]) { c.onUpload(e.target.files[0]); e.target.value = '' }
-                          }} />
-                      </label>
-                    </div>
-                    {importInfo[c.key] && (
-                      <p className={`text-xs mt-3 ${importInfo[c.key].startsWith('✅') ? 'text-green-700' : 'text-red-600'}`}>{importInfo[c.key]}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 bg-[var(--surface)]/60 border border-white/60 rounded-xl p-4 text-sm text-[var(--ink-soft)] max-w-3xl">
-                <p className="font-medium text-[var(--ink)] mb-1">{t('Urutan yang disarankan', 'Recommended order')}</p>
-                <p>{t('1) Import Produk → 2) Supplier → 3) Stok Awal → 4) Mapping Produk–Supplier. Simpan file sebagai CSV UTF-8. Header wajib sama persis dengan template.', '1) Import Products → 2) Suppliers → 3) Opening Stock → 4) Product–Supplier Mapping. Save the file as CSV UTF-8. Headers must match the template exactly.')}</p>
-              </div>
-
-              {/* Export / Backup */}
-              <div className="mt-6">
-                <h2 className="text-lg font-bold text-[var(--ink)] mb-1">{t('Export / Backup Data', 'Export / Backup Data')}</h2>
-                <p className="text-sm text-[var(--ink-soft)] mb-4">{t('Unduh data apotek saat ini ke CSV (untuk cadangan atau pindah sistem).', 'Download current pharmacy data to CSV (for backup or system migration).')}</p>
-                <div className="flex flex-wrap gap-3">
-                  {([['Produk',exportProduk],['Supplier',exportSupplier],['Stok / Batch',exportStok],['Transaksi',exportTransaksi],['Faktur',exportFaktur]] as const).map(([label, fn]) => (
-                    <button key={label} onClick={() => { if (isSuper && !migrasiCompany) return alert(t('Pilih apotek tujuan dulu di atas.', 'Select a target pharmacy above first.')); (fn as () => void)() }}
-                      className="inline-flex items-center gap-2 border border-[var(--line)] text-[var(--brand)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--surface-2)] transition"><Download size={15} /> {t('Export', 'Export')} {label}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            )
-          })()}
 
           {/* PENGATURAN */}
           {activePage === 'pengaturan' && (() => {

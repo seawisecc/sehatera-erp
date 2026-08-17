@@ -298,3 +298,121 @@ td{padding:6px 8px;vertical-align:top;}
 <div class="foot">Dokumen ini dicetak otomatis oleh Sehatera by Seawise Studio.</div>
 </body></html>`
 }
+
+// ── Laporan SIPNAP ──
+
+export type BarisSipnapMasuk  = { tgl: string; sumber: string; jml: number }
+export type BarisSipnapKeluar = { tgl: string; resep: string; pasien: string; jml: number }
+
+export type BarisSipnap = {
+  nama: string
+  satuan?: string | null
+  awal: number
+  masuk: BarisSipnapMasuk[]
+  keluar: BarisSipnapKeluar[]
+  batch: string[]
+}
+
+/**
+ * Laporan penggunaan Narkotika / Psikotropika / Prekursor.
+ *
+ * Templat ini pindah ke sini dari dalam komponen dashboard, dan ikut dibetulkan
+ * di jalan: sebelumnya nama obat, nama pasien, dan alamat pasien ditempel
+ * mentah ke dalam HTML. Ketiganya diketik manusia. Satu tanda `<` atau `&`
+ * pada nama pasien merusak sisa tabel pada dokumen yang justru paling tidak
+ * boleh salah, karena ditandatangani apoteker penanggung jawab dan dikirim ke
+ * Kementerian Kesehatan.
+ */
+export function laporanSipnap(
+  p: ProfilApotek,
+  d: { golongan: string; bulan: number; tahun: number },
+  baris: BarisSipnap[],
+): string {
+  const judul = d.golongan === 'narkotika' ? 'NARKOTIKA'
+              : d.golongan === 'psikotropika' ? 'PSIKOTROPIKA' : 'PREKURSOR'
+  const namaBulan = new Date(d.tahun, d.bulan - 1, 1).toLocaleDateString('id-ID', { month: 'long' })
+  const tglCetak = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  const isi = baris.map((b, idx) => {
+    const masuk = b.masuk.reduce((a, r) => a + r.jml, 0)
+    const keluar = b.keluar.reduce((a, r) => a + r.jml, 0)
+    const totalP = b.awal + masuk
+    const akhir = totalP - keluar
+    const batchStr = b.batch.length ? b.batch.map(x => teks(x)).join('<br>') : '-'
+
+    const n = Math.max(b.masuk.length, b.keluar.length, 1)
+    let html = ''
+    for (let i = 0; i < n; i++) {
+      const m = b.masuk[i]
+      const k = b.keluar[i]
+      html += '<tr>'
+      if (i === 0) {
+        html += `<td rowspan="${n}" class="c">${idx + 1}</td>`
+             +  `<td rowspan="${n}" class="l">${teks(b.nama)}</td>`
+             +  `<td rowspan="${n}" class="c">${teks(b.satuan, '')}</td>`
+             +  `<td rowspan="${n}" class="c">${b.awal}</td>`
+      }
+      html += `<td class="c">${m ? teks(m.tgl, '') : ''}</td>`
+           +  `<td class="l">${m ? teks(m.sumber) : ''}</td>`
+           +  `<td class="c">${m ? m.jml : ''}</td>`
+      if (i === 0) html += `<td rowspan="${n}" class="c">${totalP}</td>`
+      html += `<td class="c">${k ? teks(k.tgl, '') + '<br>' + teks(k.resep) : ''}</td>`
+           +  `<td class="l">${k ? teks(k.pasien) : ''}</td>`
+           +  `<td class="c">${k ? k.jml : ''}</td>`
+      if (i === 0) {
+        html += `<td rowspan="${n}" class="c">${akhir}</td>`
+             +  `<td rowspan="${n}" class="l">${batchStr}</td>`
+      }
+      html += '</tr>'
+    }
+    return html
+  }).join('')
+
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8">
+<title>Laporan SIPNAP ${judul} ${namaBulan} ${d.tahun}</title><style>
+@page { size: A4 landscape; margin: 12mm; }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;font-size:11px;color:#000;background:#fff;padding:10px;}
+h1{text-align:center;font-size:15px;margin-bottom:16px;}
+.info td{padding:1px 4px;font-size:11px;}
+table.rep{width:100%;border-collapse:collapse;margin-top:8px;}
+table.rep th, table.rep td{border:1px solid #000;padding:3px 5px;font-size:10px;}
+table.rep th{text-align:center;font-weight:bold;}
+.c{text-align:center;} .l{text-align:left;}
+.sign{margin-top:40px;width:100%;overflow:hidden;}
+.sign .box{width:280px;float:right;text-align:center;}
+.sign .nm{font-weight:bold;text-decoration:underline;margin-top:56px;}
+</style></head><body>
+<h1>LAPORAN PENGGUNAAN ${judul}</h1>
+<table class="info">
+  <tr><td>Nama Sarana</td><td>: ${teks(p.nama_apotek)}</td></tr>
+  <tr><td>Alamat</td><td>: ${teks(p.alamat)}</td></tr>
+  <tr><td>Bulan/Tahun</td><td>: ${namaBulan} ${d.tahun}</td></tr>
+</table>
+<table class="rep">
+  <thead>
+    <tr>
+      <th rowspan="2">No</th><th rowspan="2">Nama Sediaan</th><th rowspan="2">Satuan</th><th rowspan="2">Persediaan Awal</th>
+      <th colspan="3">Penerimaan</th>
+      <th rowspan="2">Total Persediaan</th>
+      <th colspan="3">Pengeluaran</th>
+      <th rowspan="2">Persediaan Akhir Bulan</th>
+      <th rowspan="2">No. Batch &amp; ED</th>
+    </tr>
+    <tr>
+      <th>Tanggal</th><th>Sumber</th><th>Jumlah</th>
+      <th>Tanggal/No. Resep</th><th>Nama /Alamat Pasien</th><th>Jumlah</th>
+    </tr>
+  </thead>
+  <tbody>${isi}</tbody>
+</table>
+<div class="sign">
+  <div class="box">
+    <p>${p.kota ? teks(p.kota) + ', ' : ''}${tglCetak}</p>
+    <p>Penanggung Jawab Farmasi</p>
+    <p class="nm">${teks(p.nama_apoteker)}</p>
+    <p>SIPA: ${teks(p.nomor_sipa)}</p>
+  </div>
+</div>
+</body></html>`
+}
