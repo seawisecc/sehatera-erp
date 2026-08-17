@@ -9,7 +9,7 @@
 -- faktur akan tampak "berfungsi" hanya karena tidak ada yang perlu ditampilkan.
 --
 -- Aman dijalankan ulang: data demo dihapus dulu berdasarkan company_id.
--- TIDAK membuat akun login apa pun — apotek disambungkan ke akun auth yang
+-- TIDAK membuat akun login apa pun: apotek disambungkan ke akun auth yang
 -- sudah ada.
 --
 -- ISI `v_email` DULU sebelum menjalankan, dan pastikan itu apotek yang memang
@@ -125,11 +125,11 @@ begin
       ('OBT-0013','Clobazam 10 mg','Clobazam','Clobazam 10 mg','psikotropika','Tablet',10,       5100, 10000,  40,  15),
       ('OBT-0014','Pseudoefedrin HCl 60 mg','Pseudoefedrin','Pseudoefedrin HCl 60 mg','prekursor','Tablet',10, 2200, 4500, 90, 30),
       ('OBT-0015','Tramadol 50 mg','Tramadol','Tramadol HCl 50 mg','keras','Kapsul',10,          3200,  6500,  70,  25),
-      ('OBT-0016','OBH Combi Batuk Flu 100 ml','—','Paracetamol, Efedrin, CTM','bebas_terbatas','Botol',1, 12500, 19500, 84, 24),
+      ('OBT-0016','OBH Combi Batuk Flu 100 ml','','Paracetamol, Efedrin, CTM','bebas_terbatas','Botol',1, 12500, 19500, 84, 24),
       ('OBT-0017','Betadine Antiseptik 60 ml','Povidone iodine','Povidone iodine 10%','bebas','Botol',1, 17500, 27500, 56, 15),
-      ('OBT-0018','Hansaplast Roll 2 cm','—','Plester luka','alkes','Roll',1,                    8500, 14000,  70,  20),
-      ('OBT-0019','Masker Medis 3 Ply (50s)','—','Masker bedah 3 lapis','alkes','Box',1,        22000, 35000,  38,  10),
-      ('OBT-0020','Handscoon Latex M (100s)','—','Sarung tangan periksa','alkes','Box',1,       58000, 82000,  16,   6),
+      ('OBT-0018','Hansaplast Roll 2 cm','','Plester luka','alkes','Roll',1,                    8500, 14000,  70,  20),
+      ('OBT-0019','Masker Medis 3 Ply (50s)','','Masker bedah 3 lapis','alkes','Box',1,        22000, 35000,  38,  10),
+      ('OBT-0020','Handscoon Latex M (100s)','','Sarung tangan periksa','alkes','Box',1,       58000, 82000,  16,   6),
       ('OBT-0021','Salbutamol 2 mg','Salbutamol','Salbutamol sulfat 2 mg','keras','Tablet',100,   450,  1100,  480,  80),
       ('OBT-0022','Ambroxol 30 mg','Ambroxol','Ambroxol HCl 30 mg','keras','Tablet',100,          500,  1200,  510,  80),
       ('OBT-0023','Simvastatin 20 mg','Simvastatin','Simvastatin 20 mg','keras','Tablet',30,     1250,  2600,  300,  50),
@@ -143,16 +143,16 @@ begin
       ('OBT-0031','Insto Tetes Mata 7,5 ml','Tetrahidrozolin','Tetrahidrozolin HCl','bebas','Botol',1, 9500, 15500, 62, 18),
       ('OBT-0032','Bodrex Migra','Paracetamol','Paracetamol + Propifenazon','bebas','Tablet',4,  1200,  2500,  180,  40),
       ('OBT-0033','Promag Tablet','Antasida','Hidrotalsit + Mg(OH)2','bebas','Tablet',12,        1500,  2900,  160,  40),
-      ('OBT-0034','Termometer Digital','—','Termometer badan digital','alkes','Pcs',1,          32000, 52000,   14,   5),
-      ('OBT-0035','Tensimeter Digital Omron','—','Alat ukur tekanan darah','alkes','Pcs',1,    385000,520000,    4,   2),
-      ('OBT-0036','Test Strip Gula Darah (25s)','—','Strip glukometer','alkes','Box',1,          85000,125000,   12,   5)
+      ('OBT-0034','Termometer Digital','','Termometer badan digital','alkes','Pcs',1,          32000, 52000,   14,   5),
+      ('OBT-0035','Tensimeter Digital Omron','','Alat ukur tekanan darah','alkes','Pcs',1,    385000,520000,    4,   2),
+      ('OBT-0036','Test Strip Gula Darah (25s)','','Strip glukometer','alkes','Box',1,          85000,125000,   12,   5)
     ) as t(kode, nama, generik, kandungan, kategori, satuan, isi, beli, jual, stok, minimum)
   loop
     i := i + 1;
     insert into public.products (company_id, kode, nama_obat, nama_generik, kandungan,
                                  kategori, satuan, isi_kemasan, harga_beli, harga_jual,
                                  stok_total, stok_minimum)
-    values (v_company, r.kode, r.nama, nullif(r.generik, '—'), r.kandungan,
+    values (v_company, r.kode, r.nama, nullif(r.generik, ''), r.kandungan,
             r.kategori, r.satuan, r.isi, r.beli, r.jual, r.stok, r.minimum)
     returning id into v_pid;
 
@@ -164,7 +164,7 @@ begin
 
     -- ---------- batch ----------
     -- Tiga bentuk sengaja: sudah lewat, hampir lewat, dan aman. Batch yang
-    -- sudah lewat TIDAK dikurangi dari stok_total — itu memang keadaan yang
+    -- sudah lewat TIDAK dikurangi dari stok_total: itu memang keadaan yang
     -- ingin ditemukan apoteker di layar Tindak Lanjut, bukan yang sudah
     -- dibereskan diam-diam.
     if i % 7 = 0 then
@@ -245,7 +245,7 @@ begin
     v_tgl := now() - ((j % 30) || ' days')::interval - ((j * 37) % 600 || ' minutes')::interval;
 
     -- Tiap transaksi kesepuluh memuat obat golongan, dan itu WAJIB membawa
-    -- identitas pasien serta nomor resep — aturan yang sama ditegakkan
+    -- identitas pasien serta nomor resep: aturan yang sama ditegakkan
     -- database lewat apply_transaction().
     v_golongan := (j % 10 = 0);
 

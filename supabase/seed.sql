@@ -7,7 +7,7 @@
 -- Harga mengikuti TokoKu persis. KUOTA PRODUK sengaja berbeda: TokoKu memberi
 -- 200 / 2.000 item, dan itu masuk akal untuk warung. Apotek terkecil pun
 -- membawa 1.500–3.000 item, jadi angka TokoKu akan mentok di hari pertama impor
--- katalog — orang membayar, mengimpor, lalu ditolak sebelum sempat berjualan.
+-- katalog: orang membayar, mengimpor, lalu ditolak sebelum sempat berjualan.
 --
 -- Penanda di `features` dibaca lewat lib/plan.ts. Aturan di sana: kunci yang
 -- TIDAK ada dianggap kemampuan penuh, jadi menambah kemampuan baru tidak
@@ -30,8 +30,8 @@ values
 
   -- Harga paket Klinik masih usulan dan belum diketok pemilik. Dipasang
   -- is_public = false supaya tidak muncul di halaman harga sampai angkanya
-  -- benar — lebih baik tidak terlihat daripada terlihat salah.
-  ('klinik', 'Klinik', 'Klinik pratama & utama — rekam medis, SatuSehat, BPJS',
+  -- benar: lebih baik tidak terlihat daripada terlihat salah.
+  ('klinik', 'Klinik', 'Klinik pratama & utama: rekam medis, SatuSehat, BPJS',
    1490000, 14900000, null, null, null, null, 4, false,
    '{"reports":"full","purchasing":"full","crm":"full","multi_outlet":true,"api":true,"klinik":true,"support":"dedicated"}')
 on conflict (code) do update set

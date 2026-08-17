@@ -117,7 +117,7 @@ export default function Dashboard() {
   const [riwayatMusnah, setRiwayatMusnah] = useState<any[]>([])
   const [riwayatRetur, setRiwayatRetur] = useState<any[]>([])
 
-  // Kuota dibaca dari `v_company_quota` — view yang sama yang dipakai trigger
+  // Kuota dibaca dari `v_company_quota`: view yang sama yang dipakai trigger
   // penegak kuota. Kalau layar menghitung sendiri, angkanya cepat atau lambat
   // berbeda dari angka yang dipakai menolak.
   const [kuota, setKuota] = useState<any>(null)
@@ -165,7 +165,7 @@ export default function Dashboard() {
   // Satu panggilan `my_context()` menggantikan tiga permintaan tabel yang dulu
   // dilakukan berturut-turut. Yang pertama di antaranya membaca `super_admins`
   // langsung, dan itu memaksa daftar super admin bisa dibaca semua orang yang
-  // login — lubang yang ditutup di migrasi 0002.
+  // login: lubang yang ditutup di migrasi 0002.
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -235,7 +235,7 @@ export default function Dashboard() {
 
   /**
    * Mode fokus: sidebar menyempit sendiri di halaman yang butuh layar lebar dan
-   * perhatian penuh. Kasir adalah contohnya — di sana orang sedang berhadapan
+   * perhatian penuh. Kasir adalah contohnya: di sana orang sedang berhadapan
    * dengan pembeli, bukan sedang mencari menu.
    */
   const HALAMAN_FOKUS = ['transaksi']
@@ -679,7 +679,7 @@ export default function Dashboard() {
   /**
    * Memperpanjang masa aktif.
    *
-   * Menulis ke `subscription_ends_at` DAN memindahkan status ke 'active' —
+   * Menulis ke `subscription_ends_at` DAN memindahkan status ke 'active' -
    * bukan ke `valid_sampai` yang sudah usang. Keduanya harus bergerak bersama:
    * apotek yang statusnya masih 'trial' dibaca dari `trial_ends_at`, jadi
    * memperpanjang tanpa memindahkan status berarti tanggal barunya tidak
@@ -1333,7 +1333,7 @@ const batalRetur = async (row: any) => {
   // aplikasi. Apotek yang masa aktifnya lewat masih punya kewajiban SIPNAP
   // bulan itu, masih perlu mencetak ulang faktur, dan masih perlu melihat kartu
   // stoknya. Menyandera semua itu sampai mereka membayar bukan cuma tidak
-  // sopan — itu menghalangi mereka memenuhi kewajiban hukum. Jadi yang berhenti
+  // sopan: itu menghalangi mereka memenuhi kewajiban hukum. Jadi yang berhenti
   // hanya transaksi baru, dan itu sudah ditegakkan di database (migrasi 0003).
   const langgananBanner = langgananPesan && (
     <div
@@ -2247,10 +2247,10 @@ const batalRetur = async (row: any) => {
             <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Paket', 'Plan')}</label>
             <select value={masaAktifPlan} onChange={e => setMasaAktifPlan(e.target.value)}
               className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">
-              <option value="">{t('— tidak diubah —', '— unchanged —')}</option>
+              <option value="">{t('(tidak diubah)', '(unchanged)')}</option>
               {plans.map((p: any) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} — Rp {(p.price_monthly || 0).toLocaleString('id-ID')}/{t('bln', 'mo')}
+                  {p.name}: Rp {(p.price_monthly || 0).toLocaleString('id-ID')}/{t('bln', 'mo')}
                 </option>
               ))}
             </select>
@@ -2424,7 +2424,7 @@ const batalRetur = async (row: any) => {
             Isinya sekarang HANYA merek dan menu. Nama pengguna, peran, tombol
             keluar, pemilih bahasa/tema, dan pemilih apotek Super Admin semuanya
             pindah ke topbar. Sidebar yang memuat semua itu memaksa mata
-            memindai dua jenis hal di satu kolom — yang dituju (menu) dan yang
+            memindai dua jenis hal di satu kolom, yang dituju (menu) dan yang
             jarang disentuh (setelan akun). */}
         <div className={`${sidebarCollapsed ? 'md:w-[76px]' : 'md:w-64'} w-64 bg-gradient-to-b from-[var(--brand)] via-[var(--brand-soft)] to-[var(--brand-hover)] flex flex-col shrink-0 fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 md:z-auto ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
           style={{ transition: 'transform var(--t-normal) var(--ease), width var(--t-normal) var(--ease)' }}>
@@ -3549,7 +3549,7 @@ const batalRetur = async (row: any) => {
                         // tengah perulangan, transaksinya sudah tersimpan tapi
                         // sebagian stok belum terpotong, dan tidak ada yang tahu
                         // sampai opname berikutnya. `stok_batch` bahkan tidak
-                        // pernah ikut dipotong sama sekali — padahal angka batch
+                        // pernah ikut dipotong sama sekali, padahal angka batch
                         // itulah yang dipakai laporan SIPNAP dan penelusuran obat
                         // kadaluarsa.
                         const { data: trx, error } = await supabase.rpc('apply_transaction', {
@@ -4493,7 +4493,7 @@ const batalRetur = async (row: any) => {
                 <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl p-6">
                   {settingsTab === 'migrasi' && migrasiPane}
 
-                  {/* TAMPILAN — tema warna */}
+                  {/* TAMPILAN: tema warna */}
                   {settingsTab === 'tampilan' && (
                     <div>
                       <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Tampilan', 'Appearance')}</h2>
@@ -4528,7 +4528,7 @@ const batalRetur = async (row: any) => {
                     const rp = (n: number | null | undefined) => 'Rp ' + (n || 0).toLocaleString('id-ID')
                     const tgl = (iso: string | null) => iso
                       ? new Date(iso).toLocaleDateString(lang === 'en' ? 'en-GB' : 'id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-                      : '—'
+                      : '-'
                     const aktifSampai = c?.status === 'trial' ? c?.trialEndsAt : c?.subscriptionEndsAt
                     const statusLabel: Record<string, string> = {
                       trial: t('Masa coba gratis', 'Free trial'),
@@ -4607,8 +4607,8 @@ const batalRetur = async (row: any) => {
                         <div className="mt-6 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4">
                           <p className="text-sm font-semibold text-[var(--ink)] mb-1">{t('Mau ganti paket?', 'Want to change plans?')}</p>
                           <p className="text-xs text-[var(--ink-soft)] leading-relaxed">
-                            {t('Untuk sekarang pergantian paket dilakukan lewat admin Sehatera — pembayaran otomatis di dalam aplikasi belum tersedia. Turun paket tidak menghapus data apa pun: yang berubah hanya batas penambahan.',
-                               'For now, plan changes go through the Sehatera admin — in-app automatic payment is not available yet. Downgrading deletes nothing: only the limit on adding changes.')}
+                            {t('Untuk sekarang pergantian paket dilakukan lewat admin Sehatera. Pembayaran otomatis di dalam aplikasi belum tersedia. Turun paket tidak menghapus data apa pun; yang berubah hanya batas penambahan.',
+                               'For now, plan changes go through the Sehatera admin. In-app automatic payment is not available yet. Downgrading deletes nothing; only the limit on adding changes.')}
                           </p>
                         </div>
                       </div>
@@ -4934,7 +4934,7 @@ const batalRetur = async (row: any) => {
                     </div>
                     {/* Identitas pengguna dan pemilih tema ikut ke sini saat
                         sidebar dibersihkan. Di layar lebar keduanya ada di menu
-                        akun pada topbar — di mobile tidak ada topbar itu, jadi
+                        akun pada topbar: di mobile tidak ada topbar itu, jadi
                         tanpa bagian ini orang kehilangan satu-satunya tempat
                         melihat sedang masuk sebagai siapa. */}
                     <div className="border-t border-[var(--line-soft)] mt-4 pt-3 space-y-3">

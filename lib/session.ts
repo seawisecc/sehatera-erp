@@ -3,7 +3,7 @@ import { readPlanFeatures } from './plan'
 import type { CompanyContext } from './subscription'
 
 /**
- * Identitas, peran, hak akses modul, dan keadaan langganan — satu panggilan.
+ * Identitas, peran, hak akses modul, dan keadaan langganan: satu panggilan.
  *
  * Sebelumnya aplikasi menembak tiga tabel berturut-turut saat masuk dashboard:
  * `super_admins`, lalu `companies`, lalu `app_users`. Yang pertama memaksa
@@ -69,7 +69,7 @@ const KODE_RAMAH = new Set(['SH001', 'SH002', 'SH003', 'SH004', 'SH005', 'SH006'
 /**
  * Kuota, masa aktif, dan kewajiban resep ditolak di database dengan SQLSTATE
  * tersendiri, dan pesannya memang ditulis untuk dibaca pemilik apotek. Yang
- * lain — pelanggaran constraint, jaringan putus — tidak boleh muncul apa
+ * lain: pelanggaran constraint, jaringan putus: tidak boleh muncul apa
  * adanya: "duplicate key value violates unique constraint" bukan kalimat yang
  * bisa ditindaklanjuti siapa pun di balik meja kasir.
  */

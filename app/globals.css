@@ -1,26 +1,26 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Sehatera — sistem tema
+   Sehatera: sistem tema
    ============================================================
 
    Sebelum ini setiap warna ditulis langsung di kelas Tailwind: `bg-[#1e3a2c]`
    muncul 309 kali, `#6b7280` 223 kali, dan seterusnya di 14 warna lain.
    Selama begitu, "ganti tema" berarti menyunting ribuan tempat dan berharap
-   tidak ada yang terlewat — jadi praktis tidak bisa dilakukan.
+   tidak ada yang terlewat, jadi praktis tidak bisa dilakukan.
 
    Sekarang semua warna melewati token di bawah. Menambah tema kelima nanti
    cukup menambah satu blok `[data-theme="..."]` dan satu entri di THEMES;
    tidak ada satu pun komponen yang perlu disentuh.
 
-   CATATAN KONTRAS — warna palet tiap tema terlalu terang untuk dipakai sebagai
+   CATATAN KONTRAS: warna palet tiap tema terlalu terang untuk dipakai sebagai
    warna teks; #fbd786 di atas putih tidak akan terbaca siapa pun. Jadi ketiganya
    dipakai sebagai GRADIEN IDENTITAS (--grad) di sidebar, tombol utama, dan logo,
    sementara isi layar memakai netral yang diturunkan dari palet itu. Aturan yang
    sama berlaku untuk keempat tema.
    ============================================================ */
 
-/* ---------- Sunrise Sorbet — tema bawaan, terang ---------- */
+/* ---------- Sunrise Sorbet: tema bawaan, terang ---------- */
 :root,
 [data-theme="sunrise-sorbet"] {
   --grad-1: #c6ffdd;
@@ -39,7 +39,7 @@
   --accent:       #b06a12;   /* diturunkan dari ujung amber */
   --accent-soft:  #fdf0d8;
 
-  /* Teks DI ATAS gradien identitas — bukan di atas --brand.
+  /* Teks DI ATAS gradien identitas, bukan di atas --brand.
      Keduanya perlu dibedakan: gradien Sunrise Sorbet terang, jadi teks putih di
      atasnya hilang, sementara di atas --brand yang pekat teks putih justru yang
      benar. Satu token untuk dua permukaan berbeda selalu salah di salah satunya. */
@@ -65,7 +65,7 @@
   color-scheme: light;
 }
 
-/* ---------- Vital Tide — terang, biru ke hijau ----------
+/* ---------- Vital Tide: terang, biru ke hijau ----------
    Palet yang paling "kesehatan" dari keempatnya: biru azur ke teal ke hijau,
    warna yang sudah lama dipakai rumah sakit dan alat medis. Ini tema yang
    paling aman dipakai saat menemui calon klien klinik. */
@@ -75,7 +75,7 @@
   --grad-3: #4fd98f;
   --grad: linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 50%, var(--grad-3) 100%);
 
-  /* Diturunkan dari ujung biru sampai teks putih di atasnya lolos kontras —
+  /* Diturunkan dari ujung biru sampai teks putih di atasnya lolos kontras -
      #2f7ff5 sendiri terlalu terang untuk itu. */
   --brand:        #0a628f;
   --brand-hover:  #084f74;
@@ -108,7 +108,7 @@
   color-scheme: light;
 }
 
-/* ---------- Lilac Dawn — terang, lembut ----------
+/* ---------- Lilac Dawn: terang, lembut ----------
    Ungu-lavender. Ada di sini karena tiga palet sebelumnya semuanya biru atau
    hangat; tanpa satu yang benar-benar lain, "pilihan tema" cuma jadi tiga
    varian dari selera yang sama. */
@@ -149,10 +149,10 @@
   color-scheme: light;
 }
 
-/* ---------- Clean Slate — terang, paling tenang ----------
+/* ---------- Clean Slate: terang, paling tenang ----------
    Abu-biru, nyaris tanpa warna. Untuk yang menatap tabel sepanjang hari dan
    tidak ingin dibantu warna sama sekali, dan untuk layar yang dipakai di depan
-   pasien — palet yang tidak menarik perhatian ke dirinya sendiri.
+   pasien: palet yang tidak menarik perhatian ke dirinya sendiri.
 
    Empat tema sekarang SEMUANYA terang. Tema gelap sengaja dibuang: aplikasi ini
    dipakai di ruangan terang, sering di samping dokumen kertas, dan layar gelap
@@ -174,7 +174,7 @@
   --accent:       #0369a1;
   --accent-soft:  #e0f2fe;
 
-  /* Gradiennya gelap, jadi teks di atasnya terang — kebalikan dari tiga tema
+  /* Gradiennya gelap, jadi teks di atasnya terang: kebalikan dari tiga tema
      lain. Inilah kenapa --on-grad harus per tema, bukan satu nilai global. */
   --on-grad:      #f8fafc;
   --on-grad-soft: #cbd5e1;
@@ -238,7 +238,7 @@ body {
 
 /* Judul memakai huruf yang berbeda dari isi. Tanpa ini judul halaman dan label
    kolom terbaca dengan bobot yang sama, dan mata tidak punya pegangan saat
-   memindai layar padat — yang di apotek adalah keadaan normal, bukan kecuali. */
+   memindai layar padat, yang di apotek adalah keadaan normal, bukan kecuali. */
 h1, h2, h3, .display {
   font-family: var(--font-sora), system-ui, sans-serif;
   letter-spacing: -0.02em;
@@ -248,7 +248,7 @@ h1, h2, h3, .display {
 /* ── Angka ──────────────────────────────────────────────────
    Semua angka berbaris: stok, dosis, harga, nomor batch. `tabular-nums`
    membuat lebar tiap digit sama, jadi kolom angka tidak bergoyang saat isinya
-   berubah — dan mata bisa membandingkan dua baris tanpa membacanya satu-satu. */
+   berubah, dan mata bisa membandingkan dua baris tanpa membacanya satu-satu. */
 .tabular, td, th, input[type="number"] {
   font-variant-numeric: tabular-nums;
 }
@@ -262,7 +262,7 @@ h1, h2, h3, .display {
 
 /* ── Gerak ──────────────────────────────────────────────────
    Satu tangga durasi untuk seluruh aplikasi. Aturannya: animasi TIDAK PERNAH
-   boleh menunda pekerjaan. Ini dipakai apoteker yang sedang dikejar antrean —
+   boleh menunda pekerjaan. Ini dipakai apoteker yang sedang dikejar antrean -
    transisi 400ms yang terasa "mewah" saat demo terasa lambat pada kali
    kelima puluh. Yang boleh lama hanya gerak yang tidak menghalangi input,
    seperti lembar yang naik dari bawah. */
@@ -286,7 +286,7 @@ h1, h2, h3, .display {
 .sw-grad { background: var(--grad); }
 
 /* Normalkan semua dropdown <select> agar seragam dengan input lain.
-   Panah chevron ikut warna teks lewat `currentColor` — versi lama menanam
+   Panah chevron ikut warna teks lewat `currentColor`: versi lama menanam
    #6b7280 di dalam data URI, jadi panahnya tetap abu-abu gelap dan hilang di
    tema gelap. */
 select {
@@ -342,7 +342,7 @@ select {
 }
 
 /* ============================================================
-   Halaman masuk — kaca di atas siluet
+   Halaman masuk: kaca di atas siluet
    ============================================================ */
 .sw-scene {
   position: fixed;
@@ -352,7 +352,7 @@ select {
   background: var(--paper);
 }
 /* Langit: gradien tema, diredupkan supaya kartu kaca di atasnya tetap terbaca.
-   Gradien penuh terlalu ramai sebagai latar formulir — yang dibaca orang di
+   Gradien penuh terlalu ramai sebagai latar formulir, yang dibaca orang di
    layar ini cuma dua kolom isian. */
 .sw-scene-sky {
   position: absolute;
@@ -362,7 +362,7 @@ select {
 }
 /* Pemandangan mengisi seluruh layar. Kartu masuk mengambang di tengahnya,
    jadi yang terlihat di sekeliling kartu adalah rumah sakit di kiri, apotek di
-   kanan, dan tanaman di bawah — komposisi yang sama dengan rujukan. */
+   kanan, dan tanaman di bawah: komposisi yang sama dengan rujukan. */
 .sw-scene-art {
   position: absolute;
   inset: 0;
@@ -374,7 +374,7 @@ select {
  * Kerudung di atas pemandangan.
  *
  * Tanpa ini kartu terang mengambang di atas latar yang sama terangnya, dan
- * matanya tidak tahu mana yang harus dibaca duluan — persis yang membedakan
+ * matanya tidak tahu mana yang harus dibaca duluan: persis yang membedakan
  * halaman masuk TokoKu: di sana latarnya gelap tenang, jadi kartu putihnya
  * langsung menonjol. Pemandangan di sini dipertahankan, tapi diredupkan ke
  * pinggir supaya ia jadi latar, bukan saingan.
@@ -435,7 +435,7 @@ select {
   position: relative; width: 100%; max-width: 52rem; min-height: 560px;
   /* Diperkecil dari 64rem. Pada 64rem kartunya menutupi dua pertiga layar, dan
      pemandangan di belakangnya tidak pernah terlihat selain sedikit tanaman di
-     bawah — jadi latar yang dibangun susah payah itu praktis mubazir. */
+     bawah, jadi latar yang dibangun susah payah itu praktis mubazir. */
   border-radius: 28px; overflow: hidden;
   animation: swFadeUp var(--t-sheet) var(--ease) both;
 }
@@ -459,7 +459,7 @@ select {
 .sw-overlay-face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2.5rem;
   color: var(--on-grad); transition: opacity .5s ease; }
 /* Muka yang sedang tidak terlihat harus ikut mati untuk klik dan untuk pembaca
-   layar — kalau hanya opacity-nya nol, tombol "Daftar" yang tak terlihat masih
+   layar: kalau hanya opacity-nya nol, tombol "Daftar" yang tak terlihat masih
    bisa ditekan dan masih dibacakan. */
 .sw-overlay-face--login { opacity: 0; pointer-events: none; }
 .sw-auth.active .sw-overlay-face--signup { opacity: 0; pointer-events: none; }

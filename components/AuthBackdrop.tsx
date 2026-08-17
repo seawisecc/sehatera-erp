@@ -1,9 +1,9 @@
 /**
  * Latar halaman masuk: pemandangan dunia kesehatan.
  *
- * Komposisinya mengikuti rujukan yang diminta — rumah sakit dengan ambulans di
+ * Komposisinya mengikuti rujukan yang diminta: rumah sakit dengan ambulans di
  * kiri, apotek di kanan, meja resepsionis klinik, tanaman di latar depan, dan
- * ikon medis melayang dalam heksagon — tapi digambar sebagai SVG, bukan render
+ * ikon medis melayang dalam heksagon, tapi digambar sebagai SVG, bukan render
  * 3D. Dua hal yang tidak bisa diberikan gambar raster:
  *
  * 1. Ikut tema. Setiap warna di sini adalah token. Ganti tema, seluruh
@@ -13,7 +13,7 @@
  *    layar pertama yang dilihat orang, sering di jaringan klinik yang lambat.
  *
  * Yang TIDAK bisa disamai: kedalaman fotografis render 3D. Jadi gayanya sengaja
- * dibuat ilustrasi datar berlapis — pilihan yang terbaca sebagai keputusan
+ * dibuat ilustrasi datar berlapis: pilihan yang terbaca sebagai keputusan
  * desain, bukan sebagai tiruan yang gagal.
  *
  * Kedalaman dibangun dari empat lapis, makin dekat makin pekat:
@@ -225,7 +225,7 @@ const Dna = () => (
   </>
 )
 
-/** Tanaman hias latar depan — daun melengkung dari satu titik. */
+/** Tanaman hias latar depan: daun melengkung dari satu titik. */
 function Plant({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
   return (
     <g transform={`translate(${x} ${y}) scale(${s})`}>

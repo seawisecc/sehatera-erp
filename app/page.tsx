@@ -62,7 +62,7 @@ export default function Auth() {
     setSLoading(true)
     // Nama apotek & nama lengkap disimpan di metadata akun, bukan cuma di state
     // halaman ini. Kalau konfirmasi email menyala, orang menutup tab lalu
-    // kembali lewat tautan di emailnya — dan pada saat itu isian formulir ini
+    // kembali lewat tautan di emailnya, dan pada saat itu isian formulir ini
     // sudah lama hilang. Metadata yang membawanya sampai ke pendaftaran apotek.
     const { data, error } = await supabase.auth.signUp({
       email: sEmail.trim().toLowerCase(), password: sPassword,
@@ -88,8 +88,8 @@ export default function Auth() {
     // saat login pertama (lihat app/dashboard/page.tsx).
     setSLoading(false)
     setSSukses(t(
-      'Pendaftaran berhasil! Cek email Anda untuk konfirmasi, lalu masuk — apotek Anda langsung aktif dengan masa coba 14 hari.',
-      'Registration successful! Check your email to confirm, then sign in — your pharmacy starts with a 14-day free trial.',
+      'Pendaftaran berhasil! Cek email Anda untuk konfirmasi, lalu masuk. Apotek Anda langsung aktif dengan masa coba 14 hari.',
+      'Registration successful! Check your email to confirm, then sign in. Your pharmacy starts with a 14-day free trial.',
     ))
   }
 
@@ -104,7 +104,7 @@ export default function Auth() {
         </a>
       </div>
       {/* Kolom: merek di ATAS kartu, kartu, lalu footer.
-          Menaruh merek di luar kartu membuat kartunya bersih — isinya cuma
+          Menaruh merek di luar kartu membuat kartunya bersih: isinya cuma
           pekerjaan yang sedang diminta, tanpa logo yang mengulang diri di dua
           panel sekaligus seperti sebelumnya. */}
       <div className="relative z-10 w-full max-w-[52rem] flex flex-col items-center gap-5">

@@ -6,7 +6,7 @@ import type { PlanFeatures } from './plan'
  * Sengaja dihitung ulang di sini, bukan memanggil `company_is_active()` di
  * database: fungsi itu menerima id apotek apa pun sehingga hak panggilnya
  * dicabut dari `authenticated` (lihat migrasi 0003). Aturannya harus PERSIS
- * sama dengan `company_lapsed_at()` — kalau keduanya berbeda, apotek melihat
+ * sama dengan `company_lapsed_at()`: kalau keduanya berbeda, apotek melihat
  * "aman" di layar lalu ditolak saat menekan Proses Transaksi, dan itu terjadi
  * di depan pembeli yang sedang antre.
  */
@@ -52,12 +52,12 @@ export function subscriptionState(company: CompanyContext | null): SubscriptionS
 
   // STATUS yang menentukan tanggal mana yang berlaku, sama persis dengan
   // `company_lapsed_at()`. Apotek trial tidak dikunci oleh subscriptionEndsAt,
-  // dan sebaliknya — kalau tidak, apotek yang naik dari trial ke berbayar akan
+  // dan sebaliknya: kalau tidak, apotek yang naik dari trial ke berbayar akan
   // membawa tanggal trial lamanya dan langsung terkunci di hari ia membayar.
   const iso = company.status === 'trial' ? company.trialEndsAt : company.subscriptionEndsAt
   const reason: 'trial' | 'paid' = company.status === 'trial' ? 'trial' : 'paid'
 
-  // Tanpa tanggal akhir dianggap aktif — jangan pernah mengunci apotek hanya
+  // Tanpa tanggal akhir dianggap aktif: jangan pernah mengunci apotek hanya
   // karena kolomnya belum pernah diisi.
   if (!iso) return { kind: 'ok' }
 
@@ -107,8 +107,8 @@ export function pesanLangganan(
           ? t('Masa coba sudah berakhir', 'The free trial has ended')
           : t('Masa aktif langganan sudah berakhir', 'The subscription has ended'),
     isi: t(
-      'Semua data Anda aman dan tetap bisa dibuka, dicetak, dan dilaporkan — termasuk SIPNAP. Yang berhenti hanya transaksi baru, sampai langganan diaktifkan kembali.',
-      'All your data is safe and still readable, printable, and reportable — including SIPNAP. Only new sales stop, until the subscription is reactivated.',
+      'Semua data Anda aman dan tetap bisa dibuka, dicetak, dan dilaporkan, termasuk SIPNAP. Yang berhenti hanya transaksi baru, sampai langganan diaktifkan kembali.',
+      'All your data is safe and still readable, printable, and reportable, including SIPNAP. Only new sales stop, until the subscription is reactivated.',
     ),
   }
 }

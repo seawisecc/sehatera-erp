@@ -1,7 +1,7 @@
 /**
  * Baca dan tulis CSV.
  *
- * Dipisah dari halaman karena tidak menyentuh state apa pun — dan karena
+ * Dipisah dari halaman karena tidak menyentuh state apa pun, dan karena
  * pembaca CSV yang benar itu lebih halus daripada kelihatannya. Yang di sini
  * menangani tanda kutip, koma di dalam nilai, dan kutip ganda yang di-escape;
  * `text.split(',')` tidak, dan katalog obat yang mengandung "Amoxicillin 500

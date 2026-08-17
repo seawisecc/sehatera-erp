@@ -1,10 +1,10 @@
 /**
- * Dokumen cetak — berita acara, bukti bayar, dan seterusnya.
+ * Dokumen cetak: berita acara, bukti bayar, dan seterusnya.
  *
  * Dipisah dari halaman karena isinya bukan React sama sekali, melainkan HTML
  * lengkap yang dibuka di jendela lain. Selama ia menumpang di dalam komponen
  * dashboard, dua hal terjadi: templat yang sama disalin dua kali (Berita Acara
- * dicetak dari dua tempat — sesudah memusnahkan, dan dari riwayat), dan
+ * dicetak dari dua tempat: sesudah memusnahkan, dan dari riwayat), dan
  * salinannya sudah mulai berbeda. Yang pertama menulis `${settingsData.alamat}`
  * tanpa nilai cadangan, sehingga alamat yang belum diisi tercetak sebagai kata
  * "undefined" pada dokumen yang ikut ditandatangani apoteker penanggung jawab.
@@ -100,7 +100,7 @@ export type DataPemusnahan = {
  * Berita Acara Pemusnahan Obat.
  *
  * Satu templat untuk dua pemakaian: langsung sesudah pemusnahan dicatat, dan
- * dicetak ulang dari riwayat. Bentuknya harus sama persis — dokumen yang sama
+ * dicetak ulang dari riwayat. Bentuknya harus sama persis: dokumen yang sama
  * dicetak dua kali dengan tata letak berbeda akan dipertanyakan saat
  * pemeriksaan.
  */

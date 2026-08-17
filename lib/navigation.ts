@@ -7,12 +7,12 @@ import {
  * Menu dan hak akses per peran.
  *
  * Dipisah dari halaman supaya bisa dibaca tanpa menggulir 5.000 baris, dan
- * supaya modul klinik nanti ditambahkan DI SINI — satu tempat — bukan di
+ * supaya modul klinik nanti ditambahkan DI SINI: satu tempat, bukan di
  * tengah komponen dashboard.
  *
  * Perhatikan urutan penyaringan yang berlaku di dashboard: daftar ini disaring
  * dulu oleh hak akses per pengguna, BARU oleh paket langganan
- * (`lockedModules()` di lib/plan.ts). Urutan itu penting — pemilik boleh
+ * (`lockedModules()` di lib/plan.ts). Urutan itu penting: pemilik boleh
  * memberi kasir akses ke Pembayaran Faktur, tapi paket Starter tetap tidak
  * membukanya untuk siapa pun di apotek itu.
  */

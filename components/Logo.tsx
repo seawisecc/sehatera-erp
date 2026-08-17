@@ -1,25 +1,25 @@
 /**
- * Logo Sehatera — "Perisai Nadi".
+ * Logo Sehatera: "Perisai Nadi".
  *
  * Tiga hal yang harus dibawa satu tanda:
- *   perisai  — perlindungan. Aplikasi ini memegang rekam obat golongan dan,
+ *   perisai : perlindungan. Aplikasi ini memegang rekam obat golongan dan,
  *              nanti, rekam medis. Kepercayaan itu yang dijual, bukan fiturnya.
- *   palang   — kesehatan. Satu-satunya lambang yang dikenali semua orang di
+ *   palang  : kesehatan. Satu-satunya lambang yang dikenali semua orang di
  *              Indonesia tanpa perlu dijelaskan, dari apotek sampai rumah sakit.
- *   nadi     — kehidupan, dan sistem yang mengawasinya.
+ *   nadi    : kehidupan, dan sistem yang mengawasinya.
  *
  * Nadinya DIPAHAT dari palang, bukan ditempel di atasnya. Tanda yang menumpuk
  * tiga lambang jadi ramai dan hancur di ukuran kecil; dengan dipahat, pada 16px
- * garisnya melebur jadi palang biasa dan tandanya tetap terbaca — pada ukuran
+ * garisnya melebur jadi palang biasa dan tandanya tetap terbaca: pada ukuran
  * besar barulah nadinya terlihat.
  *
- * Warna ikut token tema. Diganti tema, logonya ikut — tidak ada berkas PNG yang
+ * Warna ikut token tema. Diganti tema, logonya ikut: tidak ada berkas PNG yang
  * harus disediakan empat kali.
  */
 export function Mark({
   size = 32,
   className = '',
-  /** Pakai `mono` di atas permukaan berwarna (sidebar, tombol) — satu warna saja. */
+  /** Pakai `mono` di atas permukaan berwarna (sidebar, tombol): satu warna saja. */
   variant = 'gradient',
 }: {
   size?: number
@@ -61,7 +61,7 @@ export function Mark({
         <rect x="9.2" y="13.7" width="13.6" height="4.6" rx="1.9" />
       </g>
 
-      {/* Nadi — dipahat dari lengan mendatar palang, memakai warna perisainya
+      {/* Nadi: dipahat dari lengan mendatar palang, memakai warna perisainya
           sendiri sehingga terbaca sebagai celah, bukan garis tambahan. */}
       <path
         d="M9.2 16h2.6l1.5-3.4 2.4 6.8 1.4-3.4h3.7"
@@ -79,7 +79,7 @@ export function Mark({
 export function Logo({
   size = 36,
   className = '',
-  /** Baris kecil di bawah nama — nama faskes, atau "by Seawise Studio". */
+  /** Baris kecil di bawah nama: nama faskes, atau "by Seawise Studio". */
   sub,
   /** Kelas tambahan untuk baris kecil itu. */
   subClass = '',

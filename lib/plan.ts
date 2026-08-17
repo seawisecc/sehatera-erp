@@ -7,7 +7,7 @@
  * kehilangan fitur tanpa ada yang menyadarinya.
  *
  * ATURAN BAWAAN: kunci yang KOSONG dianggap kemampuan PENUH. Paket dibuat
- * tangan lewat Super Admin, jadi penanda yang lupa diisi itu wajar — dan
+ * tangan lewat Super Admin, jadi penanda yang lupa diisi itu wajar, dan
  * memberi kelebihan jauh lebih murah daripada mengunci apotek yang sudah bayar
  * lalu menunggu mereka mengeluh. Aturan yang sama berlaku untuk kuota di
  * database (lihat migrasi 0003).
@@ -66,7 +66,7 @@ export function readPlanFeatures(raw: unknown): PlanFeatures {
  * Modul yang dikunci paket ini.
  *
  * SIPNAP sengaja TIDAK ada di daftar mana pun. Pelaporan narkotika dan
- * psikotropika adalah kewajiban hukum apotek, bukan fitur premium — menguncinya
+ * psikotropika adalah kewajiban hukum apotek, bukan fitur premium: menguncinya
  * di paket berbayar berarti menagih orang supaya bisa patuh aturan. Yang boleh
  * dikunci di paket atas hanya kemudahannya: rekap lintas cabang dan pengiriman
  * terjadwal.

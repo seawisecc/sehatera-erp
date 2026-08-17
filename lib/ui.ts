@@ -1,7 +1,7 @@
 /**
  * Kelas tampilan yang dipakai berulang.
  *
- * Semuanya melewati token tema di `app/globals.css` — jangan menulis hex di
+ * Semuanya melewati token tema di `app/globals.css`: jangan menulis hex di
  * sini. Warna yang ditanam langsung adalah alasan "ganti tema" dulu praktis
  * tidak bisa dilakukan.
  */
@@ -22,7 +22,7 @@ export const TD       = 'px-4 py-2.5 align-middle'
  *
  * Sengaja memakai palet tetap Tailwind, bukan token tema: golongan obat adalah
  * penanda REGULASI, bukan selera. Merah untuk narkotika harus tetap merah di
- * tema mana pun — apoteker mengenalinya dari warna sebelum sempat membaca
+ * tema mana pun: apoteker mengenalinya dari warna sebelum sempat membaca
  * tulisannya, dan itu justru yang diandalkan saat sedang buru-buru.
  */
 export const KATEGORI_BADGE: Record<string, string> = {

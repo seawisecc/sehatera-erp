@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 /**
  * Tema warna Sehatera.
  *
- * Nilai warnanya TIDAK ada di file ini — semuanya di `app/globals.css` sebagai
+ * Nilai warnanya TIDAK ada di file ini: semuanya di `app/globals.css` sebagai
  * token CSS. Yang disimpan di sini hanya daftar tema yang boleh dipilih beserta
  * tiga warna contoh untuk kartu pratinjau di Pengaturan. Kalau nilai warnanya
  * ikut ditulis di sini, akan ada dua sumber kebenaran yang perlahan berbeda,
@@ -22,14 +22,14 @@ export const DEFAULT_THEME: ThemeId = 'vital-tide'
  * ruangan terang, sering di samping dokumen kertas, dan layar gelap di antara
  * kertas putih memaksa mata menyesuaikan bolak-balik sepanjang hari. Yang
  * membedakan keempatnya sekarang bukan gelap-terang, tapi seberapa banyak
- * warna yang ikut bicara — dari Vital Tide yang tegas sampai Clean Slate yang
+ * warna yang ikut bicara, dari Vital Tide yang tegas sampai Clean Slate yang
  * nyaris diam.
  */
 export const THEMES: {
   id: ThemeId
   label: string
   mode: 'terang'
-  /** Untuk siapa tema ini enak dipakai — bukan sekadar deskripsi warna. */
+  /** Untuk siapa tema ini enak dipakai, bukan sekadar deskripsi warna. */
   hint: { id: string; en: string }
   swatch: [string, string, string]
 }[] = [
@@ -38,8 +38,8 @@ export const THEMES: {
     label: 'Vital Tide',
     mode: 'terang',
     hint: {
-      id: 'Biru ke hijau — warna yang sudah lama dipakai dunia kesehatan.',
-      en: 'Blue into green — the colours healthcare has long used.',
+      id: 'Biru ke hijau: warna yang sudah lama dipakai dunia kesehatan.',
+      en: 'Blue into green: the colours healthcare has long used.',
     },
     swatch: ['#2f7ff5', '#17c1c4', '#4fd98f'],
   },
@@ -58,8 +58,8 @@ export const THEMES: {
     label: 'Lilac Dawn',
     mode: 'terang',
     hint: {
-      id: 'Ungu lavender — satu-satunya yang benar-benar lain dari tiga lainnya.',
-      en: 'Lavender violet — the only one genuinely unlike the other three.',
+      id: 'Ungu lavender: satu-satunya yang benar-benar lain dari tiga lainnya.',
+      en: 'Lavender violet: the only one genuinely unlike the other three.',
     },
     swatch: ['#a78bfa', '#c084fc', '#f0abfc'],
   },
@@ -116,7 +116,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Dipakai sesudah sesi dibaca: semua kasir di satu apotek melihat tampilan
-   * yang sama. Pilihan pribadi di perangkat ini tetap menang — orang yang sudah
+   * yang sama. Pilihan pribadi di perangkat ini tetap menang: orang yang sudah
    * memilih tema lain tidak boleh dikembalikan paksa setiap kali ia menyegarkan
    * halaman.
    */
@@ -143,13 +143,13 @@ export const useTheme = () => useContext(ThemeCtx)
  * Dijalankan sebelum React sempat merender.
  *
  * Tanpa ini, halaman selalu terlukis dengan tema bawaan lebih dulu lalu
- * berganti begitu useEffect jalan — kedipan warna tiap kali halaman dibuka.
+ * berganti begitu useEffect jalan: kedipan warna tiap kali halaman dibuka.
  */
 export function ThemeScript() {
   // Daftar tema dibangun dari THEMES, bukan ditulis ulang di dalam string.
   // Versi sebelumnya menanam dua id secara harfiah di sini, jadi menambah tema
   // ketiga akan membuat skrip ini menolaknya sebagai tidak dikenal dan
-  // mengembalikan semua orang ke tema bawaan tiap kali halaman dibuka —
+  // mengembalikan semua orang ke tema bawaan tiap kali halaman dibuka -
   // pilihan yang tersimpan rapi di localStorage, tapi tidak pernah dipakai.
   const daftar = JSON.stringify(THEMES.map((t) => t.id))
   const js = `(function(){try{var v=${daftar},t=localStorage.getItem('${STORAGE_KEY}');
@@ -211,11 +211,11 @@ export function ThemePicker({
 }
 
 /**
- * Sakelar ringkas untuk topbar — berputar melewati semua tema.
+ * Sakelar ringkas untuk topbar: berputar melewati semua tema.
  *
  * Dulu ini menukar dua tema bolak-balik. Dengan empat tema, tukar-menukar tidak
  * lagi bisa menjangkau semuanya, jadi tombolnya memutar urutan dan labelnya
- * menyebut tema BERIKUTNYA — orang perlu tahu ke mana ia akan pergi sebelum
+ * menyebut tema BERIKUTNYA: orang perlu tahu ke mana ia akan pergi sebelum
  * menekan, bukan sesudahnya.
  */
 export function ThemeToggle({ className = '' }: { className?: string }) {
