@@ -53,7 +53,7 @@ begin
     status               = 'trial',
     trial_ends_at        = now() + interval '14 days',
     subscription_ends_at = null,
-    theme                = 'sunrise-sorbet',
+    theme                = 'vital-tide',
     kota                 = 'Denpasar',
     telepon              = '0361-234567'
   where id = v_company;
@@ -310,7 +310,7 @@ begin
     status               = 'active',
     subscription_ends_at = now() + interval '5 days',   -- sengaja: memicu spanduk "segera berakhir"
     trial_ends_at        = now() - interval '3 months',
-    theme                = 'neon-pulse',
+    theme                = 'clean-slate',
     kota                 = 'Denpasar'
   where id = v_company;
 

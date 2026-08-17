@@ -11,39 +11,28 @@ import { createContext, useContext, useEffect, useState } from 'react'
  * ikut ditulis di sini, akan ada dua sumber kebenaran yang perlahan berbeda,
  * dan yang menang di layar selalu yang di CSS.
  */
-export type ThemeId = 'sunrise-sorbet' | 'vital-tide' | 'neon-pulse' | 'midnight-sage'
+export type ThemeId = 'vital-tide' | 'sunrise-sorbet' | 'lilac-dawn' | 'clean-slate'
 
-export const DEFAULT_THEME: ThemeId = 'sunrise-sorbet'
+export const DEFAULT_THEME: ThemeId = 'vital-tide'
 
 /**
- * Empat tema: dua terang, dua gelap, masing-masing satu yang berani dan satu
- * yang tenang. Susunan itu disengaja — tema kelima sebaiknya mengisi kotak yang
- * memang masih kosong, bukan menambah selera baru.
+ * Empat tema, SEMUANYA terang.
  *
- * Nilai warnanya TIDAK ada di file ini — semuanya di `app/globals.css` sebagai
- * token CSS. Yang disimpan di sini hanya daftar tema yang boleh dipilih beserta
- * tiga warna contoh untuk kartu pratinjau. Kalau nilai warnanya ikut ditulis di
- * sini, akan ada dua sumber kebenaran yang perlahan berbeda, dan yang menang di
- * layar selalu yang di CSS.
+ * Tema gelap sengaja dibuang setelah dipakai sebentar: aplikasi ini dipakai di
+ * ruangan terang, sering di samping dokumen kertas, dan layar gelap di antara
+ * kertas putih memaksa mata menyesuaikan bolak-balik sepanjang hari. Yang
+ * membedakan keempatnya sekarang bukan gelap-terang, tapi seberapa banyak
+ * warna yang ikut bicara — dari Vital Tide yang tegas sampai Clean Slate yang
+ * nyaris diam.
  */
 export const THEMES: {
   id: ThemeId
   label: string
-  mode: 'terang' | 'gelap'
+  mode: 'terang'
   /** Untuk siapa tema ini enak dipakai — bukan sekadar deskripsi warna. */
   hint: { id: string; en: string }
   swatch: [string, string, string]
 }[] = [
-  {
-    id: 'sunrise-sorbet',
-    label: 'Sunrise Sorbet',
-    mode: 'terang',
-    hint: {
-      id: 'Lembut dan tenang, untuk layar yang dilihat sepanjang jam buka.',
-      en: 'Soft and calm, for screens watched all through opening hours.',
-    },
-    swatch: ['#c6ffdd', '#fbd786', '#f7797d'],
-  },
   {
     id: 'vital-tide',
     label: 'Vital Tide',
@@ -55,24 +44,34 @@ export const THEMES: {
     swatch: ['#2f7ff5', '#17c1c4', '#4fd98f'],
   },
   {
-    id: 'neon-pulse',
-    label: 'Neon Pulse',
-    mode: 'gelap',
+    id: 'sunrise-sorbet',
+    label: 'Sunrise Sorbet',
+    mode: 'terang',
     hint: {
-      id: 'Pekat dan berkontras tinggi, untuk shift malam dan apotek 24 jam.',
-      en: 'Deep and high contrast, for night shifts and 24-hour pharmacies.',
+      id: 'Hangat dan lembut, untuk layar yang dilihat sepanjang jam buka.',
+      en: 'Warm and soft, for screens watched all through opening hours.',
     },
-    swatch: ['#8a2387', '#e94057', '#f27121'],
+    swatch: ['#c6ffdd', '#fbd786', '#f7797d'],
   },
   {
-    id: 'midnight-sage',
-    label: 'Midnight Sage',
-    mode: 'gelap',
+    id: 'lilac-dawn',
+    label: 'Lilac Dawn',
+    mode: 'terang',
     hint: {
-      id: 'Gelap yang diam, untuk yang tidak tahan menatap Neon Pulse seharian.',
-      en: 'A quiet dark, for anyone who cannot stare at Neon Pulse all day.',
+      id: 'Ungu lavender — satu-satunya yang benar-benar lain dari tiga lainnya.',
+      en: 'Lavender violet — the only one genuinely unlike the other three.',
     },
-    swatch: ['#0f3b33', '#2f7a63', '#7ec8a0'],
+    swatch: ['#a78bfa', '#c084fc', '#f0abfc'],
+  },
+  {
+    id: 'clean-slate',
+    label: 'Clean Slate',
+    mode: 'terang',
+    hint: {
+      id: 'Nyaris tanpa warna. Untuk layar yang dipakai di depan pasien.',
+      en: 'Almost colourless. For screens used in front of patients.',
+    },
+    swatch: ['#475569', '#64748b', '#94a3b8'],
   },
 ]
 
@@ -118,8 +117,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   /**
    * Dipakai sesudah sesi dibaca: semua kasir di satu apotek melihat tampilan
    * yang sama. Pilihan pribadi di perangkat ini tetap menang — orang yang sudah
-   * memilih Neon Pulse untuk shift malamnya tidak boleh dikembalikan paksa
-   * setiap kali ia menyegarkan halaman.
+   * memilih tema lain tidak boleh dikembalikan paksa setiap kali ia menyegarkan
+   * halaman.
    */
   const applyCompanyTheme = (t: string | null | undefined) => {
     try {
@@ -144,8 +143,7 @@ export const useTheme = () => useContext(ThemeCtx)
  * Dijalankan sebelum React sempat merender.
  *
  * Tanpa ini, halaman selalu terlukis dengan tema bawaan lebih dulu lalu
- * berganti begitu useEffect jalan — kedipan terang di layar yang justru dipilih
- * karena gelap, tiap kali halaman dibuka.
+ * berganti begitu useEffect jalan — kedipan warna tiap kali halaman dibuka.
  */
 export function ThemeScript() {
   // Daftar tema dibangun dari THEMES, bukan ditulis ulang di dalam string.

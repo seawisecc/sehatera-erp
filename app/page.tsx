@@ -5,9 +5,10 @@ import { FlaskConical } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useLang, LangToggle } from '../lib/i18n'
 import { ThemeToggle } from '../lib/theme'
+import { AuthBackdrop } from '../components/AuthBackdrop'
 
 const inputCls =
-  'w-full border border-[var(--line)] bg-[var(--surface)] rounded-xl px-4 py-3 text-sm text-[var(--ink)] placeholder-[var(--ink-faint)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]'
+  'glass-field w-full rounded-xl px-4 py-3 text-sm text-[var(--ink)] placeholder-[var(--ink-faint)]'
 
 
 function Logo() {
@@ -106,15 +107,16 @@ export default function Auth() {
   }
 
   return (
-    <div className="sw-ambient min-h-screen flex items-center justify-center p-4 sm:p-6 relative">
-      <div className="absolute top-4 right-5 sm:top-6 sm:right-8 flex items-center gap-2">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative">
+      <AuthBackdrop />
+      <div className="absolute top-4 right-5 sm:top-6 sm:right-8 z-20 flex items-center gap-2">
         <ThemeToggle />
         <LangToggle />
         <a href="/kenapa" className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--brand)] bg-[var(--surface)]/70 backdrop-blur-sm border border-black/5 px-3.5 py-2 rounded-full shadow-sm hover:bg-[var(--surface)] transition">
           ✨ {t('Kenapa aplikasi ini?', 'Why this app?')}
         </a>
       </div>
-      <div className={`sw-auth ${mode === 'signup' ? 'active' : ''}`}>
+      <div className={`sw-auth glass relative z-10 ${mode === 'signup' ? 'active' : ''}`}>
 
         {/* ── Login form ── */}
         <div className="sw-form sw-form--login p-8 sm:p-10 md:p-12">

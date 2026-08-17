@@ -9,16 +9,15 @@
    Selama begitu, "ganti tema" berarti menyunting ribuan tempat dan berharap
    tidak ada yang terlewat — jadi praktis tidak bisa dilakukan.
 
-   Sekarang semua warna melewati token di bawah. Menambah tema ketiga nanti
-   cukup menambah satu blok `[data-theme="..."]`; tidak ada satu pun komponen
-   yang perlu disentuh.
+   Sekarang semua warna melewati token di bawah. Menambah tema kelima nanti
+   cukup menambah satu blok `[data-theme="..."]` dan satu entri di THEMES;
+   tidak ada satu pun komponen yang perlu disentuh.
 
-   CATATAN KONTRAS — ketiga warna Sunrise Sorbet (#c6ffdd, #fbd786, #f7797d)
-   terlalu terang untuk dipakai sebagai warna teks; #fbd786 di atas putih tidak
-   akan terbaca siapa pun. Jadi ketiganya dipakai sebagai GRADIEN IDENTITAS
-   (--grad) di sidebar, tombol utama, dan logo, sementara isi layar memakai
-   netral hangat yang diturunkan dari palet itu. Aturan yang sama berlaku untuk
-   Neon Pulse.
+   CATATAN KONTRAS — warna palet tiap tema terlalu terang untuk dipakai sebagai
+   warna teks; #fbd786 di atas putih tidak akan terbaca siapa pun. Jadi ketiganya
+   dipakai sebagai GRADIEN IDENTITAS (--grad) di sidebar, tombol utama, dan logo,
+   sementara isi layar memakai netral yang diturunkan dari palet itu. Aturan yang
+   sama berlaku untuk keempat tema.
    ============================================================ */
 
 /* ---------- Sunrise Sorbet — tema bawaan, terang ---------- */
@@ -109,91 +108,94 @@
   color-scheme: light;
 }
 
-/* ---------- Neon Pulse — gelap, untuk apotek 24 jam & shift malam ---------- */
-[data-theme="neon-pulse"] {
-  --grad-1: #8a2387;
-  --grad-2: #e94057;
-  --grad-3: #f27121;
-  --grad: linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 52%, var(--grad-3) 100%);
+/* ---------- Lilac Dawn — terang, lembut ----------
+   Ungu-lavender. Ada di sini karena tiga palet sebelumnya semuanya biru atau
+   hangat; tanpa satu yang benar-benar lain, "pilihan tema" cuma jadi tiga
+   varian dari selera yang sama. */
+[data-theme="lilac-dawn"] {
+  --grad-1: #a78bfa;
+  --grad-2: #c084fc;
+  --grad-3: #f0abfc;
+  --grad: linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 50%, var(--grad-3) 100%);
 
-  --brand:        #8a2387;
-  --brand-hover:  #a02da0;
-  --brand-soft:   #c04bb6;
-  --on-brand:     #fdeef9;
-  --on-brand-soft:#e9b3de;
+  --brand:        #6d28d9;
+  --brand-hover:  #5b21b6;
+  --brand-soft:   #a78bfa;
+  --on-brand:     #f6f3ff;
+  --on-brand-soft:#ddd6fe;
 
-  --accent:       #f27121;
-  --accent-soft:  #38210f;
+  --accent:       #be185d;
+  --accent-soft:  #fce7f3;
 
-  /* Gradien Neon Pulse pekat, jadi di sini teks terang yang benar. */
-  --on-grad:      #fff2fb;
-  --on-grad-soft: #f0c4e6;
+  --on-grad:      #3b0764;
+  --on-grad-soft: #6b21a8;
 
-  --paper:        #0e0714;
-  --surface:      #180e1f;
-  --surface-2:    #22142b;
-  --surface-3:    #1c1024;
+  --paper:        #faf8ff;
+  --surface:      #ffffff;
+  --surface-2:    #f3efff;
+  --surface-3:    #f8f5ff;
 
-  --ink:          #f7ecf6;
-  --ink-mid:      #d6c2d8;
-  --ink-soft:     #b49ab8;
-  --ink-faint:    #8a7290;
+  --ink:          #241b33;
+  --ink-mid:      #453a5c;
+  --ink-soft:     #665b7d;
+  --ink-faint:    #9d93b3;
 
-  --line:         #3a2246;
-  --line-soft:    #2b1936;
+  --line:         #e6dcf7;
+  --line-soft:    #f1ebfb;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .5);
-  --shadow-md: 0 12px 34px -14px rgba(138, 35, 135, .6);
+  --shadow-sm: 0 1px 2px rgba(36, 27, 51, .05);
+  --shadow-md: 0 10px 30px -14px rgba(36, 27, 51, .28);
 
-  color-scheme: dark;
+  color-scheme: light;
 }
 
-/* ---------- Midnight Sage — gelap, tenang ----------
-   Kenapa ada tema gelap kedua: Neon Pulse itu tema gelap yang RAMAI, dan
-   sebagian orang tidak tahan menatapnya delapan jam. Ini padanannya yang diam —
-   hijau redup, kontras cukup, tanpa warna yang berteriak. Untuk apoteker yang
-   membaca tabel stok sepanjang shift malam, bukan untuk memukau siapa pun.
+/* ---------- Clean Slate — terang, paling tenang ----------
+   Abu-biru, nyaris tanpa warna. Untuk yang menatap tabel sepanjang hari dan
+   tidak ingin dibantu warna sama sekali, dan untuk layar yang dipakai di depan
+   pasien — palet yang tidak menarik perhatian ke dirinya sendiri.
 
-   Empat tema jadinya dua terang dan dua gelap, masing-masing satu yang berani
-   dan satu yang tenang. Menambah tema kelima sebaiknya mengisi kotak yang
-   memang masih kosong, bukan menambah selera baru. */
-[data-theme="midnight-sage"] {
-  --grad-1: #0f3b33;
-  --grad-2: #2f7a63;
-  --grad-3: #7ec8a0;
+   Empat tema sekarang SEMUANYA terang. Tema gelap sengaja dibuang: aplikasi ini
+   dipakai di ruangan terang, sering di samping dokumen kertas, dan layar gelap
+   di antara kertas putih memaksa mata menyesuaikan bolak-balik sepanjang hari. */
+[data-theme="clean-slate"] {
+  --grad-1: #475569;
+  --grad-2: #64748b;
+  --grad-3: #94a3b8;
   --grad: linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 52%, var(--grad-3) 100%);
 
-  --brand:        #2e7d64;
-  --brand-hover:  #3a9a7b;
-  --brand-soft:   #5fb392;
-  --on-brand:     #eefaf4;
-  --on-brand-soft:#a9d8c2;
+  --brand:        #334155;
+  --brand-hover:  #1e293b;
+  --brand-soft:   #64748b;
+  --on-brand:     #f8fafc;
+  --on-brand-soft:#cbd5e1;
 
-  /* Amber hangat: satu-satunya warna di palet ini yang bukan hijau, jadi
-     peringatan dan sorotan benar-benar menonjol alih-alih tenggelam. */
-  --accent:       #d9a441;
-  --accent-soft:  #33280f;
+  /* Satu-satunya warna sungguhan di palet ini, supaya tautan dan peringatan
+     tidak ikut hilang di antara abu. */
+  --accent:       #0369a1;
+  --accent-soft:  #e0f2fe;
 
-  --on-grad:      #f2fbf6;
-  --on-grad-soft: #bfdccb;
+  /* Gradiennya gelap, jadi teks di atasnya terang — kebalikan dari tiga tema
+     lain. Inilah kenapa --on-grad harus per tema, bukan satu nilai global. */
+  --on-grad:      #f8fafc;
+  --on-grad-soft: #cbd5e1;
 
-  --paper:        #0a1310;
-  --surface:      #111d19;
-  --surface-2:    #182823;
-  --surface-3:    #14211c;
+  --paper:        #f8fafc;
+  --surface:      #ffffff;
+  --surface-2:    #eef2f6;
+  --surface-3:    #f4f7fa;
 
-  --ink:          #e9f3ee;
-  --ink-mid:      #c3d7ce;
-  --ink-soft:     #95afa4;
-  --ink-faint:    #6d8779;
+  --ink:          #0f172a;
+  --ink-mid:      #334155;
+  --ink-soft:     #475569;
+  --ink-faint:    #94a3b8;
 
-  --line:         #24382f;
-  --line-soft:    #1b2a24;
+  --line:         #dde5ed;
+  --line-soft:    #eef2f6;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .45);
-  --shadow-md: 0 12px 34px -14px rgba(0, 0, 0, .7);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .05);
+  --shadow-md: 0 10px 30px -14px rgba(15, 23, 42, .25);
 
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 /* Token didaftarkan ke Tailwind supaya `bg-surface`, `text-ink`, `border-line`
@@ -281,16 +283,6 @@ h1, h2, h3, .display {
     radial-gradient(900px 720px at 104% 112%, var(--grad-3) 0%, transparent 55%),
     var(--paper);
 }
-/* Di tema terang gradiennya pastel dan boleh tampil apa adanya. Di tema gelap
-   ketiga warnanya pekat dan akan menenggelamkan teks, jadi diredupkan. */
-[data-theme="neon-pulse"] .sw-ambient {
-  background:
-    radial-gradient(1100px 560px at 10% -10%, color-mix(in oklab, var(--grad-1) 26%, transparent) 0%, transparent 55%),
-    radial-gradient(1000px 520px at 102% -4%, color-mix(in oklab, var(--grad-2) 20%, transparent) 0%, transparent 52%),
-    radial-gradient(900px 720px at 104% 112%, color-mix(in oklab, var(--grad-3) 18%, transparent) 0%, transparent 55%),
-    var(--paper);
-}
-
 .sw-grad { background: var(--grad); }
 
 /* Normalkan semua dropdown <select> agar seragam dengan input lain.
@@ -349,11 +341,78 @@ select {
   .sw-bar        { animation: none; transform: none; }
 }
 
+/* ============================================================
+   Halaman masuk — kaca di atas siluet
+   ============================================================ */
+.sw-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: var(--paper);
+}
+/* Langit: gradien tema, diredupkan supaya kartu kaca di atasnya tetap terbaca.
+   Gradien penuh terlalu ramai sebagai latar formulir — yang dibaca orang di
+   layar ini cuma dua kolom isian. */
+.sw-scene-sky {
+  position: absolute;
+  inset: 0;
+  background: var(--grad);
+  opacity: 0.55;
+}
+ /* Siluet duduk sebagai PITA DI BAWAH, bukan menutup layar.
+   Sebelumnya ia dipasang setinggi layar penuh dengan `slice`, jadi gambarnya
+   diperbesar sampai yang terlihat cuma potongan gedung raksasa yang tak
+   dikenali sebagai apa pun. */
+.sw-scene-art {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: clamp(220px, 42vh, 420px);
+}
+
+/**
+ * Permukaan kaca.
+ *
+ * `backdrop-filter` tidak ada di sebagian peramban lama; kalau begitu yang
+ * tersisa hanyalah latar setengah tembus dan formulirnya bisa sulit dibaca di
+ * atas siluet. Karena itu nilai dasarnya sudah cukup pekat untuk berdiri
+ * sendiri (72%), dan blur hanya menambah, bukan menyelamatkan.
+ */
+.glass {
+  background: color-mix(in oklab, var(--surface) 72%, transparent);
+  border: 1px solid color-mix(in oklab, var(--surface) 60%, transparent);
+  box-shadow:
+    0 1px 0 color-mix(in oklab, var(--surface) 85%, transparent) inset,
+    0 24px 60px -24px color-mix(in oklab, var(--ink) 45%, transparent);
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass {
+    background: color-mix(in oklab, var(--surface) 52%, transparent);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+}
+
+/* Isian di dalam kartu kaca: lebih pekat daripada kartunya, supaya teks yang
+   diketik tidak beradu dengan siluet di belakang. */
+.glass-field {
+  background: color-mix(in oklab, var(--surface) 78%, transparent);
+  border: 1px solid color-mix(in oklab, var(--ink) 12%, transparent);
+  transition: border-color var(--t-quick) var(--ease), box-shadow var(--t-quick) var(--ease);
+}
+.glass-field:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 22%, transparent);
+}
+
 /* ── Auth sliding overlay (Sign In ⇄ Sign Up) ── */
 .sw-auth {
   position: relative; width: 100%; max-width: 64rem; min-height: 600px;
-  background: var(--surface-3); border-radius: 28px; overflow: hidden;
-  box-shadow: 0 25px 60px -20px color-mix(in oklab, var(--brand) 45%, transparent);
+  border-radius: 28px; overflow: hidden;
   animation: swFadeUp var(--t-sheet) var(--ease) both;
 }
 @media (prefers-reduced-motion: reduce) { .sw-auth { animation: none; } }
@@ -369,6 +428,7 @@ select {
    nyaris hilang. */
 .sw-overlay { position: absolute; top: 0; left: 50%; width: 50%; height: 100%; z-index: 5; overflow: hidden;
   background: var(--grad);
+  opacity: 0.92;
   clip-path: polygon(14% 0, 100% 0, 100% 100%, 0 100%);
   transition: transform .9s cubic-bezier(.77,0,.18,1), clip-path .9s cubic-bezier(.77,0,.18,1); }
 .sw-auth.active .sw-overlay { transform: translateX(-100%); clip-path: polygon(0 0, 86% 0, 100% 100%, 0 100%); }

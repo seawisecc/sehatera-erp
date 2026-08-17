@@ -78,12 +78,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  // Warna bilah browser mengikuti tema aktif, bukan satu hex tetap yang akan
-  // salah separuh waktu begitu ada tema kedua.
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fdf7f3" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e0714" },
-  ],
+  // Keempat tema terang, jadi bilah peramban satu warna saja — mengikuti
+  // Vital Tide yang jadi bawaan.
+  themeColor: "#f4fbfb",
 };
 
 export default function RootLayout({
@@ -97,7 +94,7 @@ export default function RootLayout({
       // Tema bawaan ditulis di server juga, bukan hanya oleh ThemeScript.
       // Kalau hanya skrip yang mengisinya, halaman pertama sempat terlukis
       // tanpa satu pun token warna.
-      data-theme="sunrise-sorbet"
+      data-theme="vital-tide"
       suppressHydrationWarning
       className={`${sora.variable} ${jakarta.variable} ${jetbrains.variable} h-full antialiased`}
     >
