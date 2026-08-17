@@ -213,7 +213,7 @@ export default function HalamanBeranda() {
               <k.Icon size={16} className="shrink-0 text-[var(--ink-faint)]" strokeWidth={1.9} />
             </div>
             <p className="text-xl sm:text-2xl font-bold text-[var(--ink)] leading-tight break-words num">
-              {memuat ? '—' : k.nilai}
+              {memuat ? '···' : k.nilai}
             </p>
             <Selisih kini={k.kini} lalu={k.lalu} rentang={namaRentang[rentang]} />
           </div>
