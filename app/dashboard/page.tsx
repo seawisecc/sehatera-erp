@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Pill, ShoppingCart, PackageOpen, LogOut, Settings, Truck,
   FlaskConical, Wallet, CalendarClock, ClipboardList, Printer, Pencil,
-  Receipt, CreditCard, Building2, Users, PanelLeftClose, PanelLeft, ChevronRight,
+  Receipt, CreditCard, Building2, Users, ChevronRight,
   UserPlus, Trash2, Upload, ShieldCheck, Check, ArrowLeft, Menu, X, Download, Database, HeartPulse,
   Search, Wand2, AlertTriangle, LayoutGrid
 } from 'lucide-react'
@@ -218,6 +218,37 @@ export default function Dashboard() {
     })()
   }, [])
 
+  // ── Kerangka aplikasi ──
+  const [accountOpen, setAccountOpen] = useState(false)
+
+  /**
+   * Pilihan lipat sidebar milik PENGGUNA, terpisah dari lipat otomatis.
+   *
+   * Tanpa pemisahan ini, mode fokus akan menimpa pilihan orang secara permanen:
+   * masuk ke Kasir sekali, dan sidebar tetap menyempit di semua halaman lain
+   * sesudahnya karena keadaan terakhirnya sudah ikut tersimpan.
+   */
+  const pinRef = useRef<boolean>(false)
+  useEffect(() => {
+    try { pinRef.current = localStorage.getItem('sw_sidebar_collapsed') === '1' } catch {}
+  }, [])
+
+  /**
+   * Mode fokus: sidebar menyempit sendiri di halaman yang butuh layar lebar dan
+   * perhatian penuh. Kasir adalah contohnya — di sana orang sedang berhadapan
+   * dengan pembeli, bukan sedang mencari menu.
+   */
+  const HALAMAN_FOKUS = ['transaksi']
+  useEffect(() => {
+    setSidebarCollapsed(HALAMAN_FOKUS.includes(activePage) ? true : pinRef.current)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePage])
+
+  /** Nama yang dipakai di sidebar, topbar mobile, dan menu akun. */
+  const namaFaskes = isSuper
+    ? (companies.find((c: any) => c.id === superViewCompany)?.nama || 'Super Admin')
+    : (settingsData.nama_apotek || companyName || 'Apotek Saya')
+
   const langgananState = subscriptionState(session?.company ?? null)
   const langgananPesan = pesanLangganan(langgananState, t)
   const kasirTerkunci = isLapsed(langgananState)
@@ -236,6 +267,18 @@ export default function Dashboard() {
     // siapa pun di apotek itu.
     const terkunci = lockedModules(fitur)
     return withMigrasi.filter(p => !terkunci.includes(p))
+  })()
+
+  /** Menu yang benar-benar tampil di sidebar, termasuk halaman khusus Super Admin. */
+  const navItems = [
+    ...menuItems.filter(i => allowedPages.includes(i.id)),
+    ...(isSuper ? [{ id: 'companies', label: 'Companies', en: 'Companies', icon: Building2 }] : []),
+  ]
+
+  const judulHalaman = (() => {
+    const m = navItems.find(i => i.id === activePage)
+    if (m) return lang === 'en' ? m.en : m.label
+    return activePage === 'migrasi' ? t('Migrasi Data', 'Data Migration') : 'Sehatera'
   })()
 
   // Jika role tidak boleh membuka halaman aktif, arahkan ke halaman pertama yang diizinkan
@@ -2368,17 +2411,37 @@ const batalRetur = async (row: any) => {
       )}
 
       <div className="sw-ambient min-h-screen">
-        {/* Top bar (mobile) */}
+        {/* ── Topbar mobile ── */}
         <div className="md:hidden sticky top-0 z-30 flex items-center gap-3 h-14 px-4 bg-[var(--brand)] text-[var(--on-brand)]">
           <button onClick={() => setMobileNavOpen(true)} aria-label="Menu"><Menu size={22} /></button>
-          <span className="font-medium truncate">{isSuper ? (companies.find((c: any) => c.id === superViewCompany)?.nama || 'Super Admin') : (settingsData.nama_apotek || companyName || 'Apotek Saya')}</span>
+          <span className="font-medium truncate">{namaFaskes}</span>
         </div>
 
         <div className="md:flex md:min-h-screen">
-        {/* Backdrop (mobile) */}
         {mobileNavOpen && <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setMobileNavOpen(false)} />}
-        {/* Sidebar */}
-        <div className={`${sidebarCollapsed ? 'md:w-20' : 'md:w-64'} w-64 bg-gradient-to-b from-[var(--brand)] via-[var(--brand-soft)] to-[var(--brand-hover)] flex flex-col transition-transform md:transition-[width] duration-200 shrink-0 fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 md:z-auto ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+
+        {/* ══ SIDEBAR ══
+            Isinya sekarang HANYA merek dan menu. Nama pengguna, peran, tombol
+            keluar, pemilih bahasa/tema, dan pemilih apotek Super Admin semuanya
+            pindah ke topbar. Sidebar yang memuat semua itu memaksa mata
+            memindai dua jenis hal di satu kolom — yang dituju (menu) dan yang
+            jarang disentuh (setelan akun). */}
+        <div className={`${sidebarCollapsed ? 'md:w-[76px]' : 'md:w-64'} w-64 bg-gradient-to-b from-[var(--brand)] via-[var(--brand-soft)] to-[var(--brand-hover)] flex flex-col shrink-0 fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 md:z-auto ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
+          style={{ transition: 'transform var(--t-normal) var(--ease), width var(--t-normal) var(--ease)' }}>
+
+          {/* Tombol lipat: lingkaran di TEPI LUAR sidebar, bukan di dalamnya.
+              Di tepi ia selalu di tempat yang sama entah sidebar terbuka atau
+              menyempit, jadi tangan menemukannya tanpa dicari. */}
+          <button
+            onClick={() => { const nv = !sidebarCollapsed; setSidebarCollapsed(nv); pinRef.current = nv; try { localStorage.setItem('sw_sidebar_collapsed', nv ? '1' : '0') } catch {} }}
+            title={sidebarCollapsed ? t('Perlebar sidebar', 'Expand sidebar') : t('Perkecil sidebar', 'Collapse sidebar')}
+            aria-label={sidebarCollapsed ? t('Perlebar sidebar', 'Expand sidebar') : t('Perkecil sidebar', 'Collapse sidebar')}
+            aria-expanded={!sidebarCollapsed}
+            className="hidden md:flex absolute -right-3.5 top-20 z-10 w-7 h-7 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--brand)] shadow-md border border-[var(--line)] hover:bg-[var(--surface-2)]"
+            style={{ transition: 'transform var(--t-quick) var(--ease), background-color var(--t-quick) var(--ease)' }}>
+            <ChevronRight size={15} style={{ transform: sidebarCollapsed ? 'none' : 'rotate(180deg)', transition: 'transform var(--t-normal) var(--ease)' }} />
+          </button>
+
           <div className={`${sidebarCollapsed ? 'px-3' : 'px-5'} py-5`}>
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
               <div className="relative w-10 h-10 rounded-2xl bg-[var(--surface)]/10 flex items-center justify-center shrink-0">
@@ -2388,75 +2451,98 @@ const batalRetur = async (row: any) => {
               {!sidebarCollapsed && (
                 <div className="min-w-0">
                   <div className="text-white font-semibold text-sm leading-tight truncate">Sehatera</div>
-                  <div className="text-[var(--on-brand-soft)] text-xs truncate">by Seawise Studio</div>
+                  <div className="text-[var(--on-brand-soft)] text-xs truncate">{namaFaskes}</div>
                 </div>
               )}
               <button onClick={() => setMobileNavOpen(false)} className="md:hidden ml-auto text-[var(--on-brand-soft)] hover:text-white" aria-label="Tutup menu"><X size={20} /></button>
             </div>
-            {/* Toggle minimize */}
-            <button onClick={() => { const nv = !sidebarCollapsed; setSidebarCollapsed(nv); try { localStorage.setItem('sw_sidebar_collapsed', nv ? '1' : '0') } catch {} }}
-              title={sidebarCollapsed ? 'Perbesar sidebar' : 'Perkecil sidebar'}
-              className={`mt-4 w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} px-3 py-2.5 rounded-xl bg-white/[0.07] border border-white/10 text-left hover:bg-[var(--surface)]/10 transition`}>
-              {!sidebarCollapsed && <span className="text-[var(--on-brand)] text-sm font-medium truncate">{isSuper ? (companies.find((c: any) => c.id === superViewCompany)?.nama || 'Super Admin') : (settingsData.nama_apotek || companyName || 'Apotek Saya')}</span>}
-              {sidebarCollapsed ? <PanelLeft size={17} className="text-[var(--on-brand-soft)]" /> : <PanelLeftClose size={16} className="text-[var(--on-brand-soft)] shrink-0" />}
-            </button>
-            {/* Super admin: lihat sebagai apotek */}
-            {isSuper && !sidebarCollapsed && (
-              <div className="mt-2">
-                <label className="text-[10px] uppercase tracking-wide text-[var(--on-brand-soft)] mb-1 block">Lihat sebagai apotek</label>
-                <select value={superViewCompany} onChange={e => setSuperViewCompany(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-white/[0.07] border border-white/10 text-[var(--on-brand)] text-sm focus:outline-none">
-                  <option value="" className="text-black">Semua apotek</option>
-                  {companies.map((c: any) => <option key={c.id} value={c.id} className="text-black">{c.nama}</option>)}
-                </select>
-              </div>
-            )}
           </div>
+
           <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-1">
-            {menuItems.filter(item => allowedPages.includes(item.id)).map((item) => {
+            {navItems.map((item) => {
               const Icon = item.icon
+              const aktif = activePage === item.id
               return (
                 <button key={item.id} onClick={() => { setActivePage(item.id); setMobileNavOpen(false) }}
-                  title={sidebarCollapsed ? item.label : undefined}
-                  className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl text-sm transition text-left ${
-                    activePage === item.id ? 'bg-[var(--surface)]/12 text-white font-medium' : 'text-[var(--on-brand-soft)] hover:bg-white/[0.07] hover:text-white'
-                  }`}>
+                  title={sidebarCollapsed ? (lang === 'en' ? item.en : item.label) : undefined}
+                  aria-current={aktif ? 'page' : undefined}
+                  className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl text-sm text-left ${
+                    aktif ? 'bg-[var(--surface)]/15 text-white font-medium' : 'text-[var(--on-brand-soft)] hover:bg-white/[0.07] hover:text-white'
+                  }`}
+                  style={{ transition: 'background-color var(--t-quick) var(--ease), color var(--t-quick) var(--ease)' }}>
                   <Icon size={17} className="shrink-0" />{!sidebarCollapsed && <span className="truncate">{lang === 'en' ? item.en : item.label}</span>}
                 </button>
               )
             })}
-            {isSuper && (
-              <button onClick={() => { setActivePage('companies'); setMobileNavOpen(false) }}
-                title={sidebarCollapsed ? 'Companies' : undefined}
-                className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl text-sm transition text-left ${
-                  activePage === 'companies' ? 'bg-[var(--surface)]/12 text-white font-medium' : 'text-[var(--on-brand-soft)] hover:bg-white/[0.07] hover:text-white'
-                }`}>
-                <Building2 size={17} className="shrink-0" />{!sidebarCollapsed && <span className="truncate">Companies</span>}
-              </button>
-            )}
           </nav>
-          <div className={`${sidebarCollapsed ? 'px-3' : 'px-5'} py-4 border-t border-white/10`}>
-            {!sidebarCollapsed && (
-              <>
-                <div className="text-white text-sm font-medium truncate">{authName || settingsData.nama_apotek || 'Pengguna'}</div>
-                <div className="mt-0.5 mb-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface)]/10 text-[var(--on-brand-soft)] text-[10px] font-medium">
-                  <ShieldCheck size={11} /> {currentRole ? (ROLE_LABELS[currentRole] || currentRole) : '...'}
-                </div>
-              </>
-            )}
-            <button onClick={async () => { await supabase.auth.signOut(); window.location.href = '/' }}
-              title={t('Keluar', 'Sign out')}
-              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-1.5'} text-[var(--on-brand-soft)] text-xs ${sidebarCollapsed ? 'mt-0' : 'mt-2.5'} hover:text-white transition w-full`}>
-              <LogOut size={sidebarCollapsed ? 17 : 13} />{!sidebarCollapsed && t('Keluar', 'Sign out')}
-            </button>
-            {!sidebarCollapsed && (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <LangToggle dark />
-                <ThemeToggle />
-              </div>
-            )}
-          </div>
         </div>
+
+        <div className="flex-1 min-w-0 flex flex-col">
+
+        {/* ══ TOPBAR (desktop) ══
+            Judul halaman di kiri, semua yang tentang "siapa saya dan bagaimana
+            aplikasi ini disetel" di kanan. */}
+        <header className="hidden md:flex sticky top-0 z-30 h-16 items-center gap-3 px-6 bg-[var(--surface)]/85 backdrop-blur border-b border-[var(--line)]">
+          <div className="min-w-0">
+            <h1 className="text-base font-semibold text-[var(--ink)] truncate leading-tight">{judulHalaman}</h1>
+            <p className="text-xs text-[var(--ink-faint)] truncate">{namaFaskes}</p>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            {isSuper && (
+              <select value={superViewCompany} onChange={e => setSuperViewCompany(e.target.value)}
+                aria-label={t('Lihat sebagai apotek', 'View as pharmacy')}
+                className="max-w-[190px] px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-soft)] text-xs">
+                <option value="">{t('Semua apotek', 'All pharmacies')}</option>
+                {companies.map((c: any) => <option key={c.id} value={c.id}>{c.nama}</option>)}
+              </select>
+            )}
+            <LangToggle />
+            <ThemeToggle />
+
+            <div className="relative">
+              <button onClick={() => setAccountOpen(v => !v)}
+                aria-haspopup="menu" aria-expanded={accountOpen}
+                className="flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-full border border-[var(--line)] hover:bg-[var(--surface-2)]"
+                style={{ transition: 'background-color var(--t-quick) var(--ease)' }}>
+                <span className="w-7 h-7 rounded-full bg-[var(--brand)] text-[var(--on-brand)] text-xs font-semibold flex items-center justify-center shrink-0">
+                  {(authName || 'U').trim().charAt(0).toUpperCase()}
+                </span>
+                <span className="hidden lg:block text-xs font-medium text-[var(--ink)] max-w-[130px] truncate">{authName || t('Pengguna', 'User')}</span>
+                <ChevronRight size={14} className="text-[var(--ink-faint)]" style={{ transform: accountOpen ? 'rotate(90deg)' : 'rotate(90deg)', transition: 'transform var(--t-quick) var(--ease)' }} />
+              </button>
+
+              {accountOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setAccountOpen(false)} />
+                  <div role="menu" className="absolute right-0 top-full mt-2 w-64 z-50 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-lg overflow-hidden sw-anim-fade">
+                    <div className="px-4 py-3 border-b border-[var(--line-soft)]">
+                      <p className="text-sm font-semibold text-[var(--ink)] truncate">{authName || t('Pengguna', 'User')}</p>
+                      <p className="text-xs text-[var(--ink-faint)] truncate">{session?.email}</p>
+                      <span className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--ink-soft)] text-[10px] font-medium">
+                        <ShieldCheck size={11} /> {currentRole ? (ROLE_LABELS[currentRole] || currentRole) : '…'}
+                      </span>
+                    </div>
+                    {allowedPages.includes('pengaturan') && (
+                      <button onClick={() => { setActivePage('pengaturan'); setSettingsTab('profil'); setAccountOpen(false) }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--ink-mid)] hover:bg-[var(--surface-2)] text-left">
+                        <Settings size={15} /> {t('Pengaturan', 'Settings')}
+                      </button>
+                    )}
+                    <button onClick={() => { setActivePage('pengaturan'); setSettingsTab('langganan'); setAccountOpen(false) }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--ink-mid)] hover:bg-[var(--surface-2)] text-left">
+                      <CreditCard size={15} /> {t('Langganan', 'Subscription')}
+                    </button>
+                    <button onClick={async () => { await supabase.auth.signOut(); window.location.href = '/' }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--accent)] hover:bg-[var(--surface-2)] text-left border-t border-[var(--line-soft)]">
+                      <LogOut size={15} /> {t('Keluar', 'Sign out')}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </header>
 
         {/* Main Content */}
         <div className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8">
@@ -4793,6 +4879,7 @@ const batalRetur = async (row: any) => {
 
         </div>
         </div>
+        </div>
 
         {/* Bottom tab bar (mobile) + More sheet */}
         {(() => {
@@ -4845,10 +4932,31 @@ const batalRetur = async (row: any) => {
                         )
                       })}
                     </div>
-                    <div className="flex items-center justify-between border-t border-[var(--line-soft)] mt-4 pt-3">
-                      <LangToggle />
-                      <button onClick={async () => { await supabase.auth.signOut(); window.location.href = '/' }}
-                        className="inline-flex items-center gap-1.5 text-sm text-red-500 font-medium"><LogOut size={15} /> {t('Keluar', 'Sign out')}</button>
+                    {/* Identitas pengguna dan pemilih tema ikut ke sini saat
+                        sidebar dibersihkan. Di layar lebar keduanya ada di menu
+                        akun pada topbar — di mobile tidak ada topbar itu, jadi
+                        tanpa bagian ini orang kehilangan satu-satunya tempat
+                        melihat sedang masuk sebagai siapa. */}
+                    <div className="border-t border-[var(--line-soft)] mt-4 pt-3 space-y-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-9 h-9 rounded-full bg-[var(--brand)] text-[var(--on-brand)] text-sm font-semibold flex items-center justify-center shrink-0">
+                          {(authName || 'U').trim().charAt(0).toUpperCase()}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-[var(--ink)] truncate">{authName || t('Pengguna', 'User')}</p>
+                          <p className="text-[11px] text-[var(--ink-faint)] truncate">
+                            {currentRole ? (ROLE_LABELS[currentRole] || currentRole) : '…'}
+                          </p>
+                        </div>
+                        <button onClick={async () => { await supabase.auth.signOut(); window.location.href = '/' }}
+                          className="inline-flex items-center gap-1.5 text-sm text-[var(--accent)] font-medium shrink-0">
+                          <LogOut size={15} /> {t('Keluar', 'Sign out')}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <LangToggle />
+                        <ThemeToggle />
+                      </div>
                     </div>
                   </div>
                 </div>
