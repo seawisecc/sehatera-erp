@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useLang, LangToggle } from '../lib/i18n'
 import { ThemeToggle } from '../lib/theme'
+import { Eye, EyeOff } from 'lucide-react'
 import { AuthBackdrop } from '../components/AuthBackdrop'
 import { Logo, Mark } from '../components/Logo'
 
@@ -21,6 +22,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [needConfirm, setNeedConfirm] = useState(false)
+  const [lihatSandi, setLihatSandi] = useState(false)
   const [info, setInfo] = useState('')
 
   // Signup
@@ -101,13 +103,20 @@ export default function Auth() {
           ✨ {t('Kenapa aplikasi ini?', 'Why this app?')}
         </a>
       </div>
-      <div className={`sw-auth glass relative z-10 ${mode === 'signup' ? 'active' : ''}`}>
+      {/* Kolom: merek di ATAS kartu, kartu, lalu footer.
+          Menaruh merek di luar kartu membuat kartunya bersih — isinya cuma
+          pekerjaan yang sedang diminta, tanpa logo yang mengulang diri di dua
+          panel sekaligus seperti sebelumnya. */}
+      <div className="relative z-10 w-full max-w-[52rem] flex flex-col items-center gap-5">
+        <Logo size={40} sub="BY SEAWISE STUDIO" subClass="uppercase tracking-[0.16em] text-[11px]" />
+
+      <div className={`sw-auth glass ${mode === 'signup' ? 'active' : ''}`}>
 
         {/* ── Login form ── */}
         <div className="sw-form sw-form--login p-8 sm:p-10 md:p-12">
-          <Logo size={44} sub="by Seawise Studio" className="mb-6" />
           <p className="text-[var(--accent)] text-xs font-semibold uppercase tracking-[0.18em] mb-2">{t('Selamat Datang Kembali', 'Welcome Back')}</p>
-          <h1 className="text-3xl sm:text-4xl font-bold text-[var(--ink)] mb-6">{t('Masuk', 'Sign In')}</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-[var(--ink)] mb-1.5">{t('Masuk', 'Sign In')}</h1>
+          <p className="text-sm text-[var(--ink-soft)] mb-6">{t('Kelola stok, kasir, dan laporan apotek dari satu tempat.', 'Manage stock, register, and reports from one place.')}</p>
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
               {error}
@@ -121,22 +130,39 @@ export default function Auth() {
               <input type="email" placeholder="nama@apotek.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} className={inputCls} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--ink-mid)] mb-1.5">Password</label>
-              <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} className={inputCls} />
+              <label className="block text-sm font-medium text-[var(--ink-mid)] mb-1.5">{t('Kata Sandi', 'Password')}</label>
+              {/* Tombol lihat sandi bukan kemewahan: kata sandi yang diketik di
+                  balik titik-titik adalah penyebab paling sering orang mengira
+                  akunnya bermasalah padahal cuma salah ketik. */}
+              <div className="relative">
+                <input type={lihatSandi ? 'text' : 'password'} placeholder="••••••••" value={password}
+                  onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                  className={inputCls + ' pr-11'} />
+                <button type="button" onClick={() => setLihatSandi(v => !v)}
+                  aria-label={lihatSandi ? t('Sembunyikan kata sandi', 'Hide password') : t('Lihat kata sandi', 'Show password')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] hover:text-[var(--ink-soft)]">
+                  {lihatSandi ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
             </div>
             <button onClick={handleLogin} disabled={loading} className="w-full bg-[var(--brand)] text-[var(--on-brand)] py-3 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
               {loading ? t('Memproses...', 'Processing...') : t('Masuk', 'Sign In')}
             </button>
+            {/* Jalan ke pendaftaran ada di kolom ini juga, bukan hanya di panel
+                miring. Panel itu hilang di layar sempit, dan sebelumnya jalan
+                daftar ikut hilang bersamanya di layar sedang. */}
+            <button onClick={() => setMode('signup')}
+              className="w-full py-3 rounded-xl border-2 border-[var(--brand)]/25 text-sm font-semibold text-[var(--brand)] hover:bg-[var(--brand)]/8 transition">
+              {t('Belum punya apotek? Daftar', 'No pharmacy yet? Register')}
+            </button>
           </div>
-          <p className="text-sm text-[var(--ink-soft)] mt-6 md:hidden">{t('Belum punya akun?', "Don't have an account?")} <button onClick={() => setMode('signup')} className="text-[var(--brand)] font-semibold">{t('Daftar', 'Sign Up')}</button></p>
         </div>
 
         {/* ── Signup form ── */}
         <div className="sw-form sw-form--signup p-8 sm:p-10 md:p-12">
-          <Logo size={44} sub="by Seawise Studio" className="mb-6" />
           <p className="text-[var(--accent)] text-xs font-semibold uppercase tracking-[0.18em] mb-2">{t('Gabung Sekarang', 'Join Now')}</p>
           <h1 className="text-2xl sm:text-3xl font-bold text-[var(--ink)] mb-1">{t('Daftarkan Apotek', 'Register Pharmacy')}</h1>
-          <p className="text-sm text-[var(--ink-soft)] mb-5">{t('Gratis mendaftar, aktivasi oleh tim Seawise.', 'Free to register, activated by the Seawise team.')}</p>
+          <p className="text-sm text-[var(--ink-soft)] mb-5">{t('Gratis 14 hari. Tanpa kartu kredit.', 'Free for 14 days. No credit card.')}</p>
           {sError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{sError}</div>}
           {sSukses && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">{sSukses}</div>}
           <div className="space-y-3.5">
@@ -168,7 +194,10 @@ export default function Auth() {
               {sLoading ? t('Memproses...', 'Processing...') : t('Daftarkan Apotek', 'Register Pharmacy')}
             </button>
           </div>
-          <p className="text-sm text-[var(--ink-soft)] mt-5 md:hidden">{t('Sudah punya akun?', 'Already have an account?')} <button onClick={() => setMode('login')} className="text-[var(--brand)] font-semibold">{t('Masuk', 'Sign In')}</button></p>
+            <button onClick={() => setMode('login')}
+              className="w-full py-3 rounded-xl border-2 border-[var(--brand)]/25 text-sm font-semibold text-[var(--brand)] hover:bg-[var(--brand)]/8 transition">
+              {t('Sudah punya akun? Masuk', 'Already have an account? Sign in')}
+            </button>
         </div>
 
         {/* ── Overlay (slides) ── */}
@@ -194,6 +223,23 @@ export default function Auth() {
             <button onClick={() => setMode('login')} className="px-6 py-2.5 rounded-xl border border-[var(--on-grad)]/35 text-[var(--on-grad)] text-sm font-medium hover:bg-[var(--on-grad)]/10 transition">{t('Masuk', 'Sign In')}</button>
           </div>
         </div>
+      </div>
+
+      {/* Footer.
+          Tautan legal dan halaman harga sengaja ditaruh DI SINI, bukan hanya di
+          halaman publik: orang menilai apakah mau menyerahkan data pasiennya
+          tepat saat diminta mendaftar, dan dokumen yang tidak bisa ditemukan
+          dari layar ini sama saja dengan tidak ada. */}
+      <p className="glass rounded-2xl px-5 py-3 text-center text-xs leading-relaxed text-[var(--ink-soft)]">
+        <a href="/kenapa" className="font-medium text-[var(--brand)] hover:underline">
+          {t('Lihat fitur & harga', 'See features & pricing')}
+        </a>
+        <br />
+        <span className="text-[var(--ink-faint)]">
+          {t('Sehatera: sistem apotek, klinik, dan faskes', 'Sehatera: pharmacy, clinic, and facility system')} ·{' '}
+          <strong className="text-[var(--ink-soft)]">by Seawise Studio</strong>
+        </span>
+      </p>
       </div>
     </div>
   )

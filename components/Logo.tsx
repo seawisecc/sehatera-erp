@@ -81,12 +81,15 @@ export function Logo({
   className = '',
   /** Baris kecil di bawah nama — nama faskes, atau "by Seawise Studio". */
   sub,
+  /** Kelas tambahan untuk baris kecil itu. */
+  subClass = '',
   /** `onBrand` untuk dipakai di atas sidebar berwarna. */
   tone = 'default',
 }: {
   size?: number
   className?: string
   sub?: string
+  subClass?: string
   tone?: 'default' | 'onBrand'
 }) {
   const onBrand = tone === 'onBrand'
@@ -111,7 +114,7 @@ export function Logo({
           Sehatera
         </span>
         {sub && (
-          <span className={`block text-xs truncate ${onBrand ? 'text-[var(--on-brand-soft)]' : 'text-[var(--ink-faint)]'}`}>
+          <span className={`block text-xs truncate ${subClass} ${onBrand ? 'text-[var(--on-brand-soft)]' : 'text-[var(--ink-faint)]'}`}>
             {sub}
           </span>
         )}

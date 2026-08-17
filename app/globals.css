@@ -371,6 +371,30 @@ select {
 }
 
 /**
+ * Kerudung di atas pemandangan.
+ *
+ * Tanpa ini kartu terang mengambang di atas latar yang sama terangnya, dan
+ * matanya tidak tahu mana yang harus dibaca duluan — persis yang membedakan
+ * halaman masuk TokoKu: di sana latarnya gelap tenang, jadi kartu putihnya
+ * langsung menonjol. Pemandangan di sini dipertahankan, tapi diredupkan ke
+ * pinggir supaya ia jadi latar, bukan saingan.
+ */
+.sw-scene::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 50% 45%,
+      color-mix(in oklab, var(--paper) 30%, transparent) 0%,
+      color-mix(in oklab, var(--on-grad) 14%, transparent) 55%,
+      color-mix(in oklab, var(--on-grad) 34%, transparent) 100%),
+    linear-gradient(to bottom,
+      transparent 55%,
+      color-mix(in oklab, var(--paper) 45%, transparent) 100%);
+}
+
+/**
  * Permukaan kaca.
  *
  * `backdrop-filter` tidak ada di sebagian peramban lama; kalau begitu yang
@@ -379,7 +403,7 @@ select {
  * sendiri (72%), dan blur hanya menambah, bukan menyelamatkan.
  */
 .glass {
-  background: color-mix(in oklab, var(--surface) 72%, transparent);
+  background: color-mix(in oklab, var(--surface) 92%, transparent);
   border: 1px solid color-mix(in oklab, var(--surface) 60%, transparent);
   box-shadow:
     0 1px 0 color-mix(in oklab, var(--surface) 85%, transparent) inset,
@@ -387,7 +411,7 @@ select {
 }
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .glass {
-    background: color-mix(in oklab, var(--surface) 52%, transparent);
+    background: color-mix(in oklab, var(--surface) 82%, transparent);
     -webkit-backdrop-filter: blur(22px) saturate(150%);
     backdrop-filter: blur(22px) saturate(150%);
   }
