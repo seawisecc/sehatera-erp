@@ -93,10 +93,6 @@ export default function Dashboard() {
     nama_apotek: '', alamat: '', nomor_ijin: '', nomor_telepon: ''
   })
   const [suppliers, setSuppliers] = useState<any[]>([])
-  const [showSupplierForm, setShowSupplierForm] = useState(false)
-  const [supplierForm, setSupplierForm] = useState({
-    nama_supplier: '', jenis: 'PBF', alamat: '', telepon: '', email: ''
-  })
   const [editProduk, setEditProduk] = useState<any>(null)
   const [produkSuppliers, setProdukSuppliers] = useState<any[]>([])
   const [supplierSearch, setSupplierSearch] = useState('')
@@ -150,7 +146,6 @@ export default function Dashboard() {
   useEffect(() => { if (activePage === 'dashboard') fetchSalesChart(chartRange) }, [chartRange])
   useEffect(() => { if (activePage === 'produk') { fetchProducts(); fetchExpiredAlerts() } }, [activePage])
   useEffect(() => { if (activePage === 'laporan') fetchRiwayat() }, [activePage])
-  useEffect(() => { if (activePage === 'supplier') fetchSuppliers() }, [activePage])
   // Kasir masih memerlukan daftar layanan untuk dijual. Selama halaman ini
   // belum ikut pindah, ia mengambilnya sendiri.
   const [services, setServices] = useState<any[]>([])
@@ -160,7 +155,6 @@ export default function Dashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePage, superViewCompany])
   useEffect(() => { if (activePage === 'pembelian') { fetchPOList(); fetchSuppliers() } }, [activePage])
-  useEffect(() => { if (activePage === 'faktur') fetchFaktur() }, [activePage])
   useEffect(() => { if (activePage === 'pengaturan') fetchUsers() }, [activePage])
   useEffect(() => { if (activePage === 'companies') fetchCompanies() }, [activePage])
   useEffect(() => { if (activePage === 'migrasi' && isSuper) fetchCompanies() }, [activePage, isSuper])
@@ -171,10 +165,8 @@ export default function Dashboard() {
     fetchSettings()
     if (activePage === 'dashboard') fetchStats()
     else if (activePage === 'produk') { fetchProducts(); fetchExpiredAlerts() }
-    else if (activePage === 'supplier') fetchSuppliers()
     else if (activePage === 'pembelian') fetchPOList()
     else if (activePage === 'laporan') fetchRiwayat()
-    else if (activePage === 'faktur') fetchFaktur()
     else if (activePage === 'tindaklanjut') { fetchRiwayatMusnah(); fetchRiwayatRetur() }
     else if (activePage === 'pengaturan') fetchUsers()
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -330,52 +322,6 @@ export default function Dashboard() {
 
   // Faktur States
   const [fakturForm, setFakturForm] = useState({ nomor_faktur: '', tanggal_faktur: new Date().toISOString().split('T')[0], term_of_payment: 30 })
-  const [fakturList, setFakturList] = useState<any[]>([])
-  const [showBayar, setShowBayar] = useState<any>(null)
-  const [bayarForm, setBayarForm] = useState({ tanggal_bayar: new Date().toISOString().split('T')[0], metode_bayar: 'Transfer', catatan_bayar: '' })
-
-  const fetchFaktur = async () => {
-    const { data } = await scopeQ(supabase.from('faktur')
-      .select('*, suppliers(nama_supplier), purchase_orders(nomor_po)'))
-    const rows = data || []
-    // Urut: belum bayar dulu (by jatuh tempo terdekat), baru yang lunas
-    rows.sort((a: any, b: any) => {
-      const aUnpaid = a.status !== 'lunas' ? 0 : 1
-      const bUnpaid = b.status !== 'lunas' ? 0 : 1
-      if (aUnpaid !== bUnpaid) return aUnpaid - bUnpaid
-      return new Date(a.tanggal_jatuh_tempo || 0).getTime() - new Date(b.tanggal_jatuh_tempo || 0).getTime()
-    })
-    setFakturList(rows)
-  }
-
-  const submitBayar = async () => {
-    if (!showBayar) return
-    const { error } = await supabase.from('faktur').update({
-      status: 'lunas',
-      tanggal_bayar: bayarForm.tanggal_bayar,
-      metode_bayar: bayarForm.metode_bayar,
-      catatan_bayar: bayarForm.catatan_bayar,
-    }).eq('id', showBayar.id)
-    if (error) { alert('Error: ' + error.message); return }
-    const paid = { ...showBayar, status: 'lunas', tanggal_bayar: bayarForm.tanggal_bayar, metode_bayar: bayarForm.metode_bayar, catatan_bayar: bayarForm.catatan_bayar }
-    setShowBayar(null)
-    fetchFaktur()
-    cetakBuktiBayar(paid)
-  }
-
-  const cetakBuktiBayar = (f: any) => {
-    bukaCetak(buktiPembayaranFaktur(settingsData, {
-      nomor_faktur: f.nomor_faktur,
-      nama_supplier: f.suppliers?.nama_supplier,
-      nomor_po: f.purchase_orders?.nomor_po,
-      tanggal_faktur: f.tanggal_faktur,
-      tanggal_jatuh_tempo: f.tanggal_jatuh_tempo,
-      tanggal_bayar: f.tanggal_bayar,
-      metode_bayar: f.metode_bayar,
-      catatan_bayar: f.catatan_bayar,
-      total: f.total,
-    }))
-  }
 
   const fetchPOList = async () => {
     const { data } = await scopeQ(supabase.from('purchase_orders').select('*, suppliers(nama_supplier, kode, alamat, telepon)').order('created_at', { ascending: false }))
@@ -776,7 +722,6 @@ export default function Dashboard() {
       const { error } = await supabase.from('suppliers').insert(payload)
       if (error) { setImportInfo(p => ({ ...p, supplier: 'Error: ' + error.message })); return }
       setImportInfo(p => ({ ...p, supplier: `✅ ${payload.length} supplier berhasil diimpor.` }))
-      if (activePage === 'supplier') fetchSuppliers()
     } catch (e: any) { setImportInfo(p => ({ ...p, supplier: 'Gagal membaca file: ' + (e?.message || e) })) }
     finally { setImporting(null) }
   }
@@ -853,7 +798,6 @@ export default function Dashboard() {
         ok++
       }
       setImportInfo(p => ({ ...p, fakturawal: `✅ ${ok} faktur/hutang awal diimpor.` + (gagal.length ? ` ${gagal.length} supplier tidak ditemukan: ${gagal.slice(0, 5).join(', ')}` : '') }))
-      if (activePage === 'faktur') fetchFaktur()
     } catch (e: any) { setImportInfo(p => ({ ...p, fakturawal: 'Gagal membaca file: ' + (e?.message || e) })) }
     finally { setImporting(null) }
   }
@@ -1282,15 +1226,6 @@ const batalRetur = async (row: any) => {
       setShowForm(false)
       setForm({ nama_obat: '', nama_generik: '', kandungan: '', kategori: 'bebas', satuan: 'Tablet', isi_kemasan: 1, harga_beli: 0, harga_jual: 0, stok_total: 0, stok_minimum: 10 })
       fetchProducts()
-    }
-  }
-
-  const handleTambahSupplier = async () => {
-    const { error } = await supabase.from('suppliers').insert([supplierForm])
-    if (!error) {
-      setShowSupplierForm(false)
-      setSupplierForm({ nama_supplier: '', jenis: 'PBF', alamat: '', telepon: '', email: '' })
-      fetchSuppliers()
     }
   }
 
@@ -2229,53 +2164,6 @@ const batalRetur = async (row: any) => {
         </div>
       )}
 
-      {/* Modal Bayar Faktur */}
-      {showBayar && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <div className="mb-4">
-              <h2 className="text-lg font-bold text-[var(--brand)]">{t('Bayar Faktur', 'Pay Invoice')}</h2>
-              <p className="text-xs text-[var(--ink-soft)]">{showBayar.nomor_faktur} · {showBayar.suppliers?.nama_supplier}</p>
-            </div>
-            <div className="bg-[var(--surface-2)] rounded-xl p-4 mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[var(--ink-soft)]">{t('Jumlah Tagihan', 'Amount Due')}</p>
-                <p className="text-xl font-bold text-[var(--brand)]">Rp {(showBayar.total || 0).toLocaleString('id-ID')}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-[var(--ink-soft)]">{t('Jatuh Tempo', 'Due Date')}</p>
-                <p className="text-sm font-medium text-[var(--brand)]">{showBayar.tanggal_jatuh_tempo ? new Date(showBayar.tanggal_jatuh_tempo).toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'}) : '-'}</p>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Tanggal Bayar', 'Payment Date')}</label>
-                  <input type="date" value={bayarForm.tanggal_bayar} onChange={e => setBayarForm({ ...bayarForm, tanggal_bayar: e.target.value })}
-                    className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Metode', 'Method')}</label>
-                  <select value={bayarForm.metode_bayar} onChange={e => setBayarForm({ ...bayarForm, metode_bayar: e.target.value })}
-                    className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">
-                    <option>Transfer</option><option>QRIS</option><option>Tunai</option><option>Debit</option><option>Giro</option><option>Cek</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Catatan', 'Notes')}</label>
-                <input value={bayarForm.catatan_bayar} onChange={e => setBayarForm({ ...bayarForm, catatan_bayar: e.target.value })}
-                  placeholder={t('No. referensi / bank (opsional)', 'Reference no. / bank (optional)')} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => setShowBayar(null)} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">{t('Batal', 'Cancel')}</button>
-              <button onClick={submitBayar} className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">{t('Tandai Lunas', 'Mark as Paid')}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal Struk */}
       {showStruk && lastTrx && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -2964,101 +2852,6 @@ const batalRetur = async (row: any) => {
               </div>
             </div>
           )}
-
-          {/* PEMBAYARAN FAKTUR */}
-          {activePage === 'faktur' && (() => {
-            const today = new Date(); today.setHours(0,0,0,0)
-            const belumLunas = fakturList.filter(f => f.status !== 'lunas')
-            const totalHutang = belumLunas.reduce((a, f) => a + (f.total || 0), 0)
-            const terlambat = belumLunas.filter(f => f.tanggal_jatuh_tempo && new Date(f.tanggal_jatuh_tempo) < today).length
-            return (
-            <div>
-              <h1 className="text-3xl font-bold text-[var(--ink)] mb-1">{t('Pembayaran Faktur', 'Invoice Payments')}</h1>
-              <p className="text-[var(--ink-soft)] text-sm mb-6">{t('Faktur pembelian diurutkan berdasarkan jatuh tempo terdekat', 'Purchase invoices sorted by nearest due date')}</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
-                <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl p-5">
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 bg-[var(--surface-2)] text-[var(--accent)]"><Wallet size={20} strokeWidth={1.9} /></div>
-                  <p className="text-xs text-[var(--ink-soft)] font-medium uppercase tracking-wide mb-1.5">{t('Total Hutang Belum Lunas', 'Total Unpaid Debt')}</p>
-                  <p className="text-2xl font-bold text-[var(--ink)] leading-none">Rp {totalHutang.toLocaleString('id-ID')}</p>
-                </div>
-                <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl p-5">
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 bg-[var(--accent-soft)] text-[var(--accent)]"><Receipt size={20} strokeWidth={1.9} /></div>
-                  <p className="text-xs text-[var(--ink-soft)] font-medium uppercase tracking-wide mb-1.5">{t('Faktur Belum Lunas', 'Unpaid Invoices')}</p>
-                  <p className="text-2xl font-bold text-[var(--ink)] leading-none">{belumLunas.length}</p>
-                </div>
-                <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl p-5">
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 bg-red-100 text-red-600"><CalendarClock size={20} strokeWidth={1.9} /></div>
-                  <p className="text-xs text-[var(--ink-soft)] font-medium uppercase tracking-wide mb-1.5">{t('Lewat Jatuh Tempo', 'Overdue')}</p>
-                  <p className="text-2xl font-bold text-[var(--ink)] leading-none">{terlambat}</p>
-                </div>
-              </div>
-
-              <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl overflow-x-auto">
-                {fakturList.length === 0 ? (
-                  <p className="text-center text-[var(--ink-faint)] py-12 text-sm">{t('Belum ada faktur. Faktur otomatis tercatat saat penerimaan barang.', 'No invoices yet. Invoices are recorded automatically during goods receipt.')}</p>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-[var(--brand)] text-[var(--on-brand)]">
-                        <th className="text-left px-4 py-3 text-xs font-medium">{t('No. Faktur', 'Invoice No.')}</th>
-                        <th className="text-left px-4 py-3 text-xs font-medium">Supplier</th>
-                        <th className="text-left px-4 py-3 text-xs font-medium">PO</th>
-                        <th className="text-left px-4 py-3 text-xs font-medium">{t('Tgl Faktur', 'Invoice Date')}</th>
-                        <th className="text-center px-4 py-3 text-xs font-medium">TOP</th>
-                        <th className="text-left px-4 py-3 text-xs font-medium">{t('Jatuh Tempo', 'Due Date')}</th>
-                        <th className="text-right px-4 py-3 text-xs font-medium">Total</th>
-                        <th className="text-center px-4 py-3 text-xs font-medium">Status</th>
-                        <th className="text-center px-4 py-3 text-xs font-medium">{t('Aksi', 'Action')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {fakturList.map((f: any, i: number) => {
-                        const jt = f.tanggal_jatuh_tempo ? new Date(f.tanggal_jatuh_tempo) : null
-                        const overdue = jt && jt < today && f.status !== 'lunas'
-                        const dueSoon = jt && !overdue && f.status !== 'lunas' && (jt.getTime() - today.getTime()) / 86400000 <= 7
-                        return (
-                          <tr key={i} className={`${TR} ${overdue ? 'bg-red-50/60' : ''}`}>
-                            <td className="px-4 py-3 font-mono text-xs text-[var(--ink)]">{f.nomor_faktur || '-'}</td>
-                            <td className="px-4 py-3 text-[var(--ink)]">{f.suppliers?.nama_supplier || '-'}</td>
-                            <td className="px-4 py-3 font-mono text-xs text-[var(--ink-soft)]">{f.purchase_orders?.nomor_po || '-'}</td>
-                            <td className="px-4 py-3 text-xs text-[var(--ink-soft)]">{f.tanggal_faktur ? new Date(f.tanggal_faktur).toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'}) : '-'}</td>
-                            <td className="px-4 py-3 text-center text-xs text-[var(--ink-soft)]">{f.term_of_payment === 0 ? t('Tunai', 'Cash') : `${f.term_of_payment} ${t('hr', 'd')}`}</td>
-                            <td className="px-4 py-3 text-xs">
-                              <span className={overdue ? 'text-red-600 font-semibold' : dueSoon ? 'text-amber-600 font-medium' : 'text-[var(--ink-soft)]'}>
-                                {jt ? jt.toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'}) : '-'}
-                              </span>
-                              {overdue && <span className="block text-[10px] text-red-500">{t('terlambat', 'overdue')}</span>}
-                            </td>
-                            <td className="px-4 py-3 text-right font-medium text-[var(--ink)] tabular-nums">Rp {(f.total || 0).toLocaleString('id-ID')}</td>
-                            <td className="px-4 py-3 text-center">
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${f.status === 'lunas' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                {f.status === 'lunas' ? t('Lunas', 'Paid') : t('Belum Lunas', 'Unpaid')}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              {f.status === 'lunas' ? (
-                                <button onClick={() => cetakBuktiBayar(f)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--line)] text-[var(--brand)] text-xs font-medium hover:bg-[var(--surface-2)] transition">
-                                  <Printer size={13} /> {t('Cetak Bukti', 'Print Receipt')}
-                                </button>
-                              ) : (
-                                <button onClick={() => { setBayarForm({ tanggal_bayar: new Date().toISOString().split('T')[0], metode_bayar: 'Transfer', catatan_bayar: '' }); setShowBayar(f) }}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--brand)] text-[var(--on-brand)] text-xs font-medium hover:bg-[var(--brand-hover)] transition">
-                                  <CreditCard size={13} /> {t('Bayar', 'Pay')}
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-            )
-          })()}
 
           {/* PRODUK */}
           {activePage === 'produk' && (
@@ -3899,98 +3692,6 @@ const batalRetur = async (row: any) => {
                                 </>
                               )}
                             </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* SUPPLIER */}
-          {activePage === 'supplier' && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h1 className="text-2xl font-bold text-[var(--brand)] mb-1">{t('Supplier', 'Suppliers')}</h1>
-                  <p className="text-[var(--ink-soft)] text-sm">{t('Daftar PBF dan distributor apotek', 'List of pharmacy distributors (PBF)')}</p>
-                </div>
-                <button onClick={() => setShowSupplierForm(true)}
-                  className="bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">
-                  + {t('Tambah Supplier', 'Add Supplier')}
-                </button>
-              </div>
-
-              {showSupplierForm && (
-                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-                  <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md shadow-xl">
-                    <h2 className="text-lg font-bold text-[var(--brand)] mb-4">{t('Tambah Supplier', 'Add Supplier')}</h2>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Nama Supplier *', 'Supplier Name *')}</label>
-                        <input value={supplierForm.nama_supplier} onChange={e => setSupplierForm({...supplierForm, nama_supplier: e.target.value})}
-                          className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Jenis', 'Type')}</label>
-                        <select value={supplierForm.jenis} onChange={e => setSupplierForm({...supplierForm, jenis: e.target.value})}
-                          className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">
-                          <option value="PBF">PBF</option>
-                          <option value="Subdistributor">Subdistributor</option>
-                          <option value="Lainnya">Lainnya</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Telepon', 'Phone')}</label>
-                        <input value={supplierForm.telepon} onChange={e => setSupplierForm({...supplierForm, telepon: e.target.value})}
-                          className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">Email</label>
-                        <input value={supplierForm.email} onChange={e => setSupplierForm({...supplierForm, email: e.target.value})}
-                          className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Alamat', 'Address')}</label>
-                        <textarea value={supplierForm.alamat} onChange={e => setSupplierForm({...supplierForm, alamat: e.target.value})}
-                          rows={2} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-                      </div>
-                    </div>
-                    <div className="flex gap-3 mt-5">
-                      <button onClick={() => setShowSupplierForm(false)}
-                        className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">{t('Batal', 'Cancel')}</button>
-                      <button onClick={handleTambahSupplier}
-                        className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium">{t('Simpan', 'Save')}</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className={TBL_WRAP}>
-                <table className={TBL}>
-                  <thead className={THEAD}>
-                    <tr>
-                      <th className={TH_L}>{t('Kode', 'Code')}</th>
-                      <th className={TH_L}>{t('Nama Supplier', 'Supplier Name')}</th>
-                      <th className={TH_L}>{t('Jenis', 'Type')}</th>
-                      <th className={TH_L}>{t('Telepon', 'Phone')}</th>
-                      <th className={TH_C}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {suppliers.length === 0 ? (
-                      <tr><td colSpan={5} className="px-4 py-8 text-center text-[var(--ink-faint)]">{t('Belum ada supplier, tambah supplier dulu', 'No suppliers yet, add a supplier first')}</td></tr>
-                    ) : (
-                      suppliers.map(s => (
-                        <tr key={s.id} className={TR}>
-                          <td className="px-4 py-3 font-mono text-xs text-[var(--ink-soft)]">{s.kode}</td>
-                          <td className="px-4 py-3 font-medium text-[var(--brand)]">{s.nama_supplier}</td>
-                          <td className="px-4 py-3 text-[var(--ink-soft)]">{s.jenis}</td>
-                          <td className="px-4 py-3 text-[var(--ink-soft)]">{s.telepon || '-'}</td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{s.status}</span>
                           </td>
                         </tr>
                       ))

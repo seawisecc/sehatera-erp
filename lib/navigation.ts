@@ -105,7 +105,7 @@ export const RUTE_FOKUS = ['/kasir']
  * Daftar ini MENGECIL seiring pemecahan berjalan. Kalau sudah memuat semua id,
  * hapus fungsi `hrefEfektif` beserta jembatan `?p=` di dashboard.
  */
-export const RUTE_SIAP = new Set<string>(['layanan'])
+export const RUTE_SIAP = new Set<string>(['layanan', 'supplier', 'faktur'])
 
 export function hrefEfektif(item: MenuItem): string {
   return RUTE_SIAP.has(item.id) ? item.href : `/dashboard?p=${item.id}`
