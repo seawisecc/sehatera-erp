@@ -1,17 +1,42 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { JetBrains_Mono, Plus_Jakarta_Sans, Sora } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "../lib/i18n";
 import { ThemeProvider, ThemeScript } from "../lib/theme";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+/**
+ * Tiga huruf, tiga tugas — sama seperti TokoKu, dan itu disengaja: dua produk
+ * dari studio yang sama sebaiknya terbaca sebagai satu keluarga.
+ *
+ * Sebelumnya seluruh aplikasi memakai satu huruf (Geist, bawaan create-next-app)
+ * untuk judul, isi, dan angka sekaligus. Akibatnya tidak ada hierarki: judul
+ * halaman dan label kolom terbaca dengan bobot yang sama, dan mata tidak punya
+ * pegangan saat memindai layar yang padat.
+ */
+const sora = Sora({            // judul — geometris, tegas
+  variable: "--font-sora",
   subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jakarta = Plus_Jakarta_Sans({   // isi — dirancang untuk teks Indonesia
+  variable: "--font-jakarta",
   subsets: ["latin"],
+  display: "swap",
+});
+
+/**
+ * Angka SELALU memakai huruf monospace ini: dosis, stok, harga, nomor batch,
+ * nomor resep. Di aplikasi apotek angka bukan hiasan — "1" yang bisa dibaca
+ * sebagai "l", atau "0" yang mirip "O", adalah kesalahan dosis yang menunggu
+ * terjadi. JetBrains Mono membedakan keduanya secara jelas dan lebarnya tetap,
+ * jadi kolom angka berbaris rapi tanpa trik tambahan.
+ */
+const jetbrains = JetBrains_Mono({
+  variable: "--font-jbmono",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 const SITE_URL = "https://sehatera.vercel.app";
@@ -74,7 +99,7 @@ export default function RootLayout({
       // tanpa satu pun token warna.
       data-theme="sunrise-sorbet"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${sora.variable} ${jakarta.variable} ${jetbrains.variable} h-full antialiased`}
     >
       <head>
         <ThemeScript />

@@ -218,14 +218,58 @@
   --color-line:          var(--line);
   --color-line-soft:     var(--line-soft);
 
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-sora), system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+  --font-mono: var(--font-jbmono), ui-monospace, monospace;
 }
 
+/* ============================================================
+   Tipografi & gerak
+   ============================================================ */
 body {
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Judul memakai huruf yang berbeda dari isi. Tanpa ini judul halaman dan label
+   kolom terbaca dengan bobot yang sama, dan mata tidak punya pegangan saat
+   memindai layar padat — yang di apotek adalah keadaan normal, bukan kecuali. */
+h1, h2, h3, .display {
+  font-family: var(--font-sora), system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+/* ── Angka ──────────────────────────────────────────────────
+   Semua angka berbaris: stok, dosis, harga, nomor batch. `tabular-nums`
+   membuat lebar tiap digit sama, jadi kolom angka tidak bergoyang saat isinya
+   berubah — dan mata bisa membandingkan dua baris tanpa membacanya satu-satu. */
+.tabular, td, th, input[type="number"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Dipakai untuk angka yang benar-benar penting dibaca tepat. */
+.num {
+  font-family: var(--font-jbmono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ── Gerak ──────────────────────────────────────────────────
+   Satu tangga durasi untuk seluruh aplikasi. Aturannya: animasi TIDAK PERNAH
+   boleh menunda pekerjaan. Ini dipakai apoteker yang sedang dikejar antrean —
+   transisi 400ms yang terasa "mewah" saat demo terasa lambat pada kali
+   kelima puluh. Yang boleh lama hanya gerak yang tidak menghalangi input,
+   seperti lembar yang naik dari bawah. */
+:root {
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --t-instant: 90ms;   /* umpan balik tekan */
+  --t-quick: 150ms;    /* hover, fokus, warna */
+  --t-normal: 220ms;   /* muncul/hilang, geser */
+  --t-sheet: 280ms;    /* lembar & modal */
 }
 
 /* Latar ambient halaman. Dulu nilainya dihard-code di lib/theme.ts sebagai
@@ -278,9 +322,9 @@ select {
 }
 @keyframes swFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-.sw-anim-card  { animation: swFadeUp 0.5s cubic-bezier(0.22,0.61,0.36,1) both; }
-.sw-anim-panel { animation: swSlideIn 0.55s cubic-bezier(0.22,0.61,0.36,1) both; animation-delay: 0.08s; }
-.sw-anim-fade  { animation: swFadeIn 0.4s ease both; }
+.sw-anim-card  { animation: swFadeUp var(--t-sheet) var(--ease) both; }
+.sw-anim-panel { animation: swSlideIn var(--t-sheet) var(--ease) both; animation-delay: 60ms; }
+.sw-anim-fade  { animation: swFadeIn var(--t-normal) var(--ease) both; }
 
 @media (prefers-reduced-motion: reduce) {
   .sw-anim-card, .sw-anim-panel, .sw-anim-fade { animation: none; }
@@ -288,7 +332,7 @@ select {
 
 /* ── Animasi grafik penjualan dashboard ── */
 @keyframes swSheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.sw-sheet { animation: swSheetUp .28s cubic-bezier(.22,.61,.36,1) both; }
+.sw-sheet { animation: swSheetUp var(--t-sheet) var(--ease) both; }
 @media (prefers-reduced-motion: reduce) { .sw-sheet { animation: none; } }
 
 @keyframes swDraw { to { stroke-dashoffset: 0; } }
@@ -310,7 +354,7 @@ select {
   position: relative; width: 100%; max-width: 64rem; min-height: 600px;
   background: var(--surface-3); border-radius: 28px; overflow: hidden;
   box-shadow: 0 25px 60px -20px color-mix(in oklab, var(--brand) 45%, transparent);
-  animation: swFadeUp .5s cubic-bezier(.22,.61,.36,1) both;
+  animation: swFadeUp var(--t-sheet) var(--ease) both;
 }
 @media (prefers-reduced-motion: reduce) { .sw-auth { animation: none; } }
 .sw-form { position: absolute; top: 0; height: 100%; width: 50%; overflow-y: auto; display: flex; flex-direction: column; justify-content: center;
