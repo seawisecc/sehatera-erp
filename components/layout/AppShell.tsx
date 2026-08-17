@@ -1,0 +1,339 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
+import {
+  ChevronRight, CreditCard, LayoutGrid, LogOut, Menu, Settings, ShieldCheck, X, AlertTriangle,
+} from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { useApp } from '@/lib/app-context'
+import { useLang, LangToggle } from '@/lib/i18n'
+import { ThemeToggle } from '@/lib/theme'
+import { Logo, Mark } from '@/components/Logo'
+import { menuTampil, menuAktifEfektif, hrefEfektif, ROLE_LABELS, RUTE_FOKUS, type MenuItem } from '@/lib/navigation'
+
+/**
+ * Kerangka aplikasi: sidebar, topbar, navigasi bawah, spanduk langganan.
+ *
+ * Dulu semuanya hidup di dalam `app/dashboard/page.tsx` dan berpindah halaman
+ * berarti mengganti sebuah string di `useState`. Sekarang halaman ditentukan
+ * alamat, dan kerangka ini tetap terpasang saat isinya berganti: menu langsung
+ * menyala, tidak ada kedipan, dan tombol back peramban bekerja seperti yang
+ * orang harapkan.
+ */
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const cari = useSearchParams().get('p')
+  const { t, lang } = useLang()
+  const app = useApp()
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
+
+  /**
+   * Pilihan lipat sidebar milik PENGGUNA, terpisah dari lipat otomatis.
+   *
+   * Tanpa pemisahan ini, mode fokus menimpa pilihan orang secara permanen:
+   * masuk ke Kasir sekali, dan sidebar tetap menyempit di semua halaman lain
+   * sesudahnya karena keadaan terakhirnya ikut tersimpan.
+   */
+  const pinRef = useRef(false)
+  useEffect(() => {
+    try { pinRef.current = localStorage.getItem('sw_sidebar_collapsed') === '1' } catch {}
+    setSidebarCollapsed(pinRef.current)
+  }, [])
+
+  // Mode fokus: Kasir adalah halaman tempat orang berhadapan dengan pembeli,
+  // bukan sedang mencari menu.
+  useEffect(() => {
+    setSidebarCollapsed(RUTE_FOKUS.some(r => pathname.startsWith(r)) ? true : pinRef.current)
+  }, [pathname])
+
+  // Menu mobile dan lembar "Lainnya" harus tertutup sendiri sesudah pindah
+  // halaman, kalau tidak keduanya masih menutupi halaman tujuan.
+  useEffect(() => { setMobileNavOpen(false); setMoreOpen(false); setAccountOpen(false) }, [pathname])
+
+  const nav = menuTampil(app.allowedPages, app.isSuper)
+  const aktif = nav.find(m => menuAktifEfektif(pathname, cari, m))
+  const judul = aktif ? (lang === 'en' ? aktif.en : aktif.label) : 'Sehatera'
+
+  const keluar = async () => { await supabase.auth.signOut(); window.location.href = '/' }
+
+  const lipat = () => {
+    const nv = !sidebarCollapsed
+    setSidebarCollapsed(nv)
+    pinRef.current = nv
+    try { localStorage.setItem('sw_sidebar_collapsed', nv ? '1' : '0') } catch {}
+  }
+
+  const banner = app.langganan.pesan
+
+  return (
+    <div className="sw-ambient min-h-screen">
+      {/* ── Topbar mobile ── */}
+      <div className="md:hidden sticky top-0 z-30 flex items-center gap-3 h-14 px-4 bg-[var(--brand)] text-[var(--on-brand)]">
+        <button onClick={() => setMobileNavOpen(true)} aria-label="Menu"><Menu size={22} /></button>
+        <span className="font-medium truncate">{app.namaFaskes}</span>
+      </div>
+
+      <div className="md:flex md:min-h-screen">
+        {mobileNavOpen && (
+          <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setMobileNavOpen(false)} />
+        )}
+
+        {/* ══ SIDEBAR ══ */}
+        <div
+          className={`${sidebarCollapsed ? 'md:w-[76px]' : 'md:w-64'} w-64 bg-gradient-to-b from-[var(--brand)] via-[var(--brand-soft)] to-[var(--brand-hover)] flex flex-col shrink-0 fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 md:z-auto ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
+          style={{ transition: 'transform var(--t-normal) var(--ease), width var(--t-normal) var(--ease)' }}
+        >
+          {/* Tombol lipat di TEPI LUAR: di dalam sidebar posisinya bergeser
+              mengikuti lebar kolom, di tepi ia selalu di tempat yang sama. */}
+          <button
+            onClick={lipat}
+            title={sidebarCollapsed ? t('Perlebar sidebar', 'Expand sidebar') : t('Perkecil sidebar', 'Collapse sidebar')}
+            aria-label={sidebarCollapsed ? t('Perlebar sidebar', 'Expand sidebar') : t('Perkecil sidebar', 'Collapse sidebar')}
+            aria-expanded={!sidebarCollapsed}
+            className="hidden md:flex absolute -right-3.5 top-20 z-10 w-7 h-7 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--brand)] shadow-md border border-[var(--line)] hover:bg-[var(--surface-2)]"
+            style={{ transition: 'background-color var(--t-quick) var(--ease)' }}
+          >
+            <ChevronRight size={15} style={{ transform: sidebarCollapsed ? 'none' : 'rotate(180deg)', transition: 'transform var(--t-normal) var(--ease)' }} />
+          </button>
+
+          <div className={`${sidebarCollapsed ? 'px-3' : 'px-5'} py-5`}>
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+              {sidebarCollapsed
+                ? <Mark size={28} variant="mono" className="text-[var(--on-brand)]" />
+                : <Logo size={38} sub={app.namaFaskes} tone="onBrand" />}
+              <button onClick={() => setMobileNavOpen(false)} className="md:hidden ml-auto text-[var(--on-brand-soft)] hover:text-white" aria-label="Tutup menu">
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+
+          <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-1">
+            {nav.map(item => <ItemNav key={item.id} item={item} aktif={menuAktifEfektif(pathname, cari, item)} ciut={sidebarCollapsed} lang={lang} />)}
+          </nav>
+        </div>
+
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* ══ TOPBAR ══ */}
+          <header className="hidden md:flex sticky top-0 z-30 h-16 items-center gap-3 px-6 bg-[var(--surface)]/85 backdrop-blur border-b border-[var(--line)]">
+            <div className="min-w-0">
+              <h1 className="text-base font-semibold text-[var(--ink)] truncate leading-tight">{judul}</h1>
+              <p className="text-xs text-[var(--ink-faint)] truncate">{app.namaFaskes}</p>
+            </div>
+
+            <div className="ml-auto flex items-center gap-2">
+              {app.isSuper && (
+                <select
+                  value={app.superViewCompany}
+                  onChange={e => app.setSuperViewCompany(e.target.value)}
+                  aria-label={t('Lihat sebagai apotek', 'View as pharmacy')}
+                  className="max-w-[190px] px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-soft)] text-xs"
+                >
+                  <option value="">{t('Semua apotek', 'All pharmacies')}</option>
+                  {app.companies.map((c: any) => <option key={c.id} value={c.id}>{c.nama}</option>)}
+                </select>
+              )}
+              <LangToggle />
+              <ThemeToggle />
+
+              <div className="relative">
+                <button
+                  onClick={() => setAccountOpen(v => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={accountOpen}
+                  className="flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-full border border-[var(--line)] hover:bg-[var(--surface-2)]"
+                  style={{ transition: 'background-color var(--t-quick) var(--ease)' }}
+                >
+                  <span className="w-7 h-7 rounded-full bg-[var(--brand)] text-[var(--on-brand)] text-xs font-semibold flex items-center justify-center shrink-0">
+                    {(app.authName || 'U').trim().charAt(0).toUpperCase()}
+                  </span>
+                  <span className="hidden lg:block text-xs font-medium text-[var(--ink)] max-w-[130px] truncate">
+                    {app.authName || t('Pengguna', 'User')}
+                  </span>
+                </button>
+
+                {accountOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setAccountOpen(false)} />
+                    <div role="menu" className="absolute right-0 top-full mt-2 w-64 z-50 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-lg overflow-hidden sw-anim-fade">
+                      <div className="px-4 py-3 border-b border-[var(--line-soft)]">
+                        <p className="text-sm font-semibold text-[var(--ink)] truncate">{app.authName || t('Pengguna', 'User')}</p>
+                        <p className="text-xs text-[var(--ink-faint)] truncate">{app.session?.email}</p>
+                        <span className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--ink-soft)] text-[10px] font-medium">
+                          <ShieldCheck size={11} /> {app.currentRole ? (ROLE_LABELS[app.currentRole] || app.currentRole) : '…'}
+                        </span>
+                      </div>
+                      {app.allowedPages.includes('pengaturan') && (
+                        <Link href="/pengaturan" className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--ink-mid)] hover:bg-[var(--surface-2)]">
+                          <Settings size={15} /> {t('Pengaturan', 'Settings')}
+                        </Link>
+                      )}
+                      <Link href="/pengaturan/langganan" className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--ink-mid)] hover:bg-[var(--surface-2)]">
+                        <CreditCard size={15} /> {t('Langganan', 'Subscription')}
+                      </Link>
+                      <button onClick={keluar} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--accent)] hover:bg-[var(--surface-2)] text-left border-t border-[var(--line-soft)]">
+                        <LogOut size={15} /> {t('Keluar', 'Sign out')}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </header>
+
+          <div className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8">
+            {banner && (
+              <div
+                role={banner.nada === 'berhenti' ? 'alert' : undefined}
+                className={`mb-4 rounded-xl border px-4 py-3 flex items-start gap-3 ${
+                  banner.nada === 'berhenti' ? 'border-red-300 bg-red-50 text-red-900'
+                  : banner.nada === 'peringatan' ? 'border-amber-300 bg-amber-50 text-amber-900'
+                  : 'border-[var(--line)] bg-[var(--surface-2)] text-[var(--ink)]'
+                }`}
+              >
+                <AlertTriangle size={17} className="shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{banner.judul}</p>
+                  <p className="text-xs mt-0.5 leading-relaxed opacity-90">{banner.isi}</p>
+                </div>
+                <Link href="/pengaturan/langganan" className="ml-auto shrink-0 self-center text-xs font-semibold underline underline-offset-2 whitespace-nowrap">
+                  {t('Lihat langganan', 'View subscription')}
+                </Link>
+              </div>
+            )}
+
+            {children}
+          </div>
+        </div>
+      </div>
+
+      {/* ══ Navigasi bawah (mobile) ══ */}
+      <NavBawah
+        nav={nav}
+        pathname={pathname}
+        cari={cari}
+        lang={lang}
+        moreOpen={moreOpen}
+        setMoreOpen={setMoreOpen}
+        authName={app.authName}
+        role={app.currentRole}
+        keluar={keluar}
+      />
+    </div>
+  )
+}
+
+function ItemNav({ item, aktif, ciut, lang }: { item: MenuItem; aktif: boolean; ciut: boolean; lang: string }) {
+  const Icon = item.icon
+  return (
+    <Link
+      href={hrefEfektif(item)}
+      title={ciut ? (lang === 'en' ? item.en : item.label) : undefined}
+      aria-current={aktif ? 'page' : undefined}
+      className={`w-full flex items-center ${ciut ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl text-sm ${
+        aktif ? 'bg-[var(--surface)]/15 text-white font-medium' : 'text-[var(--on-brand-soft)] hover:bg-white/[0.07] hover:text-white'
+      }`}
+      style={{ transition: 'background-color var(--t-quick) var(--ease), color var(--t-quick) var(--ease)' }}
+    >
+      <Icon size={17} className="shrink-0" />
+      {!ciut && <span className="truncate">{lang === 'en' ? item.en : item.label}</span>}
+    </Link>
+  )
+}
+
+function NavBawah({
+  nav, pathname, cari, lang, moreOpen, setMoreOpen, authName, role, keluar,
+}: {
+  nav: MenuItem[]; pathname: string; cari: string | null; lang: string
+  moreOpen: boolean; setMoreOpen: (v: boolean) => void
+  authName: string; role: string | null; keluar: () => void
+}) {
+  const { t } = useLang()
+  const utama = nav.slice(0, 4)
+  const sisa = nav.slice(4)
+  const singkat = (m: MenuItem) => (lang === 'en' ? m.en : m.label).split(/[ &/]/)[0]
+  const sisaAktif = sisa.some(m => menuAktifEfektif(pathname, cari, m))
+
+  return (
+    <>
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[var(--surface)]/95 backdrop-blur border-t border-[var(--line)] flex"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        aria-label={t('Navigasi bawah', 'Bottom navigation')}
+      >
+        {utama.map(item => {
+          const Icon = item.icon
+          const on = menuAktifEfektif(pathname, cari, item)
+          return (
+            <Link key={item.id} href={hrefEfektif(item)} aria-current={on ? 'page' : undefined}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 ${on ? 'text-[var(--brand)]' : 'text-[var(--ink-faint)]'}`}>
+              <span className={`flex items-center justify-center w-10 h-6 rounded-full ${on ? 'bg-[var(--brand)]/10' : ''}`}><Icon size={19} /></span>
+              <span className="text-[10px] font-medium leading-none">{singkat(item)}</span>
+            </Link>
+          )
+        })}
+        {sisa.length > 0 && (
+          <button onClick={() => setMoreOpen(true)}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 ${sisaAktif || moreOpen ? 'text-[var(--brand)]' : 'text-[var(--ink-faint)]'}`}>
+            <span className={`flex items-center justify-center w-10 h-6 rounded-full ${sisaAktif || moreOpen ? 'bg-[var(--brand)]/10' : ''}`}><LayoutGrid size={19} /></span>
+            <span className="text-[10px] font-medium leading-none">{t('Lainnya', 'More')}</span>
+          </button>
+        )}
+      </nav>
+
+      {moreOpen && sisa.length > 0 && (
+        <div className="md:hidden fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMoreOpen(false)} />
+          <div className="absolute bottom-0 inset-x-0 bg-[var(--surface)] rounded-t-3xl p-4 sw-sheet"
+            style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>
+            <div className="w-10 h-1 rounded-full bg-[var(--line)] mx-auto mb-3" />
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold text-[var(--ink)]">{t('Menu Lainnya', 'More Menu')}</p>
+              <button onClick={() => setMoreOpen(false)} className="text-[var(--ink-faint)] hover:text-[var(--ink)]" aria-label="Tutup"><X size={18} /></button>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {sisa.map(item => {
+                const Icon = item.icon
+                const on = menuAktifEfektif(pathname, cari, item)
+                return (
+                  <Link key={item.id} href={hrefEfektif(item)}
+                    className={`flex flex-col items-center gap-1.5 py-3 rounded-2xl border ${on ? 'border-[var(--brand)] bg-[var(--surface-2)] text-[var(--brand)]' : 'border-[var(--line-soft)] text-[var(--ink-mid)]'}`}>
+                    <Icon size={20} />
+                    <span className="text-[10px] font-medium text-center leading-tight px-0.5">{lang === 'en' ? item.en : item.label}</span>
+                  </Link>
+                )
+              })}
+            </div>
+
+            {/* Identitas dan pemilih tema ada di menu akun pada topbar, tapi
+                mobile tidak punya topbar itu. Tanpa bagian ini orang kehilangan
+                satu-satunya tempat melihat sedang masuk sebagai siapa. */}
+            <div className="border-t border-[var(--line-soft)] mt-4 pt-3 space-y-3">
+              <div className="flex items-center gap-2.5">
+                <span className="w-9 h-9 rounded-full bg-[var(--brand)] text-[var(--on-brand)] text-sm font-semibold flex items-center justify-center shrink-0">
+                  {(authName || 'U').trim().charAt(0).toUpperCase()}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[var(--ink)] truncate">{authName || t('Pengguna', 'User')}</p>
+                  <p className="text-[11px] text-[var(--ink-faint)] truncate">{role ? (ROLE_LABELS[role] || role) : '…'}</p>
+                </div>
+                <button onClick={keluar} className="inline-flex items-center gap-1.5 text-sm text-[var(--accent)] font-medium shrink-0">
+                  <LogOut size={15} /> {t('Keluar', 'Sign out')}
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <LangToggle />
+                <ThemeToggle />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}

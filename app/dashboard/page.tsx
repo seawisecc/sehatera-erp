@@ -16,7 +16,7 @@ import { FULL_PLAN, lockedModules } from '../../lib/plan'
 import { subscriptionState, isLapsed, pesanLangganan } from '../../lib/subscription'
 import { bukaCetak, beritaAcaraPemusnahan, buktiPembayaranFaktur, purchaseOrder } from '../../lib/cetak'
 import { parseCSV, unduhCSV } from '../../lib/csv'
-import { menuItems, ROLE_PAGES, ROLE_LABELS } from '../../lib/navigation'
+import { menuItems, ROLE_PAGES, ROLE_LABELS, RUTE_SIAP } from '../../lib/navigation'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD, KATEGORI_BADGE } from '../../lib/ui'
 
 export default function Dashboard() {
@@ -24,6 +24,27 @@ export default function Dashboard() {
   const { theme, applyCompanyTheme } = useTheme()
   const [session, setSession] = useState<SessionContext | null>(null)
   const [activePage, setActivePage] = useState('dashboard')
+
+  /**
+   * Jembatan selama pemecahan.
+   *
+   * `?p=<modul>` membuat halaman monolit ini bisa dibagikan dan disegarkan
+   * seperti alamat sungguhan, jauh sebelum modulnya sendiri pindah. Modul yang
+   * SUDAH pindah tidak dirender di sini lagi: menunya mengantar ke rutenya.
+   */
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get('p')
+    if (p) setActivePage(p)
+  }, [])
+
+  const bukaModul = (id: string) => {
+    const tujuan = menuItems.find(m => m.id === id)
+    if (tujuan && RUTE_SIAP.has(id)) { window.location.href = tujuan.href; return }
+    setActivePage(id)
+    const u = new URL(window.location.href)
+    u.searchParams.set('p', id)
+    window.history.replaceState(null, '', u)
+  }
   const [products, setProducts] = useState<any[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
@@ -72,10 +93,6 @@ export default function Dashboard() {
     nama_apotek: '', alamat: '', nomor_ijin: '', nomor_telepon: ''
   })
   const [suppliers, setSuppliers] = useState<any[]>([])
-  const [services, setServices] = useState<any[]>([])
-  const [showServiceForm, setShowServiceForm] = useState(false)
-  const [serviceForm, setServiceForm] = useState({ nama: '', harga: 0, deskripsi: '' })
-  const [editService, setEditService] = useState<any>(null)
   const [showSupplierForm, setShowSupplierForm] = useState(false)
   const [supplierForm, setSupplierForm] = useState({
     nama_supplier: '', jenis: 'PBF', alamat: '', telepon: '', email: ''
@@ -134,7 +151,14 @@ export default function Dashboard() {
   useEffect(() => { if (activePage === 'produk') { fetchProducts(); fetchExpiredAlerts() } }, [activePage])
   useEffect(() => { if (activePage === 'laporan') fetchRiwayat() }, [activePage])
   useEffect(() => { if (activePage === 'supplier') fetchSuppliers() }, [activePage])
-  useEffect(() => { if (activePage === 'layanan' || activePage === 'transaksi') fetchServices() }, [activePage])
+  // Kasir masih memerlukan daftar layanan untuk dijual. Selama halaman ini
+  // belum ikut pindah, ia mengambilnya sendiri.
+  const [services, setServices] = useState<any[]>([])
+  useEffect(() => {
+    if (activePage !== 'transaksi') return
+    scopeQ(supabase.from('services').select('*').order('nama')).then(({ data }: any) => setServices(data || []))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePage, superViewCompany])
   useEffect(() => { if (activePage === 'pembelian') { fetchPOList(); fetchSuppliers() } }, [activePage])
   useEffect(() => { if (activePage === 'faktur') fetchFaktur() }, [activePage])
   useEffect(() => { if (activePage === 'pengaturan') fetchUsers() }, [activePage])
@@ -1238,28 +1262,6 @@ const batalRetur = async (row: any) => {
   }
 
   // ── Layanan Jasa (services) ──
-  const fetchServices = async () => {
-    const { data } = await scopeQ(supabase.from('services').select('*').order('nama'))
-    setServices(data || [])
-  }
-  const handleTambahService = async () => {
-    if (!serviceForm.nama.trim()) { alert(t('Nama layanan wajib diisi', 'Service name is required')); return }
-    const cid = (isSuper && migrasiCompany) ? { company_id: migrasiCompany } : {}
-    const { error } = await supabase.from('services').insert([{ nama: serviceForm.nama.trim(), harga: serviceForm.harga || 0, deskripsi: serviceForm.deskripsi || null, ...cid }])
-    if (error) { alert('Error: ' + error.message); return }
-    setShowServiceForm(false); setServiceForm({ nama: '', harga: 0, deskripsi: '' }); fetchServices()
-  }
-  const handleUpdateService = async () => {
-    if (!editService) return
-    const { error } = await supabase.from('services').update({ nama: editService.nama, harga: editService.harga || 0, deskripsi: editService.deskripsi, status: editService.status }).eq('id', editService.id)
-    if (error) { alert('Error: ' + error.message); return }
-    setEditService(null); fetchServices()
-  }
-  const handleDeleteService = async (s: any) => {
-    if (!confirm(t(`Hapus layanan "${s.nama}"?`, `Delete service "${s.nama}"?`))) return
-    await supabase.from('services').delete().eq('id', s.id); fetchServices()
-  }
-
   const fetchProdukSuppliers = async (productId: string) => {
     const { data } = await supabase.from('product_suppliers').select('*, suppliers(*)').eq('product_id', productId)
     setProdukSuppliers(data || [])
@@ -2191,52 +2193,6 @@ const batalRetur = async (row: any) => {
         </div>
       )}
 
-      {/* Modal Layanan Jasa (tambah / edit) */}
-      {(showServiceForm || editService) && (() => {
-        const isEdit = !!editService
-        const val = isEdit ? editService : serviceForm
-        const setVal = (patch: any) => isEdit ? setEditService({ ...editService, ...patch }) : setServiceForm({ ...serviceForm, ...patch })
-        return (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-lg font-bold text-[var(--brand)] mb-4">{isEdit ? t('Edit Layanan', 'Edit Service') : t('Tambah Layanan', 'Add Service')}</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Nama Layanan *', 'Service Name *')}</label>
-                <input value={val.nama} onChange={e => setVal({ nama: e.target.value })} placeholder={t('mis. Racikan Resep, Cek Gula Darah', 'e.g. Prescription Compounding, Blood Sugar Check')}
-                  className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Tarif (Rp)', 'Fee (Rp)')}</label>
-                <input type="text" inputMode="numeric" value={val.harga ? val.harga.toLocaleString('id-ID') : ''}
-                  onChange={e => setVal({ harga: +e.target.value.replace(/\D/g, '') || 0 })}
-                  className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" placeholder="0" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Deskripsi', 'Description')}</label>
-                <textarea value={val.deskripsi || ''} onChange={e => setVal({ deskripsi: e.target.value })} rows={2}
-                  className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-              </div>
-              {isEdit && (
-                <div>
-                  <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">Status</label>
-                  <select value={editService.status} onChange={e => setEditService({ ...editService, status: e.target.value })}
-                    className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">
-                    <option value="aktif">{t('Aktif', 'Active')}</option>
-                    <option value="nonaktif">{t('Nonaktif', 'Inactive')}</option>
-                  </select>
-                </div>
-              )}
-            </div>
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => { setShowServiceForm(false); setEditService(null) }} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">{t('Batal', 'Cancel')}</button>
-              <button onClick={isEdit ? handleUpdateService : handleTambahService} className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">{t('Simpan', 'Save')}</button>
-            </div>
-          </div>
-        </div>
-        )
-      })()}
-
       {/* Modal Ubah Masa Aktif (super admin) */}
       {showMasaAktif && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -2463,7 +2419,7 @@ const batalRetur = async (row: any) => {
               const Icon = item.icon
               const aktif = activePage === item.id
               return (
-                <button key={item.id} onClick={() => { setActivePage(item.id); setMobileNavOpen(false) }}
+                <button key={item.id} onClick={() => { bukaModul(item.id); setMobileNavOpen(false) }}
                   title={sidebarCollapsed ? (lang === 'en' ? item.en : item.label) : undefined}
                   aria-current={aktif ? 'page' : undefined}
                   className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl text-sm text-left ${
@@ -3598,57 +3554,6 @@ const batalRetur = async (row: any) => {
           )}
 
           {/* LAYANAN JASA */}
-          {activePage === 'layanan' && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h1 className="text-3xl font-bold text-[var(--ink)] mb-1">{t('Layanan Jasa', 'Services')}</h1>
-                  <p className="text-[var(--ink-soft)] text-sm">{t('Jasa apotek seperti racikan resep, cek gula darah, tensi, dll, bisa dijual di Kasir.', 'Pharmacy services like prescription compounding, blood-sugar checks, etc., sellable at the cashier.')}</p>
-                </div>
-                <button onClick={() => { setServiceForm({ nama: '', harga: 0, deskripsi: '' }); setShowServiceForm(true) }}
-                  className="bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">
-                  + {t('Tambah Layanan', 'Add Service')}
-                </button>
-              </div>
-              <div className={TBL_WRAP}>
-                <table className={TBL}>
-                  <thead className={THEAD}>
-                    <tr>
-                      <th className={TH_L}>{t('Nama Layanan', 'Service Name')}</th>
-                      <th className={TH_R}>{t('Tarif', 'Fee')}</th>
-                      <th className={TH_L}>{t('Deskripsi', 'Description')}</th>
-                      <th className={TH_C}>Status</th>
-                      <th className={TH_C}>{t('Aksi', 'Action')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {services.length === 0 ? (
-                      <tr><td colSpan={5} className="px-4 py-8 text-center text-[var(--ink-faint)]">{t('Belum ada layanan, tambah layanan pertama', 'No services yet, add your first service')}</td></tr>
-                    ) : services.map((s: any) => (
-                      <tr key={s.id} className={TR}>
-                        <td className="px-4 py-3 font-medium text-[var(--ink)]">{s.nama}</td>
-                        <td className="px-4 py-3 text-right text-[var(--ink)]">Rp {(s.harga || 0).toLocaleString('id-ID')}</td>
-                        <td className="px-4 py-3 text-[var(--ink-soft)] text-xs max-w-[280px] truncate">{s.deskripsi || '-'}</td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                            {s.status === 'aktif' ? t('Aktif', 'Active') : t('Nonaktif', 'Inactive')}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-1">
-                            <button onClick={() => setEditService({ ...s })} title="Edit" className="p-1.5 rounded-lg text-[var(--brand)] hover:bg-[var(--surface-2)] transition"><Pencil size={14} /></button>
-                            <button onClick={() => handleDeleteService(s)} title={t('Hapus','Delete')} className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition"><Trash2 size={14} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* PEMBELIAN */}
           {activePage === 'pembelian' && (
             <div>
               <div className="flex items-center justify-between mb-6">
@@ -4895,7 +4800,7 @@ const batalRetur = async (row: any) => {
                 {navMain.map(item => {
                   const Icon = item.icon; const active = activePage === item.id
                   return (
-                    <button key={item.id} onClick={() => setActivePage(item.id)}
+                    <button key={item.id} onClick={() => bukaModul(item.id)}
                       className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 ${active ? 'text-[var(--brand)]' : 'text-[var(--ink-faint)]'}`}>
                       <span className={`flex items-center justify-center w-10 h-6 rounded-full ${active ? 'bg-[var(--brand)]/10' : ''}`}><Icon size={19} /></span>
                       <span className="text-[10px] font-medium leading-none">{short(item)}</span>
@@ -4924,7 +4829,7 @@ const batalRetur = async (row: any) => {
                       {moreList.map(item => {
                         const Icon = item.icon; const active = activePage === item.id
                         return (
-                          <button key={item.id} onClick={() => { setActivePage(item.id); setMoreOpen(false) }}
+                          <button key={item.id} onClick={() => { bukaModul(item.id); setMoreOpen(false) }}
                             className={`flex flex-col items-center gap-1.5 py-3 rounded-2xl border transition ${active ? 'border-[var(--brand)] bg-[var(--surface-2)] text-[var(--brand)]' : 'border-[var(--line-soft)] text-[var(--ink-mid)]'}`}>
                             <Icon size={20} />
                             <span className="text-[10px] font-medium text-center leading-tight px-0.5">{lang === 'en' ? item.en : item.label}</span>
