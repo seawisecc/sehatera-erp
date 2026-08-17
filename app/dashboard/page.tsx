@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import {
-  Pill, ShoppingCart, PackageOpen, LogOut, Settings, Truck,
-  FlaskConical, Wallet, CalendarClock, ClipboardList, Printer, Pencil,
+  Pill, PackageOpen, LogOut, Settings, Truck,
+  FlaskConical, CalendarClock, ClipboardList, Printer, Pencil,
   Receipt, CreditCard, Building2, Users, ChevronRight,
   UserPlus, Trash2, Upload, ShieldCheck, Check, ArrowLeft, Menu, X, Download, Database, HeartPulse,
   Search, Wand2, AlertTriangle, LayoutGrid
@@ -14,9 +14,9 @@ import { useTheme, ThemePicker, ThemeToggle } from '../../lib/theme'
 import { getSessionContext, pesanError, type SessionContext } from '../../lib/session'
 import { FULL_PLAN, lockedModules } from '../../lib/plan'
 import { subscriptionState, isLapsed, pesanLangganan } from '../../lib/subscription'
-import { bukaCetak, beritaAcaraPemusnahan, buktiPembayaranFaktur, purchaseOrder } from '../../lib/cetak'
+import { bukaCetak, beritaAcaraPemusnahan, purchaseOrder } from '../../lib/cetak'
 import { parseCSV, unduhCSV } from '../../lib/csv'
-import { menuItems, ROLE_PAGES, ROLE_LABELS, RUTE_SIAP } from '../../lib/navigation'
+import { menuItems, menuSuper, ROLE_PAGES, ROLE_LABELS, RUTE_SIAP } from '../../lib/navigation'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD, KATEGORI_BADGE } from '../../lib/ui'
 
 export default function Dashboard() {
@@ -34,11 +34,16 @@ export default function Dashboard() {
    */
   useEffect(() => {
     const p = new URLSearchParams(window.location.search).get('p')
+    const tujuan = [...menuItems, ...menuSuper].find(m => m.id === (p || 'dashboard'))
+    // Modul yang sudah punya rutenya sendiri tidak dirender di sini lagi. Ini
+    // juga yang menangani /dashboard tanpa ?p: Beranda sudah pindah, jadi
+    // alamat lama itu mengantar ke sana, bukan menampilkan layar kosong.
+    if (tujuan && RUTE_SIAP.has(tujuan.id)) { window.location.replace(tujuan.href); return }
     if (p) setActivePage(p)
   }, [])
 
   const bukaModul = (id: string) => {
-    const tujuan = menuItems.find(m => m.id === id)
+    const tujuan = [...menuItems, ...menuSuper].find(m => m.id === id)
     if (tujuan && RUTE_SIAP.has(id)) { window.location.href = tujuan.href; return }
     setActivePage(id)
     const u = new URL(window.location.href)
@@ -79,16 +84,6 @@ export default function Dashboard() {
   const [lastTrx, setLastTrx] = useState<any>(null)
   const [lastItems, setLastItems] = useState<any[]>([])
   const [riwayat, setRiwayat] = useState<any[]>([])
-  const [statProduk, setStatProduk] = useState(0)
-  const [statTrxHariIni, setStatTrxHariIni] = useState(0)
-  const [statOmzet, setStatOmzet] = useState(0)
-  const [statExpired, setStatExpired] = useState(0)
-  const [salesChart, setSalesChart] = useState<any[]>([])
-  const [chartRange, setChartRange] = useState<'7d' | '30d'>('7d')
-  const [bestSellers, setBestSellers] = useState<any[]>([])
-  const [lowStock, setLowStock] = useState<any[]>([])
-  const [expiringSoon, setExpiringSoon] = useState<any[]>([])
-  const [dueInvoices, setDueInvoices] = useState<any[]>([])
   const [settingsData, setSettingsData] = useState<any>({
     nama_apotek: '', alamat: '', nomor_ijin: '', nomor_telepon: ''
   })
@@ -116,9 +111,6 @@ export default function Dashboard() {
   const [superViewCompany, setSuperViewCompany] = useState('')
   const [companyName, setCompanyName] = useState('')
   const [companies, setCompanies] = useState<any[]>([])
-  const [showMasaAktif, setShowMasaAktif] = useState<any>(null)
-  const [masaAktifDate, setMasaAktifDate] = useState('')
-  const [masaAktifPlan, setMasaAktifPlan] = useState('')
   const [authName, setAuthName] = useState('')
   const [settingsTab, setSettingsTab] = useState('profil')
   const [users, setUsers] = useState<any[]>([])
@@ -142,8 +134,6 @@ export default function Dashboard() {
 
   useEffect(() => { fetchSettings() }, [])
   useEffect(() => { if (activePage === 'tindaklanjut') { fetchRiwayatMusnah(); fetchRiwayatRetur() } }, [activePage])
-  useEffect(() => { if (activePage === 'dashboard') fetchStats() }, [activePage])
-  useEffect(() => { if (activePage === 'dashboard') fetchSalesChart(chartRange) }, [chartRange])
   useEffect(() => { if (activePage === 'produk') { fetchProducts(); fetchExpiredAlerts() } }, [activePage])
   useEffect(() => { if (activePage === 'laporan') fetchRiwayat() }, [activePage])
   // Kasir masih memerlukan daftar layanan untuk dijual. Selama halaman ini
@@ -156,15 +146,13 @@ export default function Dashboard() {
   }, [activePage, superViewCompany])
   useEffect(() => { if (activePage === 'pembelian') { fetchPOList(); fetchSuppliers() } }, [activePage])
   useEffect(() => { if (activePage === 'pengaturan') fetchUsers() }, [activePage])
-  useEffect(() => { if (activePage === 'companies') fetchCompanies() }, [activePage])
   useEffect(() => { if (activePage === 'migrasi' && isSuper) fetchCompanies() }, [activePage, isSuper])
   useEffect(() => { if (isSuper) fetchCompanies() }, [isSuper])
   // Saat super admin ganti "lihat sebagai apotek", muat ulang data halaman aktif
   useEffect(() => {
     if (!isSuper) return
     fetchSettings()
-    if (activePage === 'dashboard') fetchStats()
-    else if (activePage === 'produk') { fetchProducts(); fetchExpiredAlerts() }
+    if (activePage === 'produk') { fetchProducts(); fetchExpiredAlerts() }
     else if (activePage === 'pembelian') fetchPOList()
     else if (activePage === 'laporan') fetchRiwayat()
     else if (activePage === 'tindaklanjut') { fetchRiwayatMusnah(); fetchRiwayatRetur() }
@@ -273,7 +261,7 @@ export default function Dashboard() {
   // Akses = daftar modul user (jika diatur) ; kalau kosong pakai default role.
   // Super admin: akses penuh + halaman Companies. Migrasi Data menyatu dengan Pengaturan.
   const allowedPages = (() => {
-    if (isSuper) return [...menuItems.map(m => m.id), 'companies', 'migrasi']
+    if (isSuper) return [...menuItems.map(m => m.id), 'klien', 'migrasi']
     if (!currentRole) return []
     const base = currentModules && currentModules.length ? currentModules : (ROLE_PAGES[currentRole] || ['dashboard'])
     const withMigrasi = base.includes('pengaturan') ? [...base, 'migrasi'] : base
@@ -288,7 +276,7 @@ export default function Dashboard() {
   /** Menu yang benar-benar tampil di sidebar, termasuk halaman khusus Super Admin. */
   const navItems = [
     ...menuItems.filter(i => allowedPages.includes(i.id)),
-    ...(isSuper ? [{ id: 'companies', label: 'Companies', en: 'Companies', icon: Building2 }] : []),
+    ...(isSuper ? menuSuper : []),
   ]
 
   const judulHalaman = (() => {
@@ -299,7 +287,7 @@ export default function Dashboard() {
 
   // Jika role tidak boleh membuka halaman aktif, arahkan ke halaman pertama yang diizinkan
   useEffect(() => {
-    if (currentRole && !allowedPages.includes(activePage)) setActivePage(allowedPages[0] || 'dashboard')
+    if (currentRole && !allowedPages.includes(activePage)) bukaModul(allowedPages[0] || 'dashboard')
   }, [currentRole, activePage])
 
   // PO States
@@ -626,56 +614,6 @@ export default function Dashboard() {
     setCompanies(data || [])
   }
 
-  // Daftar paket untuk pemilihan di Super Admin. Dibaca dari database, bukan
-  // dihard-code: harga dan batas paket memang dirancang bisa diubah tanpa deploy.
-  const [plans, setPlans] = useState<any[]>([])
-  useEffect(() => {
-    if (!isSuper) return
-    supabase.from('plans').select('*').order('sort_order').then(({ data }) => setPlans(data || []))
-  }, [isSuper])
-
-  const toggleCompanyStatus = async (c: any) => {
-    const next = c.status === 'suspended' ? 'active' : 'suspended'
-    if (!confirm(`${next === 'active' ? t('Aktifkan', 'Activate') : t('Tangguhkan', 'Suspend')} ${t('apotek', 'pharmacy')} "${c.nama}"?`)) return
-    const { error } = await supabase.from('companies').update({ status: next }).eq('id', c.id)
-    if (error) { alert(pesanError(error)); return }
-    await supabase.from('subscription_events').insert([{
-      company_id: c.id, plan_id: c.plan_id,
-      action: next === 'active' ? 'reactivate' : 'cancel', actor_email: session?.email,
-    }])
-    fetchCompanies()
-  }
-
-  /**
-   * Memperpanjang masa aktif.
-   *
-   * Menulis ke `subscription_ends_at` DAN memindahkan status ke 'active' -
-   * bukan ke `valid_sampai` yang sudah usang. Keduanya harus bergerak bersama:
-   * apotek yang statusnya masih 'trial' dibaca dari `trial_ends_at`, jadi
-   * memperpanjang tanpa memindahkan status berarti tanggal barunya tidak
-   * dilihat siapa pun (lihat company_lapsed_at di migrasi 0003).
-   */
-  const simpanMasaAktif = async (tanpaBatas: boolean) => {
-    if (!showMasaAktif) return
-    const sebelumnya = showMasaAktif.plan_id
-    const payload: any = {
-      subscription_ends_at: tanpaBatas ? null : (masaAktifDate ? new Date(masaAktifDate + 'T23:59:59').toISOString() : null),
-      status: 'active',
-    }
-    if (masaAktifPlan) payload.plan_id = masaAktifPlan
-    const { error } = await supabase.from('companies').update(payload).eq('id', showMasaAktif.id)
-    if (error) { alert(pesanError(error)); return }
-    await supabase.from('subscription_events').insert([{
-      company_id: showMasaAktif.id,
-      action: masaAktifPlan && masaAktifPlan !== sebelumnya ? 'upgrade' : 'renew',
-      plan_id: masaAktifPlan || sebelumnya,
-      from_plan_id: sebelumnya,
-      actor_email: session?.email,
-      note: tanpaBatas ? 'Masa aktif tanpa batas.' : `Diperpanjang sampai ${masaAktifDate}.`,
-    }])
-    setShowMasaAktif(null)
-    fetchCompanies()
-  }
 
   // ── Migrasi Data (import/export CSV) ──
   const importProduk = async (file: File) => {
@@ -835,86 +773,6 @@ export default function Dashboard() {
       String(f.term_of_payment ?? ''), f.tanggal_jatuh_tempo || '', String(f.total ?? ''), f.status || '',
       f.tanggal_bayar || '', f.metode_bayar || '', f.catatan_bayar || '',
     ]))
-  }
-
-  const fetchStats = async () => {
-    const { count: produkCount } = await scopeQ(supabase.from('products').select('*', { count: 'exact', head: true }))
-    setStatProduk(produkCount || 0)
-    const today = new Date().toISOString().split('T')[0]
-    const { data: trxHariIni } = await scopeQ(supabase.from('transactions').select('total').gte('created_at', today))
-    setStatTrxHariIni(trxHariIni?.length || 0)
-    setStatOmzet(trxHariIni?.reduce((a: number, b: any) => a + b.total, 0) || 0)
-    const in60 = new Date(); in60.setDate(new Date().getDate() + 60)
-    const { count: expCount } = await scopeQ(supabase.from('product_batches')
-      .select('*', { count: 'exact', head: true })
-      .lte('expired_date', in60.toISOString().split('T')[0])
-      .gt('stok_batch', 0))
-    setStatExpired(expCount || 0)
-    fetchDashboardWidgets()
-  }
-
-  // Kunci tanggal lokal (bukan UTC) supaya transaksi hari ini tidak "tergeser" 1 hari
-  const localKey = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-
-  const fetchSalesChart = async (range: '7d' | '30d' = chartRange) => {
-    const span = range === '30d' ? 30 : 7
-    const start = new Date(); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - (span - 1))
-    const days: Date[] = []
-    for (let i = 0; i < span; i++) { const d = new Date(start); d.setDate(start.getDate() + i); days.push(d) }
-    const { data: trx } = await scopeQ(supabase.from('transactions').select('total,created_at,status').gte('created_at', start.toISOString()))
-    // Bucket transaksi berdasarkan tanggal LOKAL: total omzet + jumlah transaksi
-    const bucket: Record<string, { value: number; count: number }> = {}
-    ;(trx || []).forEach((x: any) => {
-      if (x.status === 'dibatalkan' || !x.created_at) return
-      const k = localKey(new Date(x.created_at))
-      if (!bucket[k]) bucket[k] = { value: 0, count: 0 }
-      bucket[k].value += (x.total || 0)
-      bucket[k].count += 1
-    })
-    setSalesChart(days.map((d, i) => {
-      const b = bucket[localKey(d)] || { value: 0, count: 0 }
-      // 7 hari: tampilkan nama hari. 30 hari: tampilkan tgl tiap ~5 titik
-      const label = span === 7
-        ? d.toLocaleDateString(lang === 'en' ? 'en-US' : 'id-ID', { weekday: 'short' })
-        : (i % 5 === 0 || i === span - 1) ? d.toLocaleDateString(lang === 'en' ? 'en-US' : 'id-ID', { day: 'numeric', month: 'short' }) : ''
-      return { label, day: d.getDate(), value: b.value, count: b.count }
-    }))
-  }
-
-  const fetchDashboardWidgets = async () => {
-    await fetchSalesChart()
-
-    // Produk terlaris (30 hari)
-    const d30 = new Date(); d30.setDate(d30.getDate() - 30)
-    const { data: items } = await scopeQ(supabase.from('transaction_items').select('nama_obat,jumlah,transactions(status,created_at)'))
-    const map: Record<string, number> = {}
-    ;(items || []).forEach((it: any) => {
-      if (it.transactions?.status === 'dibatalkan') return
-      if (!it.transactions?.created_at || new Date(it.transactions.created_at) < d30) return
-      map[it.nama_obat] = (map[it.nama_obat] || 0) + (it.jumlah || 0)
-    })
-    setBestSellers(Object.entries(map).map(([nama, qty]) => ({ nama, qty })).sort((a, b) => b.qty - a.qty).slice(0, 5))
-
-    // Stok minim
-    const { data: prods } = await scopeQ(supabase.from('products').select('nama_obat,kode,stok_total,stok_minimum').order('stok_total'))
-    setLowStock((prods || []).filter((p: any) => (p.stok_total ?? 0) <= (p.stok_minimum ?? 0)).slice(0, 8))
-
-    // Segera expired
-    const in60 = new Date(); in60.setDate(in60.getDate() + 60)
-    const { data: batches } = await scopeQ(supabase.from('product_batches')
-      .select('batch_number,expired_date,stok_batch,products(nama_obat)')
-      .lte('expired_date', in60.toISOString().split('T')[0]).gt('stok_batch', 0).order('expired_date'))
-    setExpiringSoon((batches || []).slice(0, 6))
-
-    // Tagihan faktur akan jatuh tempo (belum lunas), urut jatuh tempo terdekat
-    const { data: fakturs } = await scopeQ(supabase.from('faktur')
-      .select('nomor_faktur,tanggal_jatuh_tempo,total,status,suppliers(nama_supplier)')
-      .neq('status', 'lunas'))
-    setDueInvoices((fakturs || [])
-      .filter((f: any) => f.tanggal_jatuh_tempo)
-      .sort((a: any, b: any) => new Date(a.tanggal_jatuh_tempo).getTime() - new Date(b.tanggal_jatuh_tempo).getTime())
-      .slice(0, 6))
   }
 
   const fetchProducts = async () => {
@@ -2128,42 +1986,6 @@ const batalRetur = async (row: any) => {
         </div>
       )}
 
-      {/* Modal Ubah Masa Aktif (super admin) */}
-      {showMasaAktif && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <h2 className="text-lg font-bold text-[var(--brand)] mb-1">{t('Paket & Masa Aktif', 'Plan & Validity')}</h2>
-            <p className="text-xs text-[var(--ink-soft)] mb-4">{showMasaAktif.nama}</p>
-
-            <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Paket', 'Plan')}</label>
-            <select value={masaAktifPlan} onChange={e => setMasaAktifPlan(e.target.value)}
-              className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">
-              <option value="">{t('(tidak diubah)', '(unchanged)')}</option>
-              {plans.map((p: any) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}: Rp {(p.price_monthly || 0).toLocaleString('id-ID')}/{t('bln', 'mo')}
-                </option>
-              ))}
-            </select>
-
-            <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Aktif sampai', 'Active until')}</label>
-            <input type="date" value={masaAktifDate} onChange={e => setMasaAktifDate(e.target.value)}
-              className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-            <button onClick={() => simpanMasaAktif(true)} className="mt-2 text-xs text-[var(--brand)] font-medium hover:underline">
-              {t('Set tanpa batas', 'Set unlimited')}
-            </button>
-            <p className="text-[11px] text-[var(--ink-faint)] mt-3 leading-relaxed">
-              {t('Menyimpan juga memindahkan apotek ini dari masa coba ke berlangganan, dan perubahannya dicatat di riwayat langganan.',
-                 'Saving also moves this pharmacy from trial to paid, and the change is written to the subscription history.')}
-            </p>
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => setShowMasaAktif(null)} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">{t('Batal', 'Cancel')}</button>
-              <button onClick={() => simpanMasaAktif(false)} className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">{t('Simpan & Aktifkan', 'Save & Activate')}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal Struk */}
       {showStruk && lastTrx && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -2394,336 +2216,6 @@ const batalRetur = async (row: any) => {
           {langgananBanner}
 
           {/* COMPANIES (super admin) */}
-          {activePage === 'companies' && isSuper && (
-            <div>
-              <h1 className="text-3xl font-bold text-[var(--ink)] mb-1">Companies</h1>
-              <p className="text-[var(--ink-soft)] text-sm mb-6">{companies.length} {t('apotek terdaftar', 'registered pharmacies')}</p>
-              <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl overflow-x-auto">
-                {companies.length === 0 ? (
-                  <p className="text-center text-[var(--ink-faint)] py-12 text-sm">{t('Belum ada apotek yang mendaftar.', 'No pharmacies have registered yet.')}</p>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-[var(--ink-faint)] border-b border-[var(--line-soft)]">
-                        <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide">{t('Company', 'Company')}</th>
-                        <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide">Admin</th>
-                        <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide">{t('Paket', 'Plan')}</th>
-                        <th className="text-center px-5 py-3 text-xs font-semibold uppercase tracking-wide">Status</th>
-                        <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide">{t('Aktif Sampai', 'Active Until')}</th>
-                        <th className="text-right px-5 py-3 text-xs font-semibold uppercase tracking-wide"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {companies.map((c: any, i: number) => (
-                        <tr key={i} className="border-b border-[var(--line-soft)] last:border-0 hover:bg-[var(--surface)]">
-                          <td className="px-5 py-4">
-                            <p className="font-semibold text-[var(--ink)]">{c.nama}</p>
-                            <p className="text-xs text-[var(--ink-faint)] font-mono">{c.slug || '-'}</p>
-                          </td>
-                          <td className="px-5 py-4">
-                            <p className="text-[var(--ink)]">{c.admin_nama || '-'}</p>
-                            <p className="text-xs text-[var(--ink-faint)]">{c.admin_email || '-'}</p>
-                          </td>
-                          <td className="px-5 py-4">
-                            <p className="text-[var(--ink)]">{c.plans?.name || <span className="text-[var(--ink-faint)]">{t('Belum berpaket', 'No plan')}</span>}</p>
-                            {c.plans?.price_monthly ? (
-                              <p className="text-xs text-[var(--ink-faint)] tabular-nums">Rp {c.plans.price_monthly.toLocaleString('id-ID')}/{t('bln','mo')}</p>
-                            ) : null}
-                          </td>
-                          <td className="px-5 py-4 text-center">
-                            {(() => {
-                              const s: Record<string, [string, string]> = {
-                                active:    ['bg-green-100 text-green-800', t('Aktif', 'Active')],
-                                trial:     ['bg-amber-100 text-amber-800', t('Masa coba', 'Trial')],
-                                suspended: ['bg-red-100 text-red-800',     t('Ditangguhkan', 'Suspended')],
-                                inactive:  ['bg-gray-100 text-gray-600',   t('Nonaktif', 'Inactive')],
-                              }
-                              const [cls, label] = s[c.status] || s.inactive
-                              return <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>{label}</span>
-                            })()}
-                          </td>
-                          <td className="px-5 py-4 text-[var(--ink-soft)]">
-                            {(() => {
-                              // Tanggal yang berlaku ditentukan STATUS, sama persis
-                              // dengan company_lapsed_at() di database. Menampilkan
-                              // kolom yang salah di sini berarti admin memperpanjang
-                              // apotek yang tidak perlu, dan melewatkan yang perlu.
-                              const iso = c.status === 'trial' ? c.trial_ends_at : c.subscription_ends_at
-                              if (!iso) return t('Tanpa batas', 'Unlimited')
-                              const d = new Date(iso)
-                              const lewat = d <= new Date()
-                              return (
-                                <span className={lewat ? 'text-red-600 font-medium' : ''}>
-                                  {d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                </span>
-                              )
-                            })()}
-                          </td>
-                          <td className="px-5 py-4">
-                            <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => toggleCompanyStatus(c)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${c.status === 'suspended' ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-[var(--line)] text-[var(--accent)] hover:bg-[var(--surface-2)]'}`}>
-                                {c.status === 'suspended' ? t('Aktifkan', 'Activate') : t('Tangguhkan', 'Suspend')}
-                              </button>
-                              <button onClick={() => {
-                                const iso = c.status === 'trial' ? c.trial_ends_at : c.subscription_ends_at
-                                setMasaAktifDate(iso ? new Date(iso).toISOString().slice(0, 10) : '')
-                                setMasaAktifPlan(c.plan_id || '')
-                                setShowMasaAktif(c)
-                              }}
-                                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--brand)] text-[var(--on-brand)] hover:bg-[var(--brand-hover)] transition">
-                                {t('Paket & Masa Aktif', 'Plan & Validity')}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* DASHBOARD */}
-          {activePage === 'dashboard' && (
-            <div>
-              <h1 className="text-3xl font-bold text-[var(--ink)] mb-1">{t('Dashboard', 'Dashboard')}</h1>
-              <p className="text-[var(--ink-soft)] text-sm mb-8">
-                {t('Halo', 'Hello')}, <span className="font-semibold text-[var(--ink)]">{settingsData.nama_apoteker || t('Apoteker', 'Pharmacist')}</span> 👋, {t('ringkasan aktivitas apotek hari ini', "today's pharmacy activity summary")}
-              </p>
-              <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5">
-                {[
-                  { label: t('Total Produk', 'Total Products'), value: statProduk, desc: t('Item terdaftar', 'Registered items'), Icon: Pill, chip: 'bg-[var(--surface-2)] text-[var(--brand-soft)]' },
-                  { label: t('Transaksi Hari Ini', 'Sales Today'), value: statTrxHariIni, desc: t('Penjualan hari ini', "Today's sales"), Icon: ShoppingCart, chip: 'bg-[var(--surface-2)] text-[var(--brand-soft)]' },
-                  { label: t('Expired ≤ 60 Hari', 'Expiring ≤ 60 Days'), value: statExpired, desc: t('Batch mendekati / lewat exp', 'Batches near / past expiry'), Icon: CalendarClock, chip: 'bg-[var(--accent-soft)] text-[var(--accent)]' },
-                  { label: t('Omzet Hari Ini', 'Revenue Today'), value: `Rp ${statOmzet.toLocaleString('id-ID')}`, desc: t('Total penjualan', 'Total sales'), Icon: Wallet, chip: 'bg-[var(--surface-2)] text-[var(--accent)]' },
-                ].map((s, i) => (
-                  <div key={i} className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl p-4 sm:p-5 flex flex-col aspect-square xl:aspect-auto">
-                    <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center ${s.chip}`}>
-                      <s.Icon size={19} strokeWidth={1.9} />
-                    </div>
-                    <div className="mt-auto pt-3">
-                      <p className="text-[10.5px] sm:text-xs text-[var(--ink-soft)] font-medium uppercase tracking-wide mb-1 leading-tight">{s.label}</p>
-                      <p className="text-xl sm:text-2xl font-bold text-[var(--ink)] leading-tight break-words">{s.value}</p>
-                      <p className="text-[11px] text-[var(--ink-faint)] mt-1.5 leading-tight">{s.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Grafik penjualan + Produk terlaris */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-5">
-                <div className="lg:col-span-2 bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl p-5">
-                  <div className="flex items-start justify-between mb-4 gap-3">
-                    <div>
-                      <h3 className="font-bold text-[var(--ink)]">{chartRange === '7d' ? t('Penjualan 7 Hari Terakhir', 'Sales, Last 7 Days') : t('Penjualan 30 Hari Terakhir', 'Sales, Last 30 Days')}</h3>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="flex items-center gap-1.5 text-xs text-[var(--ink-soft)]"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-[var(--brand-soft)]" />{t('Omzet', 'Revenue')}</span>
-                        <span className="flex items-center gap-1.5 text-xs text-[var(--ink-soft)]"><span className="inline-block w-4 h-0.5 rounded bg-[var(--accent)]" />{t('Transaksi', 'Transactions')}</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <p className="text-lg font-bold text-[var(--brand)] leading-none">Rp {salesChart.reduce((a, b) => a + (b.value || 0), 0).toLocaleString('id-ID')}</p>
-                      <div className="inline-flex rounded-lg bg-[var(--paper)] p-0.5 text-xs font-medium">
-                        {(['7d', '30d'] as const).map(r => (
-                          <button key={r} onClick={() => setChartRange(r)}
-                            className={`px-2.5 py-1 rounded-md transition-all ${chartRange === r ? 'bg-[var(--surface)] text-[var(--brand)] shadow-sm' : 'text-[var(--ink-soft)] hover:text-[var(--ink)]'}`}>
-                            {r === '7d' ? t('7 Hari', '7 Days') : t('30 Hari', '30 Days')}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  {(() => {
-                    const fallbackN = chartRange === '30d' ? 30 : 7
-                    const data = salesChart.length ? salesChart : Array.from({ length: fallbackN }, () => ({ label: '', day: '', value: 0, count: 0 }))
-                    const n = data.length
-                    const dense = n > 10
-                    const maxVal = Math.max(...data.map((d: any) => d.value), 1)
-                    const maxCnt = Math.max(...data.map((d: any) => d.count), 1)
-                    // Geometri (viewBox 340×150)
-                    const W = 340, H = 150, PL = 34, PR = 24, PT = 16, PB = 24
-                    const plotW = W - PL - PR, plotH = H - PT - PB, baseY = PT + plotH
-                    const slot = plotW / n
-                    const cx = (i: number) => PL + slot * i + slot / 2
-                    const barW = Math.max(3, slot * (dense ? 0.62 : 0.5))
-                    const lineY = (c: number) => baseY - (c / maxCnt) * plotH
-                    // Kurva halus (Catmull-Rom → Bézier) agar garis tampak elegan
-                    const pts = data.map((d: any, i: number) => ({ x: cx(i), y: lineY(d.count) }))
-                    const smooth = (p: { x: number; y: number }[]) => {
-                      if (p.length < 2) return p.length ? `M${p[0].x},${p[0].y}` : ''
-                      let dPath = `M${p[0].x.toFixed(1)},${p[0].y.toFixed(1)}`
-                      for (let i = 0; i < p.length - 1; i++) {
-                        const p0 = p[i - 1] || p[i], p1 = p[i], p2 = p[i + 1], p3 = p[i + 2] || p2
-                        const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6
-                        const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6
-                        dPath += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`
-                      }
-                      return dPath
-                    }
-                    const linePath = smooth(pts)
-                    const lineLen = 900
-                    const fmtRp = (v: number) => v >= 1e6 ? `${(v / 1e6).toFixed(v >= 1e7 ? 0 : 1)}jt` : v >= 1e3 ? `${Math.round(v / 1e3)}rb` : `${v}`
-                    return (
-                      <div>
-                        <svg key={chartRange} viewBox={`0 0 ${W} ${H}`} className="w-full h-48 sw-chart">
-                          <defs>
-                            <linearGradient id="salesBar" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#3a6b50" />
-                              <stop offset="100%" stopColor="#1e3a2c" />
-                            </linearGradient>
-                          </defs>
-                          {/* grid + label sumbu omzet (kiri) */}
-                          {[0, 0.5, 1].map((g, i) => {
-                            const y = baseY - g * plotH
-                            return (
-                              <g key={i}>
-                                <line x1={PL} x2={W - PR} y1={y} y2={y} stroke="#eceae3" strokeWidth="1" />
-                                <text x={PL - 5} y={y + 3} textAnchor="end" fontSize="7.5" fill="#b8bcb4">{fmtRp(maxVal * g)}</text>
-                              </g>
-                            )
-                          })}
-                          {/* label sumbu transaksi (kanan) */}
-                          {[0, 1].map((g, i) => (
-                            <text key={'r' + i} x={W - PR + 5} y={baseY - g * plotH + 3} textAnchor="start" fontSize="7.5" fill="#d3a488">{Math.round(maxCnt * g)}</text>
-                          ))}
-                          {/* batang omzet */}
-                          {data.map((d: any, i: number) => {
-                            const h = (d.value / maxVal) * plotH
-                            return (
-                              <rect className="sw-bar" key={'b' + i} x={cx(i) - barW / 2} y={baseY - h} width={barW} height={Math.max(0, h)}
-                                rx={Math.min(3, barW / 2)} fill="url(#salesBar)" style={{ transformOrigin: `center ${baseY}px`, animationDelay: `${i * 0.04}s` }} />
-                            )
-                          })}
-                          {/* garis jumlah transaksi */}
-                          <path className="sw-chart-line" d={linePath} fill="none" stroke="#c2632f" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-                            style={{ strokeDasharray: lineLen, strokeDashoffset: lineLen }} />
-                          {!dense && data.map((d: any, i: number) => (
-                            <g key={'p' + i}>
-                              <circle className="sw-chart-dot" cx={cx(i)} cy={lineY(d.count)} r="3" fill="#fff" stroke="#c2632f" strokeWidth="2" style={{ animationDelay: `${0.6 + i * 0.06}s` }} />
-                              {d.count > 0 && <text className="sw-chart-dot" x={cx(i)} y={lineY(d.count) - 7} textAnchor="middle" fontSize="8" fontWeight="700" fill="#c2632f" style={{ animationDelay: `${0.7 + i * 0.06}s` }}>{d.count}</text>}
-                            </g>
-                          ))}
-                          {/* label hari/tanggal */}
-                          {data.map((d: any, i: number) => d.label ? <text key={'t' + i} x={cx(i)} y={H - 7} textAnchor="middle" fontSize="8.5" fill="#9ca3af">{d.label}</text> : null)}
-                        </svg>
-                      </div>
-                    )
-                  })()}
-                </div>
-
-                <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl p-5">
-                  <h3 className="font-bold text-[var(--ink)] mb-1">{t('Produk Terlaris', 'Best Sellers')}</h3>
-                  <p className="text-xs text-[var(--ink-faint)] mb-4">{t('30 hari terakhir', 'Last 30 days')}</p>
-                  {bestSellers.length === 0 ? (
-                    <p className="text-center text-xs text-[var(--ink-faint)] py-8">{t('Belum ada penjualan', 'No sales yet')}</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {bestSellers.map((b: any, i: number) => {
-                        const maxQty = bestSellers[0].qty || 1
-                        return (
-                          <div key={i}>
-                            <div className="flex justify-between text-xs mb-1">
-                              <span className="font-medium text-[var(--ink)] truncate pr-2">{i + 1}. {b.nama}</span>
-                              <span className="text-[var(--ink-soft)] shrink-0">{b.qty}</span>
-                            </div>
-                            <div className="h-1.5 rounded-full bg-[var(--paper)] overflow-hidden">
-                              <div className="h-full rounded-full bg-[var(--brand-soft)]" style={{ width: `${Math.max(6, (b.qty / maxQty) * 100)}%` }} />
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Stok minim + Segera expired */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-5">
-                <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center"><Pill size={16} /></div>
-                    <h3 className="font-bold text-[var(--ink)]">{t('Stok Minim', 'Low Stock')}</h3>
-                  </div>
-                  {lowStock.length === 0 ? (
-                    <p className="text-center text-xs text-[var(--ink-faint)] py-6">{t('Semua stok aman 👍', 'All stock is healthy 👍')}</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {lowStock.map((p: any, i: number) => (
-                        <div key={i} className="flex items-center justify-between text-sm py-1.5 border-b border-[var(--line-soft)] last:border-0">
-                          <span className="text-[var(--ink)] truncate pr-2">{p.nama_obat}</span>
-                          <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-600">{p.stok_total} / {p.stok_minimum}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center"><CalendarClock size={16} /></div>
-                    <h3 className="font-bold text-[var(--ink)]">{t('Segera Expired (≤60 hari)', 'Expiring Soon (≤60 days)')}</h3>
-                  </div>
-                  {expiringSoon.length === 0 ? (
-                    <p className="text-center text-xs text-[var(--ink-faint)] py-6">{t('Tidak ada batch mendekati expired', 'No batches nearing expiry')}</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {expiringSoon.map((b: any, i: number) => {
-                        const days = Math.ceil((new Date(b.expired_date).getTime() - Date.now()) / 86400000)
-                        return (
-                          <div key={i} className="flex items-center justify-between text-sm py-1.5 border-b border-[var(--line-soft)] last:border-0">
-                            <div className="min-w-0 pr-2">
-                              <p className="text-[var(--ink)] truncate">{b.products?.nama_obat}</p>
-                              <p className="text-[10px] text-[var(--ink-faint)]">{t('Batch', 'Batch')} {b.batch_number || '-'} · {t('sisa', 'qty')} {b.stok_batch}</p>
-                            </div>
-                            <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${days <= 0 ? 'bg-red-200 text-red-800' : days <= 30 ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-700'}`}>
-                              {days <= 0 ? t('Expired', 'Expired') : `${days} ${t('hari', 'days')}`}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Tagihan faktur akan jatuh tempo (ringkas) */}
-                <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-[var(--surface-2)] text-[var(--accent)] flex items-center justify-center"><Receipt size={16} /></div>
-                      <h3 className="font-bold text-[var(--ink)]">{t('Jatuh Tempo', 'Invoices Due')}</h3>
-                    </div>
-                    {dueInvoices.length > 0 && (
-                      <button onClick={() => setActivePage('faktur')} className="text-xs font-medium text-[var(--brand)] hover:underline">{t('Semua', 'All')}</button>
-                    )}
-                  </div>
-                  {dueInvoices.length === 0 ? (
-                    <p className="text-center text-xs text-[var(--ink-faint)] py-6">{t('Tidak ada tagihan 👍', 'No invoices due 👍')}</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {dueInvoices.map((f: any, i: number) => {
-                        const days = Math.ceil((new Date(f.tanggal_jatuh_tempo).getTime() - new Date().setHours(0,0,0,0)) / 86400000)
-                        const badge = days < 0 ? 'bg-red-200 text-red-800' : days <= 7 ? 'bg-red-50 text-red-600' : days <= 14 ? 'bg-yellow-50 text-yellow-700' : 'bg-[var(--paper)] text-[var(--brand-soft)]'
-                        return (
-                          <div key={i} className="flex items-center justify-between text-sm py-1.5 border-b border-[var(--line-soft)] last:border-0">
-                            <div className="min-w-0 pr-2">
-                              <p className="text-[var(--ink)] truncate">{f.suppliers?.nama_supplier || '-'}</p>
-                              <p className="text-[10px] text-[var(--ink-faint)] tabular-nums">Rp {(f.total || 0).toLocaleString('id-ID')}</p>
-                            </div>
-                            <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${badge}`}>
-                              {days < 0 ? `${t('Telat', 'Late')} ${Math.abs(days)}${t('h', 'd')}` : days === 0 ? t('Hari ini', 'Today') : `${days} ${t('hari', 'days')}`}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* TINDAK LANJUT, Riwayat Barang Expired */}
           {activePage === 'tindaklanjut' && (
             <div>
@@ -4491,7 +3983,7 @@ const batalRetur = async (row: any) => {
         {(() => {
           const navAll = menuItems.filter(i => allowedPages.includes(i.id))
           const navMain = navAll.slice(0, 4)
-          const superExtra = (isSuper && allowedPages.includes('companies')) ? [{ id: 'companies', label: 'Companies', en: 'Companies', icon: Building2 }] : []
+          const superExtra = (isSuper && allowedPages.includes('klien')) ? menuSuper : []
           const moreList = [...navAll.slice(4), ...superExtra]
           const short = (it: any) => (lang === 'en' ? it.en : it.label).split(/[ &\/]/)[0]
           const moreActive = moreList.some(m => m.id === activePage)
