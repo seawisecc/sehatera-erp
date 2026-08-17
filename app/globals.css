@@ -402,51 +402,72 @@ select {
   overflow: hidden;
   background: var(--paper);
 }
-/* Langit: gradien tema, diredupkan supaya kartu kaca di atasnya tetap terbaca.
-   Gradien penuh terlalu ramai sebagai latar formulir, yang dibaca orang di
-   layar ini cuma dua kolom isian. */
-.sw-scene-sky {
-  position: absolute;
-  inset: 0;
-  background: var(--grad);
-  opacity: 0.4;
-}
-/* Pemandangan mengisi seluruh layar. Kartu masuk mengambang di tengahnya,
-   jadi yang terlihat di sekeliling kartu adalah rumah sakit di kiri, apotek di
-   kanan, dan tanaman di bawah: komposisi yang sama dengan rujukan. */
-.sw-scene-art {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
 
 /**
- * Kerudung di atas pemandangan.
+ * Cahaya latar.
  *
- * Tanpa ini kartu terang mengambang di atas latar yang sama terangnya, dan
- * matanya tidak tahu mana yang harus dibaca duluan: persis yang membedakan
- * halaman masuk TokoKu: di sana latarnya gelap tenang, jadi kartu putihnya
- * langsung menonjol. Pemandangan di sini dipertahankan, tapi diredupkan ke
- * pinggir supaya ia jadi latar, bukan saingan.
+ * Tiga bidang bundar yang sangat besar dan sangat kabur, satu untuk tiap warna
+ * gradien tema. Ditaruh sebagian di luar tepi layar supaya yang terlihat cuma
+ * bagian tengahnya yang paling lembut; lingkaran yang seluruhnya terlihat akan
+ * terbaca sebagai bentuk, dan begitu ia jadi bentuk ia mulai bersaing dengan
+ * formulir di depannya.
+ *
+ * `filter: blur()` sengaja tidak dipakai: pada bidang sebesar ini ia mahal
+ * untuk digambar ulang dan membuat perpindahan tema tersendat. Gradien radial
+ * yang memudar ke transparan memberi hasil yang sama tanpa biaya itu.
  */
-.sw-scene::after {
-  content: '';
+.sw-aura {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.sw-aura-1 {
+  width: 70vw; height: 70vw; min-width: 620px; min-height: 620px;
+  top: -26vw; left: -16vw;
+  background: radial-gradient(closest-side,
+    color-mix(in oklab, var(--grad-1) 62%, transparent) 0%,
+    color-mix(in oklab, var(--grad-1) 22%, transparent) 45%,
+    transparent 72%);
+}
+.sw-aura-2 {
+  width: 62vw; height: 62vw; min-width: 540px; min-height: 540px;
+  bottom: -24vw; right: -12vw;
+  background: radial-gradient(closest-side,
+    color-mix(in oklab, var(--grad-3) 58%, transparent) 0%,
+    color-mix(in oklab, var(--grad-3) 20%, transparent) 45%,
+    transparent 72%);
+}
+.sw-aura-3 {
+  width: 54vw; height: 54vw; min-width: 460px; min-height: 460px;
+  top: 34%; left: 46%;
+  background: radial-gradient(closest-side,
+    color-mix(in oklab, var(--grad-2) 42%, transparent) 0%,
+    transparent 68%);
+}
+
+/* Kisi halus. Nilainya sengaja di bawah ambang sadar: yang dituju bukan pola
+   yang terlihat, melainkan permukaan yang tidak terasa kosong. */
+.sw-kisi {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    radial-gradient(120% 90% at 50% 45%,
-      color-mix(in oklab, var(--paper) 30%, transparent) 0%,
-      color-mix(in oklab, var(--on-grad) 14%, transparent) 55%,
-      color-mix(in oklab, var(--on-grad) 34%, transparent) 100%),
-    /* Kabut bawah dipertebal sejak kartu masuk melebar. Yang terlihat di
-       sekeliling kartu tinggal pita sempit di bawah, dan pemandangan yang
-       terpotong separuh terbaca sebagai kekacauan, bukan sebagai suasana. */
-    linear-gradient(to bottom,
-      transparent 42%,
-      color-mix(in oklab, var(--paper) 55%, transparent) 78%,
-      color-mix(in oklab, var(--paper) 82%, transparent) 100%);
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--ink) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--ink) 4%, transparent) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(120% 90% at 50% 40%, #000 20%, transparent 78%);
+  -webkit-mask-image: radial-gradient(120% 90% at 50% 40%, #000 20%, transparent 78%);
+}
+
+/* Garis nadi. Satu isyarat, sangat tipis, jauh di bawah kartu. */
+.sw-nadi {
+  position: absolute;
+  left: 0; right: 0; bottom: 9%;
+  height: 120px;
+  color: color-mix(in oklab, var(--brand) 16%, transparent);
+  pointer-events: none;
+  mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
 }
 
 /**
