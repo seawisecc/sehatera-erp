@@ -92,26 +92,3 @@ export function menuAktif(pathname: string, item: MenuItem): boolean {
 
 /** Halaman yang butuh layar lebar dan perhatian penuh; sidebar menyempit sendiri. */
 export const RUTE_FOKUS = ['/kasir']
-
-/**
- * Rute yang SUDAH benar-benar pindah dari monolit.
- *
- * Daftar ini ada supaya pemecahan bisa dilakukan sepotong demi sepotong tanpa
- * pernah meninggalkan aplikasi dalam keadaan setengah rusak: menu selalu
- * menunjuk ke tempat yang benar-benar ada. Modul yang belum pindah diarahkan
- * ke `/dashboard?p=<id>`, yang kebetulan sudah memberi satu manfaat routing
- * lebih awal, yaitu alamatnya bisa dibagikan dan disegarkan.
- *
- * Daftar ini MENGECIL seiring pemecahan berjalan. Kalau sudah memuat semua id,
- * hapus fungsi `hrefEfektif` beserta jembatan `?p=` di dashboard.
- */
-export const RUTE_SIAP = new Set<string>(['dashboard', 'layanan', 'supplier', 'faktur', 'klien', 'laporan', 'pembelian', 'tindaklanjut', 'produk', 'transaksi'])
-
-export function hrefEfektif(item: MenuItem): string {
-  return RUTE_SIAP.has(item.id) ? item.href : `/dashboard?p=${item.id}`
-}
-
-export function menuAktifEfektif(pathname: string, cari: string | null, item: MenuItem): boolean {
-  if (RUTE_SIAP.has(item.id)) return menuAktif(pathname, item)
-  return pathname === '/dashboard' && cari === item.id
-}

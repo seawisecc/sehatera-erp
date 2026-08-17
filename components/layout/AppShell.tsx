@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import {
   ChevronRight, CreditCard, LayoutGrid, LogOut, Menu, Settings, ShieldCheck, X, AlertTriangle,
@@ -11,7 +11,7 @@ import { useApp } from '@/lib/app-context'
 import { useLang, LangToggle } from '@/lib/i18n'
 import { ThemeToggle } from '@/lib/theme'
 import { Logo, Mark } from '@/components/Logo'
-import { menuTampil, menuAktifEfektif, hrefEfektif, ROLE_LABELS, RUTE_FOKUS, type MenuItem } from '@/lib/navigation'
+import { menuTampil, menuAktif, ROLE_LABELS, RUTE_FOKUS, type MenuItem } from '@/lib/navigation'
 
 /**
  * Kerangka aplikasi: sidebar, topbar, navigasi bawah, spanduk langganan.
@@ -24,7 +24,6 @@ import { menuTampil, menuAktifEfektif, hrefEfektif, ROLE_LABELS, RUTE_FOKUS, typ
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const cari = useSearchParams().get('p')
   const { t, lang } = useLang()
   const app = useApp()
 
@@ -57,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => { setMobileNavOpen(false); setMoreOpen(false); setAccountOpen(false) }, [pathname])
 
   const nav = menuTampil(app.allowedPages, app.isSuper)
-  const aktif = nav.find(m => menuAktifEfektif(pathname, cari, m))
+  const aktif = nav.find(m => menuAktif(pathname, m))
   const judul = aktif ? (lang === 'en' ? aktif.en : aktif.label) : 'Sehatera'
 
   const keluar = async () => { await supabase.auth.signOut(); window.location.href = '/' }
@@ -114,7 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-1">
-            {nav.map(item => <ItemNav key={item.id} item={item} aktif={menuAktifEfektif(pathname, cari, item)} ciut={sidebarCollapsed} lang={lang} />)}
+            {nav.map(item => <ItemNav key={item.id} item={item} aktif={menuAktif(pathname, item)} ciut={sidebarCollapsed} lang={lang} />)}
           </nav>
         </div>
 
@@ -216,7 +215,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <NavBawah
         nav={nav}
         pathname={pathname}
-        cari={cari}
         lang={lang}
         moreOpen={moreOpen}
         setMoreOpen={setMoreOpen}
@@ -232,7 +230,7 @@ function ItemNav({ item, aktif, ciut, lang }: { item: MenuItem; aktif: boolean; 
   const Icon = item.icon
   return (
     <Link
-      href={hrefEfektif(item)}
+      href={item.href}
       title={ciut ? (lang === 'en' ? item.en : item.label) : undefined}
       aria-current={aktif ? 'page' : undefined}
       className={`w-full flex items-center ${ciut ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl text-sm ${
@@ -247,9 +245,9 @@ function ItemNav({ item, aktif, ciut, lang }: { item: MenuItem; aktif: boolean; 
 }
 
 function NavBawah({
-  nav, pathname, cari, lang, moreOpen, setMoreOpen, authName, role, keluar,
+  nav, pathname, lang, moreOpen, setMoreOpen, authName, role, keluar,
 }: {
-  nav: MenuItem[]; pathname: string; cari: string | null; lang: string
+  nav: MenuItem[]; pathname: string; lang: string
   moreOpen: boolean; setMoreOpen: (v: boolean) => void
   authName: string; role: string | null; keluar: () => void
 }) {
@@ -257,7 +255,7 @@ function NavBawah({
   const utama = nav.slice(0, 4)
   const sisa = nav.slice(4)
   const singkat = (m: MenuItem) => (lang === 'en' ? m.en : m.label).split(/[ &/]/)[0]
-  const sisaAktif = sisa.some(m => menuAktifEfektif(pathname, cari, m))
+  const sisaAktif = sisa.some(m => menuAktif(pathname, m))
 
   return (
     <>
@@ -268,9 +266,9 @@ function NavBawah({
       >
         {utama.map(item => {
           const Icon = item.icon
-          const on = menuAktifEfektif(pathname, cari, item)
+          const on = menuAktif(pathname, item)
           return (
-            <Link key={item.id} href={hrefEfektif(item)} aria-current={on ? 'page' : undefined}
+            <Link key={item.id} href={item.href} aria-current={on ? 'page' : undefined}
               className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 ${on ? 'text-[var(--brand)]' : 'text-[var(--ink-faint)]'}`}>
               <span className={`flex items-center justify-center w-10 h-6 rounded-full ${on ? 'bg-[var(--brand)]/10' : ''}`}><Icon size={19} /></span>
               <span className="text-[10px] font-medium leading-none">{singkat(item)}</span>
@@ -299,9 +297,9 @@ function NavBawah({
             <div className="grid grid-cols-4 gap-2">
               {sisa.map(item => {
                 const Icon = item.icon
-                const on = menuAktifEfektif(pathname, cari, item)
+                const on = menuAktif(pathname, item)
                 return (
-                  <Link key={item.id} href={hrefEfektif(item)}
+                  <Link key={item.id} href={item.href}
                     className={`flex flex-col items-center gap-1.5 py-3 rounded-2xl border ${on ? 'border-[var(--brand)] bg-[var(--surface-2)] text-[var(--brand)]' : 'border-[var(--line-soft)] text-[var(--ink-mid)]'}`}>
                     <Icon size={20} />
                     <span className="text-[10px] font-medium text-center leading-tight px-0.5">{lang === 'en' ? item.en : item.label}</span>
