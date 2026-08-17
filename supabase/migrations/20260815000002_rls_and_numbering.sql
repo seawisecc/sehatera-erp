@@ -4,7 +4,7 @@
 -- LUBANG YANG DITUTUP DI SINI.
 -- Versi lama (`sql/2026_companies_superadmin.sql`) memasang policy
 -- `for all using (true) with check (true)` pada `companies` DAN `super_admins`.
--- Akibatnya siapa pun yang berhasil login — termasuk kasir dari apotek lain —
+-- Akibatnya siapa pun yang berhasil login, termasuk kasir dari apotek lain -
 -- bisa membaca seluruh daftar klien beserta email admin dan masa aktifnya, lalu
 -- mengubah `status` apotek mana pun. Aplikasi tidak perlu diretas untuk itu;
 -- satu panggilan PostgREST dengan kunci anon yang memang ada di browser sudah
@@ -72,7 +72,7 @@ end;
 $$;
 
 -- ============================================================
--- 3. Penomoran dokumen — berurut PER APOTEK
+-- 3. Penomoran dokumen: berurut PER APOTEK
 -- ============================================================
 -- Nomor dibuat di database, bukan di browser. Dua kasir yang menekan "Proses"
 -- pada detik yang sama akan mendapat nomor struk yang sama kalau nomornya
@@ -102,8 +102,8 @@ $$;
 
 -- Empat trigger kecil yang eksplisit, bukan satu trigger generik. Versi generik
 -- perlu menulis kolom yang namanya baru diketahui saat jalan, dan trik untuk
--- melakukan itu membuat penomoran struk — hal yang paling tidak boleh gagal di
--- aplikasi ini — bergantung pada bagian PL/pgSQL yang paling sulit dibaca.
+-- melakukan itu membuat penomoran struk: hal yang paling tidak boleh gagal di
+-- aplikasi ini: bergantung pada bagian PL/pgSQL yang paling sulit dibaca.
 create or replace function public.set_nomor_pemusnahan()
 returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
 begin
@@ -167,7 +167,7 @@ create trigger trg_nomor_trx before insert on public.transactions
 -- Fungsi lama `set_nomor_ba()` dari `sql/2026_expired_followup.sql` menghitung
 -- `count(*) + 1` lintas seluruh tabel tanpa memandang apotek: begitu ada apotek
 -- kedua, nomornya melompat dan bentrok. Padanannya di atas sudah menggantikan.
--- `set_nomor_retur()` tidak ikut di-drop di sini — namanya sama dan sudah
+-- `set_nomor_retur()` tidak ikut di-drop di sini: namanya sama dan sudah
 -- ditulis ulang oleh `create or replace` di atas; men-drop-nya dengan cascade
 -- justru akan ikut menghapus trigger yang baru saja dipasang.
 drop function if exists public.set_nomor_ba() cascade;
@@ -208,7 +208,7 @@ begin
 end $$;
 
 -- ============================================================
--- 5. Policy tabel platform — bagian yang dulu bolong
+-- 5. Policy tabel platform: bagian yang dulu bolong
 -- ============================================================
 
 alter table public.companies enable row level security;
@@ -267,7 +267,7 @@ create trigger trg_guard_company_commercial
 
 -- ---------- super_admins ----------
 -- Daftar super admin tidak boleh bisa dibaca, apalagi ditulis, oleh pengguna
--- biasa. Aplikasi TIDAK perlu membacanya untuk tahu siapa dirinya — ada
+-- biasa. Aplikasi TIDAK perlu membacanya untuk tahu siapa dirinya: ada
 -- `is_super_admin()` yang SECURITY DEFINER untuk itu.
 alter table public.super_admins enable row level security;
 drop policy if exists "allow all super_admins" on public.super_admins;

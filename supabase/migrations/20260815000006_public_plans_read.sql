@@ -5,7 +5,7 @@
 --
 --     using (is_public or public.is_super_admin())
 --
--- dan di migrasi yang sama hak panggil `is_super_admin()` dicabut dari `anon` —
+-- dan di migrasi yang sama hak panggil `is_super_admin()` dicabut dari `anon` -
 -- fungsi itu membaca tabel super admin, jadi memang tidak boleh bisa dipanggil
 -- pengunjung. Akibat gabungan keduanya: pengunjung yang membuka halaman harga
 -- mendapat `permission denied for function is_super_admin`, bukan daftar paket.
@@ -13,11 +13,11 @@
 -- `is_public` sudah cukup untuk meloloskannya.
 --
 -- Ditemukan dengan menembak REST API memakai kunci anon yang memang ada di
--- dalam browser, bukan lewat aplikasi — dan memang begitu seharusnya diuji.
+-- dalam browser, bukan lewat aplikasi, dan memang begitu seharusnya diuji.
 --
 -- Perbaikannya MEMISAHKAN policy per peran, bukan membuka `is_super_admin()`
 -- untuk anon. Pengunjung hanya boleh melihat paket yang ditandai publik; paket
--- yang belum siap dijual — misalnya Klinik, yang harganya belum diketok —
+-- yang belum siap dijual, misalnya Klinik, yang harganya belum diketok -
 -- tetap tidak terlihat.
 -- ============================================================
 

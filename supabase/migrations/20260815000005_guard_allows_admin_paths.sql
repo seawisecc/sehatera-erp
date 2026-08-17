@@ -2,13 +2,13 @@
 -- Sehatera · 0005 · Gerbang kolom komersial: izinkan jalur admin
 --
 -- Migrasi 0002 memasang `guard_company_commercial()` untuk menahan pemilik
--- apotek mengubah paket dan masa aktifnya sendiri — RLS menyaring baris, bukan
+-- apotek mengubah paket dan masa aktifnya sendiri: RLS menyaring baris, bukan
 -- kolom, jadi izin memperbarui profil apotek otomatis mencakup `status` dan
 -- tanggal langganan juga.
 --
 -- Yang terlewat: gerbang itu bersandar sepenuhnya pada `is_super_admin()`, yang
--- membaca email dari JWT. Koneksi yang TIDAK lewat PostgREST — migrasi, skrip
--- seed, tugas terjadwal, dan kunci service_role di sisi server — sama sekali
+-- membaca email dari JWT. Koneksi yang TIDAK lewat PostgREST: migrasi, skrip
+-- seed, tugas terjadwal, dan kunci service_role di sisi server: sama sekali
 -- tidak punya JWT, jadi semuanya ikut tertolak. Ketahuan saat menjalankan seed
 -- data demo: skrip yang berjalan sebagai pemilik database sendiri ditolak
 -- dengan pesan yang ditujukan untuk pemilik apotek.

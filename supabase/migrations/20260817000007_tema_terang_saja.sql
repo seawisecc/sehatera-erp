@@ -8,7 +8,7 @@
 --
 -- Apotek yang kolom `theme`-nya menyimpan tema yang sudah tidak ada TIDAK boleh
 -- dibiarkan: `isThemeId()` di aplikasi akan menolak nilainya dan diam-diam
--- jatuh ke bawaan, jadi dari layar tidak terlihat rusak — tapi kolomnya
+-- jatuh ke bawaan, jadi dari layar tidak terlihat rusak, tapi kolomnya
 -- menyimpan sesuatu yang tidak berarti apa-apa, dan itu jenis data yang
 -- membingungkan orang berikutnya yang membacanya.
 -- ============================================================
@@ -97,7 +97,7 @@ begin
   select id into v_plan from public.plans where code = 'starter' limit 1;
 
   -- Masa coba dicatat per email pendaftar. Yang mendaftar apotek kedua tetap
-  -- boleh — dia hanya tidak dapat 14 hari gratis untuk kedua kalinya.
+  -- boleh: dia hanya tidak dapat 14 hari gratis untuk kedua kalinya.
   v_trial_used := exists (select 1 from public.trial_grants where email = v_email);
   v_trial_end  := case when v_trial_used then now() else now() + interval '14 days' end;
 

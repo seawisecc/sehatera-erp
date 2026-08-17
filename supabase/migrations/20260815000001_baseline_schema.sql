@@ -13,20 +13,20 @@
 -- Database yang sudah berjalan SUDAH punya sebagian tabel ini, dibuat tangan
 -- lewat SQL Editor dan tidak pernah tercatat di file mana pun.
 -- `create table if not exists` pada tabel yang sudah ada TIDAK melakukan apa
--- pun — ia tidak menambahkan kolom yang kurang, dan tidak mengeluh. Jadi
+-- pun: ia tidak menambahkan kolom yang kurang, dan tidak mengeluh. Jadi
 -- migrasi yang hanya berisi CREATE TABLE akan melaporkan "berhasil" sambil
 -- meninggalkan database persis seperti semula, dan kode baru yang menulis ke
 -- kolom yang tidak ada baru gagal berjam-jam kemudian di tangan pengguna.
 --
 -- Bentuk di bawah lebih panjang dibaca, tapi menghasilkan bentuk akhir yang
 -- sama baik dijalankan di database kosong maupun di database yang sudah berisi
--- data — dan yang kedua itulah keadaan nyatanya.
+-- data, dan yang kedua itulah keadaan nyatanya.
 -- ============================================================
 
 create extension if not exists "pgcrypto";
 
 -- ============================================================
--- LAPISAN PLATFORM — milik penyedia layanan, bukan milik apotek
+-- LAPISAN PLATFORM: milik penyedia layanan, bukan milik apotek
 -- ============================================================
 
 -- ---------- paket langganan ----------
@@ -74,7 +74,7 @@ alter table public.companies
   add column if not exists created_at           timestamptz not null default now(),
   -- Dua kolom di bawah warisan `sql/2026_companies_superadmin.sql`. Dibiarkan
   -- ada supaya database lama tidak pecah, tapi TIDAK dipakai lagi oleh
-  -- aplikasi — masa aktif sekarang dibaca dari trial_ends_at /
+  -- aplikasi: masa aktif sekarang dibaca dari trial_ends_at /
   -- subscription_ends_at.
   add column if not exists valid_sampai         date,
   add column if not exists user_count           integer not null default 1;
@@ -91,7 +91,7 @@ create index if not exists idx_companies_status      on public.companies (status
 -- tidak bisa transaksi tanpa sebab yang jelas.
 do $$
 begin
-  -- Data lama memakai 'aktif' / 'nonaktif'. Diseragamkan DULU, baru dikunci —
+  -- Data lama memakai 'aktif' / 'nonaktif'. Diseragamkan DULU, baru dikunci -
   -- urutan terbalik akan menolak migrasinya sendiri.
   update public.companies set status = 'active'   where status = 'aktif';
   update public.companies set status = 'inactive' where status = 'nonaktif';
@@ -131,7 +131,7 @@ alter table public.audit_logs
 create index if not exists idx_audit_company on public.audit_logs (company_id, created_at desc);
 
 -- ============================================================
--- LAPISAN APOTEK — semua tabel di bawah ini ber-company_id
+-- LAPISAN APOTEK: semua tabel di bawah ini ber-company_id
 -- ============================================================
 
 -- ---------- profil apotek ----------
@@ -367,7 +367,7 @@ alter table public.retur_supplier
 -- Nomor BA dan nomor retur unik PER APOTEK. Versi lama memasang `unique` global,
 -- sehingga apotek kedua yang memusnahkan obat di tahun yang sama akan ditolak
 -- karena nomor BA/2026/0001 sudah dipakai apotek lain. Batasan lama dilepas
--- dulu — kalau tidak, yang global tetap berlaku dan penggantinya percuma.
+-- dulu: kalau tidak, yang global tetap berlaku dan penggantinya percuma.
 do $$
 declare r record;
 begin

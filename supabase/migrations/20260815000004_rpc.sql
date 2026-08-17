@@ -85,7 +85,7 @@ grant execute on function public.my_context() to authenticated;
 -- 2. Pendaftaran apotek
 -- ============================================================
 -- Dipanggil sekali sesudah akun auth terbentuk. Semua yang dibutuhkan apotek
--- baru dibuat di sini dalam satu transaksi database — kalau salah satu gagal,
+-- baru dibuat di sini dalam satu transaksi database: kalau salah satu gagal,
 -- tidak ada yang tersisa setengah jadi.
 create or replace function public.register_apotek(
   p_nama_apotek text,
@@ -130,7 +130,7 @@ begin
   select id into v_plan from public.plans where code = 'starter' limit 1;
 
   -- Masa coba dicatat per email pendaftar. Yang mendaftar apotek kedua tetap
-  -- boleh — dia hanya tidak dapat 14 hari gratis untuk kedua kalinya.
+  -- boleh: dia hanya tidak dapat 14 hari gratis untuk kedua kalinya.
   v_trial_used := exists (select 1 from public.trial_grants where email = v_email);
   v_trial_end  := case when v_trial_used then now() else now() + interval '14 days' end;
 
@@ -177,7 +177,7 @@ grant execute on function public.register_apotek(text, text, text, text) to auth
 --   1. Kalau jaringan putus di tengah perulangan, transaksi dan itemnya sudah
 --      tersimpan tapi sebagian stok belum terpotong. Tidak ada yang tahu sampai
 --      stok opname berikutnya.
---   2. `stok_batch` TIDAK PERNAH ikut dipotong sama sekali — hanya
+--   2. `stok_batch` TIDAK PERNAH ikut dipotong sama sekali: hanya
 --      `products.stok_total`. Jadi sejak transaksi pertama, jumlah batch dan
 --      stok total sudah berbeda, dan angka batch itulah yang dipakai laporan
 --      SIPNAP dan penelusuran obat kadaluarsa.
@@ -252,7 +252,7 @@ begin
     end if;
 
     -- Obat golongan wajib membawa identitas pasien dan nomor resep. Ini
-    -- kewajiban pelaporan SIPNAP, jadi ditolak di database — bukan hanya
+    -- kewajiban pelaporan SIPNAP, jadi ditolak di database, bukan hanya
     -- diingatkan di layar, yang bisa dilewati siapa pun yang memanggil API
     -- langsung.
     if v_golongan and (
@@ -300,7 +300,7 @@ begin
        set stok_total = greatest(0, stok_total - v_qty)
      where id = v_pid and company_id = v_company;
 
-    -- FEFO — batch yang paling dekat kadaluarsa dikeluarkan lebih dulu. Batch
+    -- FEFO: batch yang paling dekat kadaluarsa dikeluarkan lebih dulu. Batch
     -- tanpa tanggal kadaluarsa ditaruh paling akhir supaya obat yang punya
     -- tanggal tidak keburu lewat sementara yang tak bertanggal terus terpakai.
     v_sisa := v_qty;

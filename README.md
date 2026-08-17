@@ -2,7 +2,7 @@
 
 Sistem manajemen apotek: kasir & resep, stok dengan batch dan tanggal
 kadaluarsa, order terpandu ke pemasok, pembayaran faktur, tindak lanjut barang
-kadaluarsa, dan laporan SIPNAP — dalam satu aplikasi, berlangganan per apotek.
+kadaluarsa, dan laporan SIPNAP: dalam satu aplikasi, berlangganan per apotek.
 
 Oleh Seawise Studio. Sekeluarga dengan [TokoKu](../tokoku-erp), yang dipakai
 sebagai acuan pola untuk struktur multi-tenant dan sistem paketnya.
@@ -41,13 +41,13 @@ psql "$DATABASE_URL" -f supabase/seed_demo.sql   # data demo, opsional
 ```
 
 Migrasi ditulis agar aman dijalankan **di atas database yang sudah berisi
-data** — `create table if not exists` lalu `add column if not exists` satu per
+data**: `create table if not exists` lalu `add column if not exists` satu per
 satu, bukan satu CREATE TABLE yang rapi. Alasannya di header migrasi 0001.
 
 Migrasi yang sudah dijalankan tidak disunting; perbaikan jadi migrasi baru.
 Itulah kenapa ada 0005 dan 0006.
 
-`sql/` adalah arsip cara lama — jangan dijalankan (lihat `sql/README.md`).
+`sql/` adalah arsip cara lama: jangan dijalankan (lihat `sql/README.md`).
 
 ### Data demo
 
@@ -58,7 +58,7 @@ resepnya, dan ada faktur yang lewat jatuh tempo. Tanpa ketiganya, layar Tindak
 Lanjut, laporan SIPNAP, dan pengingat faktur akan tampak "berfungsi" hanya
 karena tidak ada yang perlu ditampilkan.
 
-Skrip itu **tidak membuat akun login apa pun** — apotek disambungkan ke akun
+Skrip itu **tidak membuat akun login apa pun**: apotek disambungkan ke akun
 yang sudah ada di `auth.users`.
 
 ## Paket langganan
@@ -81,7 +81,7 @@ dikunci di paket atas hanya kemudahannya: rekap lintas cabang dan pengiriman
 terjadwal.
 
 Aturan pembacaan paket ada di satu tempat: `lib/plan.ts`. Kuota ditegakkan di
-database (`enforce_plan_quota`, SQLSTATE `SH002`), bukan di layar — impor
+database (`enforce_plan_quota`, SQLSTATE `SH002`), bukan di layar: impor
 katalog CSV menembak tabel `products` langsung, jadi gerbang yang hanya ada di
 form akan dilewati begitu saja.
 
@@ -103,5 +103,5 @@ komponen yang perlu disentuh. Sebaiknya isi kotak yang memang masih kosong di
 matriks terang/gelap × berani/tenang, bukan menambah selera baru.
 
 Ketiga warna tiap palet dipakai sebagai **gradien identitas**, bukan warna teks
-— `#fbd786` di atas putih tidak terbaca siapa pun. Isi layar memakai netral
+- `#fbd786` di atas putih tidak terbaca siapa pun. Isi layar memakai netral
 hangat yang diturunkan dari palet itu.

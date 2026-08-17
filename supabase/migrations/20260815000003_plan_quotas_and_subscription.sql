@@ -4,7 +4,7 @@
 -- Penegakannya ditaruh di DATABASE, bukan di layar. Dua alasan yang sudah
 -- menggigit project sejenis:
 --   1. INSERT yang ditolak RLS mengembalikan "sukses" dengan 0 baris, bukan
---      error — pengecekan di aplikasi mudah bocor tanpa meninggalkan jejak.
+--      error: pengecekan di aplikasi mudah bocor tanpa meninggalkan jejak.
 --   2. Impor katalog CSV menembak `products` langsung dalam satu insert massal.
 --      Gerbang yang cuma ada di form tambah-produk akan dilewati begitu saja.
 -- ============================================================
@@ -14,7 +14,7 @@
 -- ============================================================
 
 -- NULL berarti tanpa batas. Apotek tanpa paket (`plan_id` belum diisi) juga
--- NULL: jangan pernah mengunci apotek hanya karena kolomnya belum terisi —
+-- NULL: jangan pernah mengunci apotek hanya karena kolomnya belum terisi -
 -- memberi kelebihan jauh lebih murah daripada menahan apotek yang sudah bayar
 -- lalu menunggu mereka mengeluh.
 create or replace function public.company_quota(p_company uuid, p_key text)
@@ -78,7 +78,7 @@ end;
 $$;
 
 -- Sengaja hanya pada INSERT. Apotek yang turun paket dan sudah terlanjur
--- melewati batas TIDAK kehilangan satu baris pun — ia hanya tidak bisa menambah
+-- melewati batas TIDAK kehilangan satu baris pun: ia hanya tidak bisa menambah
 -- sampai kembali di bawah batas. Menghapus data orang karena downgrade adalah
 -- cara tercepat kehilangan kepercayaan, dan untuk apotek itu berarti menghapus
 -- katalog obat yang jadi dasar laporan ke Dinas Kesehatan.
@@ -128,13 +128,13 @@ grant select on public.v_company_quota to authenticated;
 -- Kapan akses sebuah apotek habis. NULL = belum/tidak habis.
 --
 -- STATUS yang menentukan tanggal mana yang berlaku. Apotek yang masih trial
--- tidak boleh dikunci oleh subscription_ends_at, dan sebaliknya — kalau tidak,
+-- tidak boleh dikunci oleh subscription_ends_at, dan sebaliknya: kalau tidak,
 -- apotek yang naik dari trial ke berbayar akan membawa tanggal trial lamanya
 -- dan langsung terkunci di hari ia membayar.
 --
 -- Aturan ini WAJIB sama persis dengan lib/subscription.ts. Kalau keduanya
 -- berbeda, apotek melihat "aman" di layar lalu ditolak saat menekan Proses
--- Transaksi — dan itu terjadi di depan pembeli yang sedang antre.
+-- Transaksi, dan itu terjadi di depan pembeli yang sedang antre.
 create or replace function public.company_lapsed_at(p_company uuid)
 returns timestamptz
 language sql stable security definer set search_path = public, pg_temp
@@ -167,7 +167,7 @@ revoke all on function public.company_is_active(uuid)  from public, anon, authen
 -- Yang berhenti saat langganan habis HANYA penerimaan transaksi baru. Data lama
 -- tetap utuh, tetap bisa dibuka, tetap bisa dicetak dan dilaporkan. Apotek yang
 -- masa aktifnya lewat masih punya kewajiban SIPNAP bulan itu, dan menyandera
--- datanya sampai mereka membayar bukan cuma tidak sopan — itu menghalangi
+-- datanya sampai mereka membayar bukan cuma tidak sopan: itu menghalangi
 -- mereka memenuhi kewajiban hukum.
 create or replace function public.enforce_subscription_active()
 returns trigger
