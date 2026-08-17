@@ -114,7 +114,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* ══ SIDEBAR ══ */}
         <div
-          className={`${sidebarCollapsed ? 'md:w-[76px]' : 'md:w-64'} w-64 bg-gradient-to-b from-[var(--brand)] via-[var(--brand-soft)] to-[var(--brand-hover)] flex flex-col shrink-0 fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 md:z-auto ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
+          className={`${sidebarCollapsed ? 'md:w-[64px]' : 'md:w-64'} w-64 bg-gradient-to-b from-[var(--brand)] via-[var(--brand-soft)] to-[var(--brand-hover)] flex flex-col shrink-0 fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 md:z-auto ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
           style={{ transition: 'transform var(--t-normal) var(--ease), width var(--t-normal) var(--ease)' }}
         >
           {/* Tombol lipat di TEPI LUAR: di dalam sidebar posisinya bergeser
@@ -130,10 +130,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <ChevronRight size={15} style={{ transform: sidebarCollapsed ? 'none' : 'rotate(180deg)', transition: 'transform var(--t-normal) var(--ease)' }} />
           </button>
 
-          <div className={`${sidebarCollapsed ? 'px-3' : 'px-5'} py-5`}>
+          <div className={`${sidebarCollapsed ? 'px-2' : 'px-5'} py-5`}>
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
               {sidebarCollapsed
-                ? <Mark size={28} variant="mono" className="text-[var(--on-brand)]" />
+                ? <Mark size={26} variant="mono" className="text-[var(--on-brand)]" />
                 : <Logo size={38} sub={app.namaFaskes} tone="onBrand" />}
               <button onClick={() => setMobileNavOpen(false)} className="md:hidden ml-auto text-[var(--on-brand-soft)] hover:text-white" aria-label="Tutup menu">
                 <X size={20} />
@@ -141,7 +141,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-1">
+          <nav className={`flex-1 min-h-0 overflow-y-auto ${sidebarCollapsed ? 'px-2' : 'px-3'} py-2 space-y-1`}>
             {nav.map(item => <ItemNav key={item.id} item={item} aktif={menuAktif(pathname, item)} ciut={sidebarCollapsed} lang={lang} />)}
           </nav>
         </div>
@@ -159,10 +159,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <select
                   value={app.superViewCompany}
                   onChange={e => app.setSuperViewCompany(e.target.value)}
-                  aria-label={t('Lihat sebagai apotek', 'View as pharmacy')}
+                  aria-label={t('Lihat sebagai faskes', 'View as facility')}
                   className="max-w-[190px] px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-soft)] text-xs"
                 >
-                  <option value="">{t('Semua apotek', 'All pharmacies')}</option>
+                  <option value="">{t('Semua faskes', 'All facilities')}</option>
                   {app.companies.map((c: any) => <option key={c.id} value={c.id}>{c.nama}</option>)}
                 </select>
               )}
@@ -255,20 +255,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   )
 }
 
+/**
+ * Satu baris menu di sidebar.
+ *
+ * Menu aktif memakai GRADASI tema, bukan kabut putih tipis seperti sebelumnya.
+ * Kabut putih di atas sidebar yang sendirinya sudah gradasi hanya menaikkan
+ * terangnya sedikit, dan pada layar kasir yang menyala terus sepanjang hari
+ * selisih setipis itu praktis tidak terbaca. Gradasi tema membalik
+ * hubungannya: yang aktif jadi terang di atas latar gelap, jadi terbaca dari
+ * sudut mata tanpa dicari.
+ *
+ * Warna tulisannya memakai --on-grad, bukan putih. Gradasi keempat tema ini
+ * terang, dan putih di atasnya hilang.
+ */
 function ItemNav({ item, aktif, ciut, lang }: { item: MenuItem; aktif: boolean; ciut: boolean; lang: string }) {
   const Icon = item.icon
+  const nama = lang === 'en' ? item.en : item.label
   return (
     <Link
       href={item.href}
-      title={ciut ? (lang === 'en' ? item.en : item.label) : undefined}
+      title={ciut ? nama : undefined}
       aria-current={aktif ? 'page' : undefined}
-      className={`w-full flex items-center ${ciut ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl text-sm ${
-        aktif ? 'bg-[var(--surface)]/15 text-white font-medium' : 'text-[var(--on-brand-soft)] hover:bg-white/[0.07] hover:text-white'
+      className={`relative w-full flex items-center ${ciut ? 'justify-center px-0' : 'gap-3 px-3'} py-2.5 rounded-xl text-sm ${
+        aktif
+          ? 'font-semibold shadow-sm'
+          : 'text-[var(--on-brand-soft)] hover:bg-white/[0.07] hover:text-white'
       }`}
-      style={{ transition: 'background-color var(--t-quick) var(--ease), color var(--t-quick) var(--ease)' }}
+      style={{
+        transition: 'background-color var(--t-quick) var(--ease), color var(--t-quick) var(--ease)',
+        ...(aktif ? { background: 'var(--grad)', color: 'var(--on-grad)' } : null),
+      }}
     >
-      <Icon size={17} className="shrink-0" />
-      {!ciut && <span className="truncate">{lang === 'en' ? item.en : item.label}</span>}
+      <Icon size={17} className="shrink-0" strokeWidth={aktif ? 2.4 : 2} />
+      {!ciut && <span className="truncate">{nama}</span>}
     </Link>
   )
 }

@@ -440,9 +440,13 @@ select {
       color-mix(in oklab, var(--paper) 30%, transparent) 0%,
       color-mix(in oklab, var(--on-grad) 14%, transparent) 55%,
       color-mix(in oklab, var(--on-grad) 34%, transparent) 100%),
+    /* Kabut bawah dipertebal sejak kartu masuk melebar. Yang terlihat di
+       sekeliling kartu tinggal pita sempit di bawah, dan pemandangan yang
+       terpotong separuh terbaca sebagai kekacauan, bukan sebagai suasana. */
     linear-gradient(to bottom,
-      transparent 55%,
-      color-mix(in oklab, var(--paper) 45%, transparent) 100%);
+      transparent 42%,
+      color-mix(in oklab, var(--paper) 55%, transparent) 78%,
+      color-mix(in oklab, var(--paper) 82%, transparent) 100%);
 }
 
 /**
@@ -481,51 +485,71 @@ select {
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 22%, transparent);
 }
 
-/* ── Auth sliding overlay (Sign In ⇄ Sign Up) ── */
-.sw-auth {
-  position: relative; width: 100%; max-width: 52rem; min-height: 560px;
-  /* Diperkecil dari 64rem. Pada 64rem kartunya menutupi dua pertiga layar, dan
-     pemandangan di belakangnya tidak pernah terlihat selain sedikit tanaman di
-     bawah, jadi latar yang dibangun susah payah itu praktis mubazir. */
-  border-radius: 28px; overflow: hidden;
+/**
+ * Kartu halaman masuk.
+ *
+ * Menggantikan pola dua panel yang saling menggeser dengan potongan miring.
+ * Pola itu templat yang sangat mudah dikenali, dan pengenalan itulah masalah
+ * sebenarnya: orang yang akan menyerahkan data pasiennya menilai kesungguhan
+ * sebuah produk dari layar pertamanya, dan layar yang terlihat seperti templat
+ * gratisan menjawab pertanyaan itu dengan cara yang salah.
+ *
+ * Penggantinya: dua kolom yang diam bersebelahan. Kiri membawa merek dan tiga
+ * hal yang benar tentang produknya; kanan hanya pekerjaan yang sedang diminta.
+ * Tidak ada yang bergerak, tidak ada potongan miring, tidak ada panel yang
+ * menimpa panel lain.
+ */
+.sw-masuk {
+  width: 100%;
+  border-radius: 24px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr;
   animation: swFadeUp var(--t-sheet) var(--ease) both;
 }
-@media (prefers-reduced-motion: reduce) { .sw-auth { animation: none; } }
-.sw-form { position: absolute; top: 0; height: 100%; width: 50%; overflow-y: auto; display: flex; flex-direction: column; justify-content: center;
-  transition: opacity .7s cubic-bezier(.77,0,.18,1), transform .7s cubic-bezier(.77,0,.18,1), filter .7s ease; }
-.sw-form--login  { left: 0; z-index: 2; }
-.sw-form--signup { left: 50%; z-index: 1; opacity: 0; transform: translateX(40px); pointer-events: none; }
-.sw-auth.active .sw-form--login  { opacity: 0; transform: translateX(-40px); filter: blur(5px); pointer-events: none; z-index: 1; }
-.sw-auth.active .sw-form--signup { opacity: 1; transform: none; pointer-events: auto; z-index: 2; }
+@media (min-width: 900px) { .sw-masuk { grid-template-columns: 1.02fr 1fr; } }
+@media (prefers-reduced-motion: reduce) { .sw-masuk { animation: none; } }
 
-/* Panel miring memakai gradien identitas. Teksnya TIDAK putih polos melainkan
-   --on-brand, karena gradien Sunrise Sorbet cukup terang dan putih di atasnya
-   nyaris hilang. */
-.sw-overlay { position: absolute; top: 0; left: 50%; width: 50%; height: 100%; z-index: 5; overflow: hidden;
+/* Kolom merek. Gradien tema dipakai penuh di sini, bukan diredupkan: ini
+   satu-satunya bidang di layar yang memang boleh berwarna. */
+.sw-masuk-merek {
+  position: relative;
   background: var(--grad);
-  opacity: 0.92;
-  clip-path: polygon(14% 0, 100% 0, 100% 100%, 0 100%);
-  transition: transform .9s cubic-bezier(.77,0,.18,1), clip-path .9s cubic-bezier(.77,0,.18,1); }
-.sw-auth.active .sw-overlay { transform: translateX(-100%); clip-path: polygon(0 0, 86% 0, 100% 100%, 0 100%); }
-.sw-overlay-face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2.5rem;
-  color: var(--on-grad); transition: opacity .5s ease; }
-/* Muka yang sedang tidak terlihat harus ikut mati untuk klik dan untuk pembaca
-   layar: kalau hanya opacity-nya nol, tombol "Daftar" yang tak terlihat masih
-   bisa ditekan dan masih dibacakan. */
-.sw-overlay-face--login { opacity: 0; pointer-events: none; }
-.sw-auth.active .sw-overlay-face--signup { opacity: 0; pointer-events: none; }
-.sw-auth.active .sw-overlay-face--login  { opacity: 1; pointer-events: auto; }
-
-@media (max-width: 768px) {
-  .sw-auth { min-height: 0; }
-  .sw-overlay { display: none; }
-  .sw-form { position: relative; left: 0 !important; width: 100%; opacity: 1 !important; transform: none !important; filter: none !important; pointer-events: auto !important; }
-  .sw-form--signup { display: none; }
-  .sw-auth.active .sw-form--login { display: none; }
-  .sw-auth.active .sw-form--signup { display: flex; }
+  color: var(--on-grad);
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
 }
-@media (prefers-reduced-motion: reduce) {
-  .sw-form, .sw-overlay, .sw-overlay-face { transition: none; }
+@media (min-width: 640px) { .sw-masuk-merek { padding: 44px 40px; } }
+@media (min-width: 900px) { .sw-masuk-merek { padding: 52px 46px; } }
+
+/* Kilau tipis dari sudut atas, supaya bidang gradiennya punya kedalaman tanpa
+   perlu bayangan atau garis tambahan. */
+.sw-masuk-merek::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 80% at 10% 0%,
+    color-mix(in oklab, var(--surface) 40%, transparent) 0%, transparent 62%);
+}
+.sw-masuk-merek > * { position: relative; }
+
+/* Kolom formulir. Permukaan PEKAT, bukan kaca: yang diketik orang di sini
+   kata sandi, dan siluet yang menembus dari belakang membuat salah ketik jauh
+   lebih sulit dilihat. */
+.sw-masuk-isi {
+  background: var(--surface);
+  padding: 36px 28px;
+}
+@media (min-width: 640px) { .sw-masuk-isi { padding: 44px 40px; } }
+@media (min-width: 900px) { .sw-masuk-isi { padding: 52px 46px; } }
+
+.sw-bukti { display: flex; flex-direction: column; gap: 15px; margin: 0; padding: 0; list-style: none; }
+.sw-bukti li { display: flex; gap: 12px; align-items: flex-start; line-height: 1.5; }
+.sw-bukti .tanda {
+  flex: none; width: 21px; height: 21px; border-radius: 999px; margin-top: 1px;
+  display: grid; place-items: center;
+  background: color-mix(in oklab, var(--on-grad) 13%, transparent);
 }
 
 /* Struk dan laporan selalu dicetak hitam di atas putih, apa pun temanya.

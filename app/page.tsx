@@ -4,9 +4,9 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useLang, LangToggle } from '../lib/i18n'
 import { ThemeToggle } from '../lib/theme'
-import { Eye, EyeOff } from 'lucide-react'
+import { Check, Eye, EyeOff } from 'lucide-react'
 import { AuthBackdrop } from '../components/AuthBackdrop'
-import { Logo, Mark } from '../components/Logo'
+import { Logo } from '../components/Logo'
 
 const inputCls =
   'glass-field w-full rounded-xl px-4 py-3 text-sm text-[var(--ink)] placeholder-[var(--ink-faint)]'
@@ -93,154 +93,191 @@ export default function Auth() {
     ))
   }
 
+  const label = 'block text-[13px] font-medium text-[var(--ink-mid)] mb-1.5'
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative">
+    <div className="min-h-screen flex flex-col relative">
       <AuthBackdrop />
-      <div className="absolute top-4 right-5 sm:top-6 sm:right-8 z-20 flex items-center gap-2">
-        <ThemeToggle />
-        <LangToggle />
-        <a href="/kenapa" className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--brand)] bg-[var(--surface)]/70 backdrop-blur-sm border border-black/5 px-3.5 py-2 rounded-full shadow-sm hover:bg-[var(--surface)] transition">
-          ✨ {t('Kenapa aplikasi ini?', 'Why this app?')}
+
+      {/* Baris kendali di atas. Sejajar dengan lebar kartunya, bukan menempel
+          sudut layar: yang menempel sudut terlihat seperti tempelan. */}
+      <header className="relative z-20 w-full max-w-5xl mx-auto px-4 sm:px-6 pt-5 flex items-center gap-2">
+        <a href="/kenapa" className="text-sm font-medium text-[var(--brand)] hover:underline underline-offset-4">
+          {t('Fitur & harga', 'Features & pricing')}
         </a>
-      </div>
-      {/* Kolom: merek di ATAS kartu, kartu, lalu footer.
-          Menaruh merek di luar kartu membuat kartunya bersih: isinya cuma
-          pekerjaan yang sedang diminta, tanpa logo yang mengulang diri di dua
-          panel sekaligus seperti sebelumnya. */}
-      <div className="relative z-10 w-full max-w-[52rem] flex flex-col items-center gap-5">
-        <Logo size={40} sub="BY SEAWISE STUDIO" subClass="uppercase tracking-[0.16em] text-[11px]" />
-
-      <div className={`sw-auth glass ${mode === 'signup' ? 'active' : ''}`}>
-
-        {/* ── Login form ── */}
-        <div className="sw-form sw-form--login p-8 sm:p-10 md:p-12">
-          <p className="text-[var(--accent)] text-xs font-semibold uppercase tracking-[0.18em] mb-2">{t('Selamat Datang Kembali', 'Welcome Back')}</p>
-          <h1 className="text-3xl sm:text-4xl font-bold text-[var(--ink)] mb-1.5">{t('Masuk', 'Sign In')}</h1>
-          <p className="text-sm text-[var(--ink-soft)] mb-6">{t('Kelola stok, kasir, dan laporan apotek dari satu tempat.', 'Manage stock, register, and reports from one place.')}</p>
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-              {error}
-              {needConfirm && <button onClick={resendConfirmation} className="block mt-2 text-[var(--brand)] font-medium underline">{t('Kirim ulang email verifikasi', 'Resend verification email')}</button>}
-            </div>
-          )}
-          {info && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">{info}</div>}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[var(--ink-mid)] mb-1.5">Email</label>
-              <input type="email" placeholder="nama@apotek.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} className={inputCls} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--ink-mid)] mb-1.5">{t('Kata Sandi', 'Password')}</label>
-              {/* Tombol lihat sandi bukan kemewahan: kata sandi yang diketik di
-                  balik titik-titik adalah penyebab paling sering orang mengira
-                  akunnya bermasalah padahal cuma salah ketik. */}
-              <div className="relative">
-                <input type={lihatSandi ? 'text' : 'password'} placeholder="••••••••" value={password}
-                  onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                  className={inputCls + ' pr-11'} />
-                <button type="button" onClick={() => setLihatSandi(v => !v)}
-                  aria-label={lihatSandi ? t('Sembunyikan kata sandi', 'Hide password') : t('Lihat kata sandi', 'Show password')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] hover:text-[var(--ink-soft)]">
-                  {lihatSandi ? <EyeOff size={17} /> : <Eye size={17} />}
-                </button>
-              </div>
-            </div>
-            <button onClick={handleLogin} disabled={loading} className="w-full bg-[var(--brand)] text-[var(--on-brand)] py-3 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-              {loading ? t('Memproses...', 'Processing...') : t('Masuk', 'Sign In')}
-            </button>
-            {/* Jalan ke pendaftaran ada di kolom ini juga, bukan hanya di panel
-                miring. Panel itu hilang di layar sempit, dan sebelumnya jalan
-                daftar ikut hilang bersamanya di layar sedang. */}
-            <button onClick={() => setMode('signup')}
-              className="w-full py-3 rounded-xl border-2 border-[var(--brand)]/25 text-sm font-semibold text-[var(--brand)] hover:bg-[var(--brand)]/8 transition">
-              {t('Belum punya apotek? Daftar', 'No pharmacy yet? Register')}
-            </button>
-          </div>
+        <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
+          <LangToggle />
         </div>
+      </header>
 
-        {/* ── Signup form ── */}
-        <div className="sw-form sw-form--signup p-8 sm:p-10 md:p-12">
-          <p className="text-[var(--accent)] text-xs font-semibold uppercase tracking-[0.18em] mb-2">{t('Gabung Sekarang', 'Join Now')}</p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--ink)] mb-1">{t('Daftarkan Apotek', 'Register Pharmacy')}</h1>
-          <p className="text-sm text-[var(--ink-soft)] mb-5">{t('Gratis 14 hari. Tanpa kartu kredit.', 'Free for 14 days. No credit card.')}</p>
-          {sError && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{sError}</div>}
-          {sSukses && <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">{sSukses}</div>}
-          <div className="space-y-3.5">
+      <main className="relative z-10 flex-1 flex items-center justify-center px-4 sm:px-6 py-8">
+        <div className="sw-masuk glass w-full max-w-5xl">
+
+          {/* ── Kolom merek ── */}
+          <section className="sw-masuk-merek">
+            <Logo size={40} sub="BY SEAWISE STUDIO" subClass="uppercase tracking-[0.16em] text-[11px]" tone="onGrad" />
+
             <div>
-              <label className="block text-sm font-medium text-[var(--ink-mid)] mb-1.5">{t('Nama Apotek', 'Pharmacy Name')}</label>
-              <input value={namaApotek} onChange={e => setNamaApotek(e.target.value)} placeholder={t('Apotek Sehat Sentosa', 'Sehat Sentosa Pharmacy')} className={inputCls} />
+              <h2 className="text-[26px] sm:text-[30px] font-bold leading-[1.15] tracking-[-0.01em] max-w-[15ch]">
+                {t('Satu sistem untuk apotek, klinik, dan rumah sakit.',
+                   'One system for pharmacies, clinics, and hospitals.')}
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed max-w-[38ch]" style={{ color: 'var(--on-grad-soft)' }}>
+                {t('Stok, kasir, pembelian, dan laporan wajib dalam satu tempat, dengan angka yang bisa dipertanggungjawabkan.',
+                   'Stock, register, purchasing, and mandatory reports in one place, with numbers that hold up.')}
+              </p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-[var(--ink-mid)] mb-1.5">{t('Nama Lengkap', 'Full Name')}</label>
-                <input value={namaLengkap} onChange={e => setNamaLengkap(e.target.value)} placeholder={t('Nama apoteker', 'Pharmacist name')} className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--ink-mid)] mb-1.5">Email</label>
-                <input type="email" value={sEmail} onChange={e => setSEmail(e.target.value)} placeholder="kamu@apotek.com" className={inputCls} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-[var(--ink-mid)] mb-1.5">Password</label>
-                <input type="password" value={sPassword} onChange={e => setSPassword(e.target.value)} placeholder={t('Min. 6 karakter', 'Min. 6 characters')} className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--ink-mid)] mb-1.5">{t('Konfirmasi', 'Confirm')}</label>
-                <input type="password" value={konfirmasi} onChange={e => setKonfirmasi(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleRegister()} placeholder={t('Ulangi password', 'Repeat password')} className={inputCls} />
-              </div>
-            </div>
-            <button onClick={handleRegister} disabled={sLoading} className="w-full bg-[var(--brand)] text-[var(--on-brand)] py-3 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-              {sLoading ? t('Memproses...', 'Processing...') : t('Daftarkan Apotek', 'Register Pharmacy')}
-            </button>
-          </div>
-            <button onClick={() => setMode('login')}
-              className="w-full py-3 rounded-xl border-2 border-[var(--brand)]/25 text-sm font-semibold text-[var(--brand)] hover:bg-[var(--brand)]/8 transition">
-              {t('Sudah punya akun? Masuk', 'Already have an account? Sign in')}
-            </button>
-        </div>
 
-        {/* ── Overlay (slides) ── */}
-        <div className="sw-overlay">
-          {/* Login mode → invite to sign up */}
-          <div className="sw-overlay-face sw-overlay-face--signup">
-            <div className="relative mb-6">
-              <Mark size={52} variant="mono" className="text-[var(--on-grad)]" />
-              <span className="absolute top-2 right-1 w-2 h-2 rounded-full bg-[var(--accent)]" />
-            </div>
-            <h2 className="text-2xl font-bold text-[var(--on-grad)] mb-3">{t('Apotek baru di sini?', 'New pharmacy here?')}</h2>
-            <p className="text-[var(--on-grad-soft)] text-sm leading-relaxed max-w-xs mb-6">{t('Daftarkan apotekmu dan kelola stok, transaksi, hingga tindak lanjut barang expired dalam satu aplikasi.', 'Register your pharmacy and manage stock, sales, and expired-goods follow-up in one app.')}</p>
-            <button onClick={() => setMode('signup')} className="px-6 py-2.5 rounded-xl border border-[var(--on-grad)]/35 text-[var(--on-grad)] text-sm font-medium hover:bg-[var(--on-grad)]/10 transition">{t('Daftarkan Apotek', 'Register Pharmacy')}</button>
-          </div>
-          {/* Signup mode → invite to sign in */}
-          <div className="sw-overlay-face sw-overlay-face--login">
-            <div className="relative mb-6">
-              <Mark size={52} variant="mono" className="text-[var(--on-grad)]" />
-              <span className="absolute top-2 right-1 w-2 h-2 rounded-full bg-[var(--accent)]" />
-            </div>
-            <h2 className="text-2xl font-bold text-[var(--on-grad)] mb-3">{t('Sudah punya akun?', 'Already have an account?')}</h2>
-            <p className="text-[var(--on-grad-soft)] text-sm leading-relaxed max-w-xs mb-6">{t('Masuk dan lanjutkan mengelola apotekmu dari tempat terakhir.', 'Sign in and continue managing your pharmacy where you left off.')}</p>
-            <button onClick={() => setMode('login')} className="px-6 py-2.5 rounded-xl border border-[var(--on-grad)]/35 text-[var(--on-grad)] text-sm font-medium hover:bg-[var(--on-grad)]/10 transition">{t('Masuk', 'Sign In')}</button>
-          </div>
-        </div>
-      </div>
+            {/* Tiga hal yang BENAR tentang produknya, bukan janji pemasaran.
+                Orang yang menilai apakah akan menyerahkan data pasiennya
+                membaca yang spesifik, dan mengabaikan yang umum. */}
+            <ul className="sw-bukti text-sm">
+              {[
+                t('Laporan SIPNAP narkotika, psikotropika, dan prekursor siap cetak.',
+                  'SIPNAP reports for narcotics, psychotropics, and precursors, ready to print.'),
+                t('Batch dan tanggal kadaluarsa tercatat FEFO, bukan sekadar jumlah stok.',
+                  'Batches and expiry dates tracked FEFO, not just a stock count.'),
+                t('Data tiap faskes terpisah di tingkat database, bukan hanya di tampilan.',
+                  'Each facility isolated at the database level, not merely on screen.'),
+              ].map((x, i) => (
+                <li key={i}>
+                  <span className="tanda"><Check size={12} strokeWidth={3} /></span>
+                  <span style={{ color: 'var(--on-grad-soft)' }}>{x}</span>
+                </li>
+              ))}
+            </ul>
 
-      {/* Footer.
-          Tautan legal dan halaman harga sengaja ditaruh DI SINI, bukan hanya di
-          halaman publik: orang menilai apakah mau menyerahkan data pasiennya
-          tepat saat diminta mendaftar, dan dokumen yang tidak bisa ditemukan
-          dari layar ini sama saja dengan tidak ada. */}
-      <p className="glass rounded-2xl px-5 py-3 text-center text-xs leading-relaxed text-[var(--ink-soft)]">
-        <a href="/kenapa" className="font-medium text-[var(--brand)] hover:underline">
-          {t('Lihat fitur & harga', 'See features & pricing')}
-        </a>
-        <br />
-        <span className="text-[var(--ink-faint)]">
-          {t('Sehatera: sistem apotek, klinik, dan faskes', 'Sehatera: pharmacy, clinic, and facility system')} ·{' '}
-          <strong className="text-[var(--ink-soft)]">by Seawise Studio</strong>
-        </span>
-      </p>
-      </div>
+            <p className="mt-auto pt-2 text-xs" style={{ color: 'var(--on-grad-soft)' }}>
+              {t('Masa coba 14 hari. Tanpa kartu kredit.', '14-day trial. No credit card.')}
+            </p>
+          </section>
+
+          {/* ── Kolom formulir ── */}
+          <section className="sw-masuk-isi flex flex-col justify-center">
+            {mode === 'login' ? (
+              <div>
+                <h1 className="text-[28px] font-bold text-[var(--ink)] tracking-[-0.01em]">{t('Masuk', 'Sign in')}</h1>
+                <p className="text-sm text-[var(--ink-soft)] mt-1 mb-7">
+                  {t('Lanjutkan dari tempat terakhir kamu berhenti.', 'Continue where you left off.')}
+                </p>
+
+                {error && (
+                  <div className="mb-4 px-3.5 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm leading-relaxed">
+                    {error}
+                    {needConfirm && (
+                      <button onClick={resendConfirmation} className="block mt-1.5 font-medium underline underline-offset-2">
+                        {t('Kirim ulang email verifikasi', 'Resend the verification email')}
+                      </button>
+                    )}
+                  </div>
+                )}
+                {info && <div className="mb-4 px-3.5 py-3 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm">{info}</div>}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className={label}>Email</label>
+                    <input type="email" placeholder="nama@faskes.com" value={email}
+                      onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                      className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={label}>{t('Kata sandi', 'Password')}</label>
+                    {/* Tombol lihat sandi bukan kemewahan: kata sandi yang
+                        diketik di balik titik-titik adalah penyebab paling
+                        sering orang mengira akunnya bermasalah padahal cuma
+                        salah ketik. */}
+                    <div className="relative">
+                      <input type={lihatSandi ? 'text' : 'password'} placeholder="••••••••" value={password}
+                        onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                        className={inputCls + ' pr-11'} />
+                      <button type="button" onClick={() => setLihatSandi(v => !v)}
+                        aria-label={lihatSandi ? t('Sembunyikan kata sandi', 'Hide password') : t('Lihat kata sandi', 'Show password')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] hover:text-[var(--ink-soft)]">
+                        {lihatSandi ? <EyeOff size={17} /> : <Eye size={17} />}
+                      </button>
+                    </div>
+                  </div>
+                  <button onClick={handleLogin} disabled={loading}
+                    className="w-full bg-[var(--brand)] text-[var(--on-brand)] py-3.5 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
+                    {loading ? t('Memproses…', 'Processing…') : t('Masuk', 'Sign in')}
+                  </button>
+                </div>
+
+                <p className="mt-7 pt-6 border-t border-[var(--line-soft)] text-sm text-[var(--ink-soft)]">
+                  {t('Belum punya faskes terdaftar?', 'No facility registered yet?')}{' '}
+                  <button onClick={() => setMode('signup')} className="font-semibold text-[var(--brand)] hover:underline underline-offset-4">
+                    {t('Daftarkan sekarang', 'Register now')}
+                  </button>
+                </p>
+              </div>
+            ) : (
+              <div>
+                <h1 className="text-[28px] font-bold text-[var(--ink)] tracking-[-0.01em]">{t('Daftarkan faskes', 'Register a facility')}</h1>
+                <p className="text-sm text-[var(--ink-soft)] mt-1 mb-7">
+                  {t('Gratis 14 hari, dan tidak diminta kartu kredit.', 'Free for 14 days, and no card is asked for.')}
+                </p>
+
+                {sError && <div className="mb-4 px-3.5 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm leading-relaxed">{sError}</div>}
+                {sSukses && <div className="mb-4 px-3.5 py-3 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm leading-relaxed">{sSukses}</div>}
+
+                <div className="space-y-3.5">
+                  <div>
+                    <label className={label}>{t('Nama faskes', 'Facility name')}</label>
+                    <input value={namaApotek} onChange={e => setNamaApotek(e.target.value)}
+                      placeholder={t('Apotek Sehat Sentosa', 'Sehat Sentosa Pharmacy')} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={label}>{t('Nama lengkap', 'Full name')}</label>
+                    <input value={namaLengkap} onChange={e => setNamaLengkap(e.target.value)}
+                      placeholder={t('Nama penanggung jawab', 'Person in charge')} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={label}>Email</label>
+                    <input type="email" value={sEmail} onChange={e => setSEmail(e.target.value)}
+                      placeholder="kamu@faskes.com" className={inputCls} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={label}>{t('Kata sandi', 'Password')}</label>
+                      <input type="password" value={sPassword} onChange={e => setSPassword(e.target.value)}
+                        placeholder={t('Min. 6 karakter', 'Min. 6 characters')} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={label}>{t('Ulangi', 'Repeat')}</label>
+                      <input type="password" value={konfirmasi} onChange={e => setKonfirmasi(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleRegister()}
+                        placeholder={t('Ulangi kata sandi', 'Repeat password')} className={inputCls} />
+                    </div>
+                  </div>
+                  <button onClick={handleRegister} disabled={sLoading}
+                    className="w-full bg-[var(--brand)] text-[var(--on-brand)] py-3.5 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
+                    {sLoading ? t('Memproses…', 'Processing…') : t('Daftarkan faskes', 'Register facility')}
+                  </button>
+                </div>
+
+                <p className="mt-7 pt-6 border-t border-[var(--line-soft)] text-sm text-[var(--ink-soft)]">
+                  {t('Sudah punya akun?', 'Already have an account?')}{' '}
+                  <button onClick={() => setMode('login')} className="font-semibold text-[var(--brand)] hover:underline underline-offset-4">
+                    {t('Masuk', 'Sign in')}
+                  </button>
+                </p>
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
+
+      {/* Kaki halaman. Tautan legal dan halaman harga sengaja ada DI SINI:
+          orang menilai apakah mau menyerahkan data pasiennya tepat saat
+          diminta mendaftar, dan dokumen yang tidak bisa ditemukan dari layar
+          ini sama saja dengan tidak ada. */}
+      <footer className="relative z-10 w-full max-w-5xl mx-auto px-4 sm:px-6 pb-6 text-center sm:text-left">
+        <p className="text-xs text-[var(--ink-soft)] leading-relaxed">
+          {t('Sehatera: sistem apotek, klinik, dan faskes', 'Sehatera: pharmacy, clinic, and facility system')}
+          {' · '}<span className="text-[var(--ink-soft)] font-medium">by Seawise Studio</span>
+        </p>
+      </footer>
     </div>
   )
 }
