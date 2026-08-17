@@ -56,6 +56,8 @@ export default function HalamanKasir() {
   const [metode, setMetode] = useState<string>('Tunai')
   const [isResep, setIsResep] = useState(false)
   const [pasien, setPasien] = useState({ nama_pasien: '', alamat_pasien: '', kontak_pasien: '', nomor_resep: '' })
+  const [kunjungan, setKunjungan] = useState<any[]>([])
+  const [visitId, setVisitId] = useState('')
   const [sibuk, setSibuk] = useState(false)
 
   const [struk, setStruk] = useState<any>(null)
@@ -136,6 +138,7 @@ export default function HalamanKasir() {
   const kosongkan = () => {
     setKeranjang([]); setBayar(0); setMetode('Tunai'); setIsResep(false)
     setPasien({ nama_pasien: '', alamat_pasien: '', kontak_pasien: '', nomor_resep: '' })
+    setVisitId('')
   }
 
   useEffect(() => {
@@ -171,6 +174,12 @@ export default function HalamanKasir() {
       return
     }
 
+    if (instalasi && !visitId) {
+      alert(t('Pilih dulu kunjungan pasiennya. Instalasi farmasi hanya melayani pasien fasilitas ini, jadi penyerahan obat harus terikat ke satu kunjungan.',
+              'Choose the patient visit first. A pharmacy installation serves only this facility patients, so dispensing must be tied to a visit.'))
+      return
+    }
+
     setSibuk(true)
     const { data, error } = await supabase.rpc('apply_transaction', {
       p_items: keranjang.map(k => ({
@@ -182,12 +191,15 @@ export default function HalamanKasir() {
       })),
       p_bayar: bayar,
       p_metode_bayar: metode,
-      p_pasien: perluResep ? {
-        nama_pasien: pasien.nama_pasien.trim(),
-        alamat_pasien: pasien.alamat_pasien.trim(),
-        kontak_pasien: pasien.kontak_pasien.trim(),
-        nomor_resep: pasien.nomor_resep.trim(),
-      } : null,
+      p_pasien: {
+        ...(perluResep ? {
+          nama_pasien: pasien.nama_pasien.trim(),
+          alamat_pasien: pasien.alamat_pasien.trim(),
+          kontak_pasien: pasien.kontak_pasien.trim(),
+          nomor_resep: pasien.nomor_resep.trim(),
+        } : {}),
+        ...(visitId ? { visit_id: visitId } : {}),
+      },
       p_company: (app.isSuper && app.superViewCompany) || null,
     })
     setSibuk(false)
@@ -205,6 +217,32 @@ export default function HalamanKasir() {
     const ok = bukaCetak(strukPenjualan(app.settingsData, struk, strukItems), 350, 600)
     if (!ok) alert(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
   }
+
+  /**
+   * Bentuk bagian farmasi.
+   *
+   * Instalasi farmasi hanya melayani pasien fasilitas ini, jadi tiap penyerahan
+   * obat harus terikat ke satu kunjungan. Database sudah menolak yang tidak,
+   * tapi penolakan saja tidak cukup: kalau layarnya tidak menyediakan jalannya,
+   * kasir cuma menemukan pintu terkunci tanpa tahu kuncinya di mana.
+   */
+  const instalasi = app.sektor !== 'apotek' && (app.settingsData.mode_farmasi || 'apotek') === 'instalasi'
+
+  useEffect(() => {
+    if (!instalasi) { setKunjungan([]); return }
+    ;(async () => {
+      const { data } = await app.scope(
+        supabase.from('v_antrean_hari_ini')
+          .select('id,nomor_antre,pasien_nama,nomor_rm,status,unit_nama')
+          .in('status', ['resep', 'obat'])
+          .order('dibuka_pada')
+      )
+      setKunjungan((data as any[]) || [])
+    })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // `struk` ikut jadi pemicu: sesudah satu penjualan selesai, kunjungan yang
+  // baru dilayani sudah berpindah keadaan dan tidak boleh muncul lagi di daftar.
+  }, [instalasi, app.superViewCompany, struk])
 
   const inputCls = 'w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]'
   const KARTU = 'bg-[var(--surface)]/70 backdrop-blur-sm border border-[var(--line)] rounded-xl shadow-sm'
@@ -378,6 +416,29 @@ export default function HalamanKasir() {
                   <p className="text-xs text-[var(--ink-faint)]">{t('Centang untuk mengisi data pasien dan nomor resep.', 'Tick to record patient data and prescription number.')}</p>
                 </div>
               </label>
+            )}
+
+            {instalasi && (
+              <div className="mb-3 p-3 rounded-xl border border-[var(--line)] bg-[var(--surface-2)]">
+                <p className="text-xs font-semibold text-[var(--brand-soft)] mb-1.5">
+                  {t('Kunjungan pasien', 'Patient visit')} <span className="text-red-500">*</span>
+                </p>
+                <select value={visitId} onChange={e => setVisitId(e.target.value)} className={inputCls}>
+                  <option value="">{t('Pilih kunjungan…', 'Choose a visit…')}</option>
+                  {kunjungan.map(k => (
+                    <option key={k.id} value={k.id}>
+                      {k.nomor_antre} · {k.pasien_nama}{k.unit_nama ? ` · ${k.unit_nama}` : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-[var(--ink-faint)] mt-1.5 leading-relaxed">
+                  {kunjungan.length === 0
+                    ? t('Belum ada kunjungan yang sampai tahap resep atau obat hari ini. Majukan dulu kunjungannya di menu Kunjungan.',
+                        'No visit has reached the prescription or dispensing step today. Move a visit forward in the Visits screen first.')
+                    : t('Bagian farmasi di sini berbentuk instalasi, jadi hanya melayani pasien fasilitas ini. Bisa diubah di Pengaturan.',
+                        'The pharmacy unit here is an installation, so it serves only this facility patients. This can be changed in Settings.')}
+                </p>
+              </div>
             )}
 
             {perluResep && (

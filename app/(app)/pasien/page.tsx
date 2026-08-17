@@ -64,7 +64,10 @@ export default function HalamanPasien() {
 
   const simpan = async (isi: any, id: string | null) => {
     setSibuk(true)
-    const { error } = await supabase.rpc('simpan_pasien', { p_id: id, p_data: isi })
+    const { error } = await supabase.rpc('simpan_pasien', {
+      p_id: id, p_data: isi,
+      p_company: (app.isSuper && app.superViewCompany) || null,
+    })
     setSibuk(false)
     if (error) { alert(pesanError(error)); return false }
     setForm(undefined)
@@ -81,6 +84,7 @@ export default function HalamanPasien() {
     setSibuk(true)
     const { error } = await supabase.rpc('daftar_kunjungan', {
       p_patient: p.id, p_keluhan: keluhan, p_penjamin: p.penjamin,
+      p_company: (app.isSuper && app.superViewCompany) || null,
     })
     setSibuk(false)
     if (error) { alert(pesanError(error)); return }

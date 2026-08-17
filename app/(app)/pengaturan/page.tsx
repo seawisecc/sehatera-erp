@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowLeft, Building2, Check, ChevronRight, CreditCard, Database,
-  LayoutGrid, Pencil, ScrollText, Send, ShieldCheck, Trash2, Upload, UserPlus, Users,
+  LayoutGrid, Pencil, Pill, ScrollText, Send, ShieldCheck, Stethoscope, Trash2,
+  Upload, UserPlus, Users,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
@@ -14,6 +15,7 @@ import { pesanError } from '@/lib/session'
 import { menuItems, ROLE_PAGES } from '@/lib/navigation'
 import { tanggal, rupiah } from '@/lib/format'
 import JejakAudit from '@/components/JejakAudit'
+import PengaturanPoli from '@/components/klinik/PengaturanPoli'
 
 /**
  * Pengaturan: profil apotek, pengguna, data apoteker, tampilan, langganan.
@@ -33,7 +35,7 @@ import JejakAudit from '@/components/JejakAudit'
  * 3. Nonaktifkan dan hapus pengguna tidak pernah melaporkan kegagalan.
  */
 
-const TAB_SAH = ['profil', 'pengguna', 'apoteker', 'tampilan', 'langganan', 'jejak'] as const
+const TAB_SAH = ['profil', 'pengguna', 'poli', 'apoteker', 'tampilan', 'langganan', 'jejak'] as const
 type Tab = typeof TAB_SAH[number]
 
 export default function HalamanPengaturan() {
@@ -198,6 +200,25 @@ export default function HalamanPengaturan() {
     fetchUsers()
   }
 
+  /**
+   * Mengubah bentuk bagian farmasi.
+   *
+   * Lewat RPC tersendiri, bukan ikut penyimpanan pengaturan biasa, karena ini
+   * mengubah apa yang BOLEH dilakukan dan bukan cuma apa yang tertulis. Ia
+   * pantas punya jejak auditnya sendiri.
+   */
+  const simpanModeFarmasi = async (mode: string) => {
+    if ((app.settingsData.mode_farmasi || 'apotek') === mode) return
+    if (mode === 'instalasi' && !confirm(
+      t('Sesudah ini, penyerahan obat yang tidak terikat ke kunjungan pasien akan ditolak. Penjualan bebas di kasir tidak bisa lagi. Lanjutkan?',
+        'After this, dispensing not tied to a patient visit will be rejected. Walk-in sales at the counter will no longer work. Continue?'))) return
+    setSibuk(true)
+    const { error } = await supabase.rpc('set_mode_farmasi', { p_mode: mode })
+    setSibuk(false)
+    if (error) { alert(pesanError(error)); return }
+    app.setSettingsData({ ...app.settingsData, mode_farmasi: mode })
+  }
+
   const handleDeleteUser = async (u: any) => {
     if (!confirm(t(`Hapus pengguna "${u.nama}"? Akun loginnya tetap ada, tapi ia kehilangan akses ke apotek ini.`,
                    `Delete user "${u.nama}"? Their login account remains, but they lose access to this pharmacy.`))) return
@@ -214,10 +235,16 @@ export default function HalamanPengaturan() {
     dokter: t('Dokter', 'Doctor'), perawat: t('Perawat', 'Nurse'),
     pendaftaran: t('Pendaftaran', 'Front desk'),
   }
+  // Poli cuma ada di klinik dan rumah sakit. Menampilkannya di apotek berarti
+  // menawarkan sesuatu yang tidak akan pernah dipakai, dan tiap menu mati
+  // membuat menu yang hidup lebih sulit ditemukan.
+  const klinik = app.sektor !== 'apotek'
   const settingsMenu = [
     { id: 'profil',    label: t('Profil Apotek', 'Pharmacy Profile'),   desc: t('Nama, alamat, logo', 'Name, address, logo'),                Icon: Building2 },
     { id: 'pengguna',  label: t('Manajemen Pengguna', 'User Management'), desc: t('Akses pengguna, anggota tim', 'User access, team members'), Icon: Users },
-    { id: 'apoteker',  label: t('Data Apoteker', 'Pharmacist Data'),    desc: t('SIA, SIPA, penanggung jawab', 'SIA, SIPA, responsible person'), Icon: ShieldCheck },
+    ...(klinik ? [{ id: 'poli', label: t('Poli & Dokter', 'Units & Doctors'), desc: t('Ruang periksa, deret antrean', 'Exam rooms, queue series'), Icon: Stethoscope }] : []),
+    { id: 'apoteker',  label: klinik ? t('Farmasi & Penanggung Jawab', 'Pharmacy & Person in Charge') : t('Data Apoteker', 'Pharmacist Data'),
+      desc: klinik ? t('Bentuk farmasi, SIPA', 'Pharmacy form, SIPA') : t('SIA, SIPA, penanggung jawab', 'SIA, SIPA, responsible person'), Icon: ShieldCheck },
     { id: 'tampilan',  label: t('Tampilan', 'Appearance'),              desc: t('Tema warna aplikasi', 'App colour theme'),                  Icon: LayoutGrid },
     { id: 'langganan', label: t('Langganan', 'Subscription'),           desc: t('Paket, masa aktif, kuota', 'Plan, validity, quota'),        Icon: CreditCard },
     { id: 'jejak',     label: t('Jejak Audit', 'Audit Trail'),          desc: t('Siapa melakukan apa, kapan', 'Who did what, and when'),      Icon: ScrollText },
@@ -504,8 +531,54 @@ export default function HalamanPengaturan() {
                   )}
 
                   {/* DATA APOTEKER */}
+                  {tab === 'poli' && <PengaturanPoli />}
+
                   {tab === 'apoteker' && (
                     <div className="max-w-md">
+                      {/* Bentuk farmasi. Di klinik, bagian obatnya bisa berdiri
+                          sebagai apotek berizin sendiri atau sebagai instalasi
+                          farmasi yang menempel pada izin klinik, dan keduanya
+                          beda secara hukum, bukan cuma beda nama. Pilihannya di
+                          sini mengubah apa yang boleh dilakukan kasir. */}
+                      {klinik && (
+                        <div className="mb-8">
+                          <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Bentuk bagian farmasi', 'Form of the pharmacy unit')}</h2>
+                          <p className="text-sm text-[var(--ink-soft)] mb-4 leading-relaxed">
+                            {t('Ini bukan soal istilah di layar. Pilihannya menentukan apakah penyerahan obat boleh lepas dari kunjungan pasien.',
+                               'This is not a matter of wording. It decides whether dispensing may happen without a patient visit.')}
+                          </p>
+                          <div className="space-y-2">
+                            {([
+                              ['apotek', t('Apotek', 'Pharmacy'),
+                               t('Punya izin sendiri (SIA) dan apoteker penanggung jawab sendiri. Boleh melayani siapa saja, termasuk yang bukan pasien klinik, dan boleh menerima resep dari luar.',
+                                 'Has its own licence and responsible pharmacist. May serve anyone, including non-patients, and may accept outside prescriptions.')],
+                              ['instalasi', t('Instalasi Farmasi', 'Pharmacy Installation'),
+                               t('Bagian dari izin klinik, tidak punya SIA sendiri. Hanya melayani pasien klinik ini, jadi tiap penyerahan obat harus terikat ke satu kunjungan.',
+                                 'Part of the clinic licence, with no separate permit. Serves this clinic patients only, so every dispensing must be tied to a visit.')],
+                            ] as const).map(([nilai, judul, ket]) => {
+                              const on = (app.settingsData.mode_farmasi || 'apotek') === nilai
+                              return (
+                                <button key={nilai} onClick={() => simpanModeFarmasi(nilai)} disabled={sibuk}
+                                  className={`w-full text-left flex items-start gap-3 p-3.5 rounded-xl border transition disabled:opacity-50 ${
+                                    on ? 'border-[var(--brand)] bg-[var(--surface-2)]' : 'border-[var(--line)] hover:bg-[var(--surface-2)]'
+                                  }`}>
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${on ? 'bg-[var(--brand)] text-[var(--on-brand)]' : 'bg-[var(--paper)] text-[var(--brand)]'}`}>
+                                    <Pill size={15} />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-[var(--ink)] flex items-center gap-1.5">
+                                      {judul} {on && <Check size={14} className="text-[var(--brand)]" />}
+                                    </p>
+                                    <p className="text-xs text-[var(--ink-soft)] leading-relaxed mt-0.5">{ket}</p>
+                                  </div>
+                                </button>
+                              )
+                            })}
+                          </div>
+                          <hr className="my-8 border-[var(--line-soft)]" />
+                        </div>
+                      )}
+
                       <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Penanggung jawab', 'Person in charge')}</h2>
                       <p className="text-sm text-[var(--ink-soft)] mb-6">
                         {app.kata('penanggungJawab')}. {t('Namanya tertera di purchase order dan berita acara pemusnahan.',

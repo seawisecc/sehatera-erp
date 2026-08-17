@@ -57,7 +57,13 @@ type Antrean = {
   ada_catatan: boolean
   jumlah_diagnosis: number
   ada_vital: boolean
+  unit_id: string | null
+  unit_nama: string | null
+  unit_kode: string | null
 }
+
+type Poli = { id: string; nama: string; kode: string }
+type Dokter = { email: string; nama: string | null }
 
 const LANGKAH = ['terdaftar', 'diperiksa', 'resep', 'obat', 'selesai'] as const
 
@@ -75,6 +81,10 @@ export default function HalamanKunjungan() {
   const [bukaDaftar, setBukaDaftar] = useState(false)
   const [formPasien, setFormPasien] = useState<Pasien | null | undefined>(undefined)
   const [bukaRekam, setBukaRekam] = useState(false)
+  const [poli, setPoli] = useState<Poli[]>([])
+  const [poliDipilih, setPoliDipilih] = useState<string | null>(null)
+  const [dokter, setDokter] = useState<Dokter[]>([])
+  const [tugas, setTugas] = useState<Record<string, string[]>>({})
 
   const namaLangkah: Record<string, string> = {
     terdaftar: t('Terdaftar', 'Registered'),
@@ -96,6 +106,29 @@ export default function HalamanKunjungan() {
   }, [app.superViewCompany])
 
   useEffect(() => { muat() }, [muat])
+
+  // Poli dan dokter dimuat sekali, bukan tiap kali jendela pendaftaran dibuka:
+  // keduanya jarang berubah, dan menunggu dua permintaan jaringan tiap kali
+  // seorang pasien datang adalah menunggu yang tidak perlu.
+  useEffect(() => {
+    ;(async () => {
+      const [u, a, d] = await Promise.all([
+        app.scope(supabase.from('clinic_units').select('id,nama,kode').eq('aktif', true).order('urutan').order('nama')),
+        app.scope(supabase.from('app_users').select('nama,email,role').eq('role', 'dokter').order('nama')),
+        app.scope(supabase.from('unit_doctors').select('unit_id,email')),
+      ])
+      const daftarPoli = (u.data as Poli[]) || []
+      setPoli(daftarPoli)
+      setPoliDipilih(p => p ?? daftarPoli[0]?.id ?? null)
+      setDokter(((a.data as any[]) || []).map(x => ({ email: (x.email || '').toLowerCase(), nama: x.nama })))
+      const peta: Record<string, string[]> = {}
+      for (const r of (d.data as any[]) || []) {
+        peta[r.unit_id] = [...(peta[r.unit_id] || []), (r.email || '').toLowerCase()]
+      }
+      setTugas(peta)
+    })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [app.superViewCompany])
 
   // Pasien yang sedang terbuka. Kalau tidak ada yang dipilih, yang pertama
   // belum selesai dibuka sendiri: yang paling sering dilakukan orang saat
@@ -125,6 +158,8 @@ export default function HalamanKunjungan() {
     setSibuk(true)
     const { data, error } = await supabase.rpc('daftar_kunjungan', {
       p_patient: p.id, p_keluhan: null, p_penjamin: p.penjamin,
+      p_unit: poliDipilih, p_dokter: null,
+      p_company: (app.isSuper && app.superViewCompany) || null,
     })
     setSibuk(false)
     if (error) { alert(pesanError(error)); return }
@@ -144,6 +179,17 @@ export default function HalamanKunjungan() {
     muat()
   }
 
+  const pilihDokter = async (email: string) => {
+    if (!aktif) return
+    setSibuk(true)
+    const { error } = await supabase.rpc('set_dokter_kunjungan', {
+      p_visit: aktif.id, p_email: email || null,
+    })
+    setSibuk(false)
+    if (error) { alert(pesanError(error)); return }
+    muat()
+  }
+
   const batalkan = async () => {
     if (!aktif) return
     const alasan = prompt(t(`Batalkan kunjungan ${aktif.pasien_nama}? Tulis alasannya.`,
@@ -154,7 +200,10 @@ export default function HalamanKunjungan() {
 
   const simpanPasien = async (isi: any, id: string | null) => {
     setSibuk(true)
-    const { data, error } = await supabase.rpc('simpan_pasien', { p_id: id, p_data: isi })
+    const { data, error } = await supabase.rpc('simpan_pasien', {
+      p_id: id, p_data: isi,
+      p_company: (app.isSuper && app.superViewCompany) || null,
+    })
     setSibuk(false)
     if (error) { alert(pesanError(error)); return false }
     setFormPasien(undefined)
@@ -227,7 +276,10 @@ export default function HalamanKunjungan() {
                         : a.status === 'selesai' ? 'bg-green-100 text-green-700'
                         : 'bg-[var(--surface-2)] text-[var(--ink-soft)]'
                       }`}>{namaLangkah[a.status]}</span>
-                      <span className="text-[10px] text-[var(--ink-faint)] num">
+                      {a.unit_nama && (
+                        <span className="text-[10px] text-[var(--ink-faint)] truncate">{a.unit_nama}</span>
+                      )}
+                      <span className="text-[10px] text-[var(--ink-faint)] num ml-auto">
                         {new Date(a.dibuka_pada).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
@@ -297,10 +349,41 @@ export default function HalamanKunjungan() {
                     {aktif.tanggal_lahir && ` · ${tanggal(aktif.tanggal_lahir)}`}
                   </p>
                   <p className="text-xs text-[var(--ink-faint)] mt-1">
+                    {aktif.unit_nama && <>{t('Poli', 'Unit')} {aktif.unit_nama}{' · '}</>}
                     {t('Penjamin', 'Payer')}: {aktif.penjamin.toUpperCase()}
                     {' · '}{t('didaftarkan', 'registered')} {tanggalJam(aktif.dibuka_pada)}
-                    {aktif.dokter_email && ` · ${t('diperiksa oleh', 'seen by')} ${aktif.dokter_email}`}
                   </p>
+
+                  {/* Dokter pemeriksa ditetapkan di sini, bukan saat mendaftar:
+                      yang mendaftar tahu poli tujuannya, belum tentu tahu siapa
+                      yang akan memeriksa. Dokter poli ini didahulukan, tapi yang
+                      lain tetap bisa dipilih, karena di klinik kecil dokter
+                      saling menggantikan. */}
+                  {dokter.length > 0 && aktif.status !== 'batal' && aktif.status !== 'selesai' && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs text-[var(--ink-faint)]">{t('Diperiksa oleh', 'Seen by')}</span>
+                      <select value={aktif.dokter_email || ''} disabled={sibuk}
+                        onChange={e => pilihDokter(e.target.value)}
+                        className="border border-[var(--line)] rounded-lg px-2 py-1 text-xs bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)] disabled:opacity-50">
+                        <option value="">{t('belum ditentukan', 'not set yet')}</option>
+                        {(() => {
+                          const sePoli = aktif.unit_id ? (tugas[aktif.unit_id] || []) : []
+                          const urut = [...dokter].sort((a, b) =>
+                            Number(sePoli.includes(b.email)) - Number(sePoli.includes(a.email)))
+                          return urut.map(d => (
+                            <option key={d.email} value={d.email}>
+                              {d.nama || d.email}{sePoli.includes(d.email) && aktif.unit_nama ? ` · ${aktif.unit_nama}` : ''}
+                            </option>
+                          ))
+                        })()}
+                      </select>
+                    </div>
+                  )}
+                  {aktif.dokter_email && (aktif.status === 'selesai' || aktif.status === 'batal') && (
+                    <p className="text-xs text-[var(--ink-faint)] mt-1">
+                      {t('Diperiksa oleh', 'Seen by')} {aktif.dokter_email}
+                    </p>
+                  )}
                 </div>
                 <button onClick={() => setFormPasien(
                   { id: aktif.pasien_id, nomor_rm: aktif.nomor_rm, nama: aktif.pasien_nama,
@@ -404,6 +487,28 @@ export default function HalamanKunjungan() {
               {t('Cari pasien yang sudah pernah datang. Kalau belum ada, daftarkan sebagai pasien baru.',
                  'Find a returning patient. If they are new, register them first.')}
             </p>
+
+            {/* Poli dipilih SEBELUM pasiennya, karena itu yang menentukan
+                deret antreannya. Kalau ditanyakan sesudah, nomornya sudah
+                terlanjur terbit dari deret yang salah. */}
+            {poli.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-faint)] mb-1.5">
+                  {t('Poli tujuan', 'Destination unit')}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {poli.map(u => (
+                    <button key={u.id} onClick={() => setPoliDipilih(u.id)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition ${
+                        poliDipilih === u.id ? 'border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand)]'
+                                             : 'border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--brand)]'
+                      }`}>
+                      <span className="num font-bold">{u.kode}</span> {u.nama}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="relative">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]" />
