@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  AlertTriangle, ArrowLeft, ArrowRight, Check, Search, UserPlus, X,
+  AlertTriangle, ArrowLeft, ArrowRight, Check, FileText, Search, Stethoscope,
+  UserPlus, X,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
@@ -10,6 +11,7 @@ import { useLang } from '@/lib/i18n'
 import { pesanError } from '@/lib/session'
 import { tanggal, tanggalJam } from '@/lib/format'
 import FormPasien, { type Pasien } from '@/components/klinik/FormPasien'
+import RekamMedis from '@/components/klinik/RekamMedis'
 
 /**
  * Kunjungan: satu layar kerja untuk seluruh hari.
@@ -47,6 +49,14 @@ type Antrean = {
   alergi: string | null
   telepon: string | null
   umur: number | null
+  jenis_kunjungan: string
+  poli: string | null
+  no_rujukan: string | null
+  kesadaran: string | null
+  status_pulang: string | null
+  ada_catatan: boolean
+  jumlah_diagnosis: number
+  ada_vital: boolean
 }
 
 const LANGKAH = ['terdaftar', 'diperiksa', 'resep', 'obat', 'selesai'] as const
@@ -64,6 +74,7 @@ export default function HalamanKunjungan() {
   const [hasilPasien, setHasilPasien] = useState<Pasien[]>([])
   const [bukaDaftar, setBukaDaftar] = useState(false)
   const [formPasien, setFormPasien] = useState<Pasien | null | undefined>(undefined)
+  const [bukaRekam, setBukaRekam] = useState(false)
 
   const namaLangkah: Record<string, string> = {
     terdaftar: t('Terdaftar', 'Registered'),
@@ -310,12 +321,21 @@ export default function HalamanKunjungan() {
                 </div>
               )}
 
-              {/* Yang dibuka DARI sini. Sengaja ditampilkan meski belum aktif,
-                  supaya bentuk kerjanya sudah terbaca sejak sekarang dan tidak
-                  berubah begitu modulnya datang. */}
-              <div className="mt-5 flex flex-wrap gap-2">
+              {/* Yang dibuka DARI sini. Rekam medis sudah hidup; tiga sisanya
+                  tetap ditampilkan supaya bentuk kerjanya terbaca sekarang dan
+                  tidak berubah begitu modulnya datang. */}
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <button onClick={() => setBukaRekam(true)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-medium text-[var(--ink)] hover:border-[var(--brand)] transition">
+                  <Stethoscope size={14} className="text-[var(--brand)]" />
+                  {aktif.ada_catatan || aktif.jumlah_diagnosis > 0
+                    ? t('Buka rekam medis', 'Open medical record')
+                    : t('Isi rekam medis', 'Fill medical record')}
+                  {aktif.jumlah_diagnosis > 0 && (
+                    <Check size={13} className="text-emerald-600" />
+                  )}
+                </button>
                 {[
-                  t('Rekam medis', 'Medical record'),
                   t('Tulis resep', 'Write prescription'),
                   t('Serahkan obat', 'Dispense'),
                   t('Bayar', 'Payment'),
@@ -327,6 +347,18 @@ export default function HalamanKunjungan() {
                   </span>
                 ))}
               </div>
+
+              {/* Tanda kesiapan, dipasang di sini dan bukan disembunyikan sampai
+                  tombol terakhir ditekan. Kunjungan tanpa diagnosis akan ditolak
+                  saat ditutup, dan penolakan yang benar pada saat yang salah
+                  tetap terasa seperti aplikasi yang rusak. */}
+              {aktif.status !== 'batal' && aktif.status !== 'selesai' && aktif.jumlah_diagnosis === 0 && (
+                <p className="mt-3 flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <FileText size={14} className="shrink-0 mt-0.5" />
+                  {t('Kunjungan ini belum punya diagnosis, jadi belum bisa ditutup. BPJS dan SatuSehat akan menolaknya tanpa itu.',
+                     'This visit has no diagnosis yet, so it cannot be closed. BPJS and SatuSehat will reject it without one.')}
+                </p>
+              )}
 
               {/* Langkah berikutnya: satu tombol besar, selalu di tempat yang
                   sama, dan selalu menyebut langkah berikutnya dengan namanya. */}
@@ -415,6 +447,20 @@ export default function HalamanKunjungan() {
             </div>
           </div>
         </div>
+      )}
+
+      {bukaRekam && aktif && (
+        <RekamMedis
+          visitId={aktif.id}
+          nama={`${aktif.pasien_nama}${aktif.nomor_rm ? ` · ${aktif.nomor_rm}` : ''}`}
+          alergi={aktif.alergi}
+          tertutup={aktif.status === 'selesai' || aktif.status === 'batal'}
+          awal={{
+            kesadaran: aktif.kesadaran, poli: aktif.poli, no_rujukan: aktif.no_rujukan,
+            status_pulang: aktif.status_pulang, jenis_kunjungan: aktif.jenis_kunjungan,
+          }}
+          onTutup={() => setBukaRekam(false)}
+          onSimpan={muat} />
       )}
 
       {formPasien !== undefined && (
