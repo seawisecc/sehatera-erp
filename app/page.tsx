@@ -1,30 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { FlaskConical } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useLang, LangToggle } from '../lib/i18n'
 import { ThemeToggle } from '../lib/theme'
 import { AuthBackdrop } from '../components/AuthBackdrop'
+import { Logo, Mark } from '../components/Logo'
 
 const inputCls =
   'glass-field w-full rounded-xl px-4 py-3 text-sm text-[var(--ink)] placeholder-[var(--ink-faint)]'
 
-
-function Logo() {
-  return (
-    <div className="flex items-center gap-3 mb-6">
-      <div className="relative w-11 h-11 rounded-2xl bg-[var(--brand)] flex items-center justify-center">
-        <FlaskConical size={22} className="text-white" strokeWidth={1.8} />
-        <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
-      </div>
-      <div>
-        <div className="font-bold text-[var(--ink)] leading-tight">Sehatera</div>
-        <div className="text-xs text-[var(--ink-faint)]">by Seawise Studio</div>
-      </div>
-    </div>
-  )
-}
 
 export default function Auth() {
   const { t } = useLang()
@@ -120,7 +105,7 @@ export default function Auth() {
 
         {/* ── Login form ── */}
         <div className="sw-form sw-form--login p-8 sm:p-10 md:p-12">
-          <Logo />
+          <Logo size={44} sub="by Seawise Studio" className="mb-6" />
           <p className="text-[var(--accent)] text-xs font-semibold uppercase tracking-[0.18em] mb-2">{t('Selamat Datang Kembali', 'Welcome Back')}</p>
           <h1 className="text-3xl sm:text-4xl font-bold text-[var(--ink)] mb-6">{t('Masuk', 'Sign In')}</h1>
           {error && (
@@ -148,7 +133,7 @@ export default function Auth() {
 
         {/* ── Signup form ── */}
         <div className="sw-form sw-form--signup p-8 sm:p-10 md:p-12">
-          <Logo />
+          <Logo size={44} sub="by Seawise Studio" className="mb-6" />
           <p className="text-[var(--accent)] text-xs font-semibold uppercase tracking-[0.18em] mb-2">{t('Gabung Sekarang', 'Join Now')}</p>
           <h1 className="text-2xl sm:text-3xl font-bold text-[var(--ink)] mb-1">{t('Daftarkan Apotek', 'Register Pharmacy')}</h1>
           <p className="text-sm text-[var(--ink-soft)] mb-5">{t('Gratis mendaftar, aktivasi oleh tim Seawise.', 'Free to register, activated by the Seawise team.')}</p>
@@ -191,7 +176,7 @@ export default function Auth() {
           {/* Login mode → invite to sign up */}
           <div className="sw-overlay-face sw-overlay-face--signup">
             <div className="relative mb-6">
-              <FlaskConical size={44} className="text-[var(--on-grad)]" strokeWidth={1.5} />
+              <Mark size={52} variant="mono" className="text-[var(--on-grad)]" />
               <span className="absolute top-2 right-1 w-2 h-2 rounded-full bg-[var(--accent)]" />
             </div>
             <h2 className="text-2xl font-bold text-[var(--on-grad)] mb-3">{t('Apotek baru di sini?', 'New pharmacy here?')}</h2>
@@ -201,7 +186,7 @@ export default function Auth() {
           {/* Signup mode → invite to sign in */}
           <div className="sw-overlay-face sw-overlay-face--login">
             <div className="relative mb-6">
-              <FlaskConical size={44} className="text-[var(--on-grad)]" strokeWidth={1.5} />
+              <Mark size={52} variant="mono" className="text-[var(--on-grad)]" />
               <span className="absolute top-2 right-1 w-2 h-2 rounded-full bg-[var(--accent)]" />
             </div>
             <h2 className="text-2xl font-bold text-[var(--on-grad)] mb-3">{t('Sudah punya akun?', 'Already have an account?')}</h2>

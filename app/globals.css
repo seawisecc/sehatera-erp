@@ -358,19 +358,16 @@ select {
   position: absolute;
   inset: 0;
   background: var(--grad);
-  opacity: 0.55;
+  opacity: 0.4;
 }
- /* Siluet duduk sebagai PITA DI BAWAH, bukan menutup layar.
-   Sebelumnya ia dipasang setinggi layar penuh dengan `slice`, jadi gambarnya
-   diperbesar sampai yang terlihat cuma potongan gedung raksasa yang tak
-   dikenali sebagai apa pun. */
+/* Pemandangan mengisi seluruh layar. Kartu masuk mengambang di tengahnya,
+   jadi yang terlihat di sekeliling kartu adalah rumah sakit di kiri, apotek di
+   kanan, dan tanaman di bawah — komposisi yang sama dengan rujukan. */
 .sw-scene-art {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   width: 100%;
-  height: clamp(220px, 42vh, 420px);
+  height: 100%;
 }
 
 /**
@@ -411,7 +408,10 @@ select {
 
 /* ── Auth sliding overlay (Sign In ⇄ Sign Up) ── */
 .sw-auth {
-  position: relative; width: 100%; max-width: 64rem; min-height: 600px;
+  position: relative; width: 100%; max-width: 52rem; min-height: 560px;
+  /* Diperkecil dari 64rem. Pada 64rem kartunya menutupi dua pertiga layar, dan
+     pemandangan di belakangnya tidak pernah terlihat selain sedikit tanaman di
+     bawah — jadi latar yang dibangun susah payah itu praktis mubazir. */
   border-radius: 28px; overflow: hidden;
   animation: swFadeUp var(--t-sheet) var(--ease) both;
 }
