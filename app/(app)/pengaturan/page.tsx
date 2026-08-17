@@ -83,7 +83,7 @@ export default function HalamanPengaturan() {
 
   const saveSettings = async () => {
     const payload = {
-      nama_apotek: app.settingsData.nama_apotek,
+      nama_faskes: app.settingsData.nama_faskes,
       sektor_usaha: app.settingsData.sektor_usaha,
       kota: app.settingsData.kota,
       alamat: app.settingsData.alamat,
@@ -424,8 +424,13 @@ export default function HalamanPengaturan() {
                   {/* PROFIL APOTEK */}
                   {tab === 'profil' && (
                     <div>
-                      <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Profil apotek', 'Pharmacy profile')}</h2>
-                      <p className="text-sm text-[var(--ink-soft)] mb-6">{t('Profil apotek akan ditampilkan pada struk penjualan.', 'The pharmacy profile appears on sales receipts.')}</p>
+                      <h2 className="text-xl font-bold text-[var(--ink)] mb-1">
+                        {t('Profil', 'Profile')} {app.kata('faskes').toLowerCase()}
+                      </h2>
+                      <p className="text-sm text-[var(--ink-soft)] mb-6">
+                        {t('Profil ini ditampilkan pada struk, purchase order, dan dokumen resmi lainnya.',
+                           'This profile appears on receipts, purchase orders, and other official documents.')}
+                      </p>
                       <div className="flex flex-col sm:flex-row gap-6">
                         {/* Logo */}
                         <div className="shrink-0">
@@ -444,13 +449,23 @@ export default function HalamanPengaturan() {
                         {/* Fields */}
                         <div className="flex-1 space-y-4">
                           <div>
-                            <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">{t('Nama apotek', 'Pharmacy name')}</label>
-                            <input value={app.settingsData.nama_apotek || ''} onChange={e => app.setSettingsData({...app.settingsData, nama_apotek: e.target.value})} className={inputCls} />
+                            <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">
+                              {t('Nama', 'Name')} {app.kata('faskes').toLowerCase()}
+                            </label>
+                            <input value={app.settingsData.nama_faskes ?? app.settingsData.nama_apotek ?? ''}
+                              onChange={e => app.setSettingsData({ ...app.settingsData, nama_faskes: e.target.value })}
+                              className={inputCls} />
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
                               <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">{t('Sektor usaha', 'Business sector')}</label>
-                              <input value={app.settingsData.sektor_usaha || 'Apotek'} onChange={e => app.setSettingsData({...app.settingsData, sektor_usaha: e.target.value})} className={inputCls} />
+                              <input value={app.settingsData.sektor_usaha || app.kata('faskes')}
+                                onChange={e => app.setSettingsData({ ...app.settingsData, sektor_usaha: e.target.value })}
+                                className={inputCls} />
+                              <p className="text-[11px] text-[var(--ink-faint)] mt-1 leading-relaxed">
+                                {t('Sekadar keterangan di dokumen. Jenis fasilitas yang menentukan menu diatur admin Sehatera.',
+                                   'Just a label on documents. The facility type that drives the menu is set by the Sehatera admin.')}
+                              </p>
                             </div>
                             <div>
                               <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">{t('Kota/Kabupaten', 'City/Regency')}</label>
@@ -472,7 +487,9 @@ export default function HalamanPengaturan() {
                             </div>
                           </div>
                           <div>
-                            <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">{t('Nomor Ijin (SIA)', 'License No. (SIA)')}</label>
+                            <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">
+                              {t('Nomor Izin', 'Licence No.')} ({app.kata('izin')})
+                            </label>
                             <input value={app.settingsData.nomor_ijin || ''} onChange={e => app.setSettingsData({...app.settingsData, nomor_ijin: e.target.value})} className={inputCls} />
                           </div>
                           <button onClick={saveSettings} disabled={sibuk}
@@ -487,8 +504,11 @@ export default function HalamanPengaturan() {
                   {/* DATA APOTEKER */}
                   {tab === 'apoteker' && (
                     <div className="max-w-md">
-                      <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Data apoteker', 'Pharmacist data')}</h2>
-                      <p className="text-sm text-[var(--ink-soft)] mb-6">{t('Penanggung jawab yang tertera di PO & Berita Acara.', 'The responsible person shown on POs & official reports.')}</p>
+                      <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Penanggung jawab', 'Person in charge')}</h2>
+                      <p className="text-sm text-[var(--ink-soft)] mb-6">
+                        {app.kata('penanggungJawab')}. {t('Namanya tertera di purchase order dan berita acara pemusnahan.',
+                                                          'Their name appears on purchase orders and destruction reports.')}
+                      </p>
                       <div className="space-y-4">
                         <div>
                           <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">{t('Nama Apoteker', 'Pharmacist Name')}</label>

@@ -14,6 +14,8 @@
  */
 
 export type ProfilApotek = {
+  /** Nama fasilitas. `nama_apotek` masih diterima demi data lama. */
+  nama_faskes?: string | null
   nama_apotek?: string | null
   alamat?: string | null
   nomor_ijin?: string | null
@@ -76,7 +78,7 @@ td{padding:6px 8px;vertical-align:top;}
 
 const kepalaApotek = (p: ProfilApotek) => `
 <div class="apotek">
-  <h1>${teks(p.nama_apotek, 'Apotek')}</h1>
+  <h1>${teks(p.nama_faskes ?? p.nama_apotek, 'Fasilitas')}</h1>
   <p>${teks(p.alamat, '')}</p>
   <p>SIA: ${teks(p.nomor_ijin)} | Telp: ${teks(p.nomor_telepon)}</p>
 </div>
@@ -182,7 +184,7 @@ td{padding:8px;border-bottom:1px solid #eee;font-size:11px;}
 </style></head><body>
 <div class="header">
   <div>
-    <h1>${teks(p.nama_apotek, 'Apotek')}</h1>
+    <h1>${teks(p.nama_faskes ?? p.nama_apotek, 'Fasilitas')}</h1>
     <p>${teks(p.alamat, '')}</p>
     <p>SIA: ${teks(p.nomor_ijin)} | Telp: ${teks(p.nomor_telepon)}</p>
   </div>
@@ -264,7 +266,7 @@ td{padding:6px 8px;vertical-align:top;}
 </style></head><body>
 <div class="head">
   <div class="apotek">
-    <h1>${teks(p.nama_apotek, 'Apotek')}</h1>
+    <h1>${teks(p.nama_faskes ?? p.nama_apotek, 'Fasilitas')}</h1>
     <p>${teks(p.alamat, '')}</p>
     <p>SIA: ${teks(p.nomor_ijin)} | Telp: ${teks(p.nomor_telepon)}</p>
   </div>
@@ -385,7 +387,7 @@ table.rep th{text-align:center;font-weight:bold;}
 </style></head><body>
 <h1>LAPORAN PENGGUNAAN ${judul}</h1>
 <table class="info">
-  <tr><td>Nama Sarana</td><td>: ${teks(p.nama_apotek)}</td></tr>
+  <tr><td>Nama Sarana</td><td>: ${teks(p.nama_faskes ?? p.nama_apotek)}</td></tr>
   <tr><td>Alamat</td><td>: ${teks(p.alamat)}</td></tr>
   <tr><td>Bulan/Tahun</td><td>: ${namaBulan} ${d.tahun}</td></tr>
 </table>
@@ -463,7 +465,7 @@ p{text-align:center;font-size:10px;color:#555;margin:1px 0;}
 .bold{font-weight:bold;}
 .small{font-size:10px;color:#555;}
 </style></head><body>
-<h2>${teks(p.nama_apotek)}</h2>
+<h2>${teks(p.nama_faskes ?? p.nama_apotek)}</h2>
 <p>${teks(p.alamat, '')}</p>
 ${p.nomor_ijin ? `<p>SIA: ${teks(p.nomor_ijin)}</p>` : ''}
 ${p.nomor_telepon ? `<p>Telp: ${teks(p.nomor_telepon)}</p>` : ''}

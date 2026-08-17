@@ -1,4 +1,5 @@
 import type { PlanFeatures } from './plan'
+import type { Sektor } from './faskes'
 
 /**
  * Keadaan langganan dari sudut pandang PEMILIK APOTEK.
@@ -15,6 +16,8 @@ export type CompanyContext = {
   nama: string
   status: 'trial' | 'active' | 'suspended' | 'inactive'
   theme: string | null
+  /** Jenis fasilitas. Menentukan menu mana yang ADA, terpisah dari paket. */
+  sektor: Sektor
   trialEndsAt: string | null
   subscriptionEndsAt: string | null
   planCode: string | null

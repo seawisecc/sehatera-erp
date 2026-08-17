@@ -35,6 +35,7 @@ export default function HalamanKlien() {
   const [paket, setPaket] = useState('')
   const [simpanan, setSimpanan] = useState(false)
   const [sibuk, setSibuk] = useState(false)
+  const [sektor, setSektor] = useState('apotek')
   const [tab, setTab] = useState<'daftar' | 'tagihan' | 'paket' | 'jejak'>('daftar')
 
   // Paket dibaca dari database, bukan dihard-code: harga dan batasnya memang
@@ -110,8 +111,15 @@ export default function HalamanKlien() {
       p_sampai: tanpaBatas ? null : (tanggalAktif || null),
       p_tanpa_batas: tanpaBatas,
     })
+    if (error) { setSimpanan(false); alert(pesanError(error)); return }
+
+    if (sektor !== (edit.sektor || 'apotek')) {
+      const { error: eSektor } = await supabase.rpc('set_company_sektor', {
+        p_company: edit.id, p_sektor: sektor,
+      })
+      if (eSektor) { setSimpanan(false); alert(pesanError(eSektor)); return }
+    }
     setSimpanan(false)
-    if (error) { alert(pesanError(error)); return }
     setEdit(null)
     app.muatCompanies()
   }
@@ -253,6 +261,7 @@ export default function HalamanKlien() {
                         onClick={() => {
                           setTanggalAktif(tanggalInput(batasAktif(c)))
                           setPaket(c.plan_id || '')
+                          setSektor(c.sektor || 'apotek')
                           setEdit(c)
                         }}
                         className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--brand)] text-[var(--on-brand)] hover:bg-[var(--brand-hover)] transition whitespace-nowrap"
@@ -284,6 +293,17 @@ export default function HalamanKlien() {
                 </option>
               ))}
             </select>
+
+            <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Jenis fasilitas', 'Facility type')}</label>
+            <select value={sektor} onChange={e => setSektor(e.target.value)} className={inputCls + ' mb-1'}>
+              <option value="apotek">{t('Apotek', 'Pharmacy')}</option>
+              <option value="klinik">{t('Klinik', 'Clinic')}</option>
+              <option value="rumah_sakit">{t('Rumah Sakit', 'Hospital')}</option>
+            </select>
+            <p className="text-[11px] text-[var(--ink-faint)] mb-3 leading-relaxed">
+              {t('Menentukan menu mana yang ADA di aplikasi faskes ini, terpisah dari paket yang menentukan menu mana yang dibuka.',
+                 'Determines which menus EXIST for this facility, separate from the plan that determines which are unlocked.')}
+            </p>
 
             <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Aktif sampai', 'Active until')}</label>
             <input type="date" value={tanggalAktif} onChange={e => setTanggalAktif(e.target.value)} className={inputCls} />

@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { readPlanFeatures } from './plan'
+import { bacaSektor } from './faskes'
 import type { CompanyContext } from './subscription'
 
 /**
@@ -61,6 +62,7 @@ export async function getSessionContext(): Promise<SessionContext> {
           nama: c.nama,
           status: c.status,
           theme: c.theme ?? null,
+          sektor: bacaSektor(c.sektor),
           trialEndsAt: c.trialEndsAt ?? null,
           subscriptionEndsAt: c.subscriptionEndsAt ?? null,
           planCode: c.planCode ?? null,

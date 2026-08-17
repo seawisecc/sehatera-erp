@@ -463,7 +463,7 @@ export default function HalamanKasir() {
           <div className="bg-[var(--surface)] rounded-2xl shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="text-center mb-4 border-b border-dashed border-[var(--line)] pb-4">
-                <h2 className="font-bold text-lg text-[var(--brand)]">{app.settingsData.nama_apotek}</h2>
+                <h2 className="font-bold text-lg text-[var(--brand)]">{app.namaFaskes}</h2>
                 <p className="text-xs text-[var(--ink-soft)] mt-1">{app.settingsData.alamat}</p>
                 <p className="text-xs text-[var(--ink-soft)]">{app.settingsData.nomor_telepon}</p>
                 {app.settingsData.nomor_ijin && <p className="text-xs text-[var(--ink-faint)] mt-1">SIA: {app.settingsData.nomor_ijin}</p>}

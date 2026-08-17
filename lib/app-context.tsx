@@ -6,6 +6,7 @@ import { getSessionContext, pesanError, KUNCI_UNDANGAN, type SessionContext } fr
 import { FULL_PLAN, lockedModules, type PlanFeatures } from './plan'
 import { subscriptionState, isLapsed, pesanLangganan, type SubscriptionState } from './subscription'
 import { menuItems, ROLE_PAGES } from './navigation'
+import { bacaSektor, istilah, MODUL_SEKTOR, type Sektor } from './faskes'
 import { useLang } from './i18n'
 import { useTheme } from './theme'
 
@@ -68,6 +69,18 @@ export type AppState = {
 
   /** Nama yang tampil di sidebar, topbar, dan menu akun. */
   namaFaskes: string
+
+  /**
+   * Jenis fasilitas: apotek, klinik, atau rumah sakit.
+   *
+   * Menentukan menu mana yang ADA. Paket menentukan menu mana yang DIBUKA.
+   * Keduanya sengaja terpisah: apotek berpaket Enterprise tetap tidak melihat
+   * Antrian Pasien, karena ia memang tidak punya antrian pasien, bukan karena
+   * paketnya kurang.
+   */
+  sektor: Sektor
+  /** Satu kata istilah yang mengikuti jenis fasilitas dan bahasa yang dipakai. */
+  kata: (kunci: 'faskes' | 'pelanggan' | 'penanggungJawab' | 'izin') => string
 }
 
 const Ctx = createContext<AppState | null>(null)
@@ -79,7 +92,7 @@ export function useApp(): AppState {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const { applyCompanyTheme } = useTheme()
 
   const [siap, setSiap] = useState(false)
@@ -90,7 +103,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [authName, setAuthName] = useState('')
   const [companyName, setCompanyName] = useState('')
   const [settingsData, setSettingsData] = useState<any>({
-    nama_apotek: '', alamat: '', nomor_ijin: '', nomor_telepon: '',
+    nama_faskes: '', nama_apotek: '', alamat: '', nomor_ijin: '', nomor_telepon: '',
   })
   const [companies, setCompanies] = useState<any[]>([])
   const [superViewCompany, setSuperViewCompany] = useState('')
@@ -171,7 +184,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (ctx.company) {
         setCompanyName(ctx.company.nama || '')
         applyCompanyTheme(ctx.company.theme)
-        setSettingsData((prev: any) => prev.nama_apotek ? prev : { ...prev, nama_apotek: ctx.company!.nama || '' })
+        setSettingsData((prev: any) => prev.nama_faskes ? prev
+          : { ...prev, nama_faskes: ctx.company!.nama || '', nama_apotek: ctx.company!.nama || '' })
       }
 
       setCurrentRole(ctx.role)
@@ -190,6 +204,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const fitur = session?.company?.features ?? FULL_PLAN
   const state = subscriptionState(session?.company ?? null)
 
+  const sektor = bacaSektor(session?.company?.sektor)
+
   const allowedPages = (() => {
     if (isSuper) return [...menuItems.map(m => m.id), 'klien', 'migrasi']
     if (!currentRole) return []
@@ -201,12 +217,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // boleh memberi kasir akses ke Pembayaran Faktur, tapi paket Starter tetap
     // tidak membukanya untuk siapa pun di apotek itu.
     const terkunci = lockedModules(fitur)
-    return dengaMigrasi.filter(p => !terkunci.includes(p))
+    // Jenis fasilitas menyaring PALING DULU. Modul yang tidak masuk akal untuk
+    // jenis fasilitas ini bukan soal hak akses dan bukan soal paket: ia memang
+    // tidak ada di sana.
+    const adaDiSektor = MODUL_SEKTOR[sektor]
+    return dengaMigrasi
+      .filter(p => p === 'migrasi' || adaDiSektor.includes(p))
+      .filter(p => !terkunci.includes(p))
   })()
 
   const namaFaskes = isSuper
     ? (companies.find((c: any) => c.id === superViewCompany)?.nama || 'Super Admin')
-    : (settingsData.nama_apotek || companyName || 'Apotek Saya')
+    : (settingsData.nama_faskes || settingsData.nama_apotek || companyName
+       || istilah(sektor, 'faskes', false) + ' Saya')
 
   const nilai: AppState = {
     siap, session, isSuper, currentRole, authName,
@@ -216,6 +239,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     allowedPages, fitur,
     langganan: { state, pesan: pesanLangganan(state, t), terkunci: isLapsed(state) },
     namaFaskes,
+    sektor,
+    kata: (kunci) => istilah(sektor, kunci, lang === 'en'),
   }
 
   return <Ctx.Provider value={nilai}>{children}</Ctx.Provider>
