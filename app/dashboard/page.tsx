@@ -5,7 +5,7 @@ import {
   Pill, PackageOpen, LogOut, Settings, Truck,
   FlaskConical, ClipboardList, Pencil,
   Receipt, CreditCard, Building2, Users, ChevronRight,
-  UserPlus, Trash2, Upload, ShieldCheck, Check, ArrowLeft, Menu, X, Download, Database, HeartPulse,
+  UserPlus, Trash2, Upload, ShieldCheck, Check, ArrowLeft, Menu, X, Download, Database,
   AlertTriangle, LayoutGrid
 } from 'lucide-react'
 import { supabase, createSignupClient } from '../../lib/supabase'
@@ -13,10 +13,9 @@ import { useLang, LangToggle } from '../../lib/i18n'
 import { useTheme, ThemePicker, ThemeToggle } from '../../lib/theme'
 import { getSessionContext, pesanError, type SessionContext } from '../../lib/session'
 import { FULL_PLAN, lockedModules } from '../../lib/plan'
-import { subscriptionState, isLapsed, pesanLangganan } from '../../lib/subscription'
+import { subscriptionState, pesanLangganan } from '../../lib/subscription'
 import { parseCSV, unduhCSV } from '../../lib/csv'
 import { menuItems, menuSuper, ROLE_PAGES, ROLE_LABELS, RUTE_SIAP } from '../../lib/navigation'
-import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '../../lib/ui'
 
 export default function Dashboard() {
   const { t, lang } = useLang()
@@ -49,24 +48,12 @@ export default function Dashboard() {
     u.searchParams.set('p', id)
     window.history.replaceState(null, '', u)
   }
-  const [products, setProducts] = useState<any[]>([])
-  const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [keranjang, setKeranjang] = useState<any[]>([])
-  const [bayar, setBayar] = useState(0)
-  const [metodeBayar, setMetodeBayar] = useState('Tunai')
-  const [pasienForm, setPasienForm] = useState({ nama_pasien: '', alamat_pasien: '', kontak_pasien: '', nomor_resep: '' })
   // Filter kolom produk
   // Filter laporan penjualan / metode bayar
   // Kasir: tandai transaksi resep
-  const [isResep, setIsResep] = useState(false)
   const [importInfo, setImportInfo] = useState<Record<string, string>>({})
   const [importing, setImporting] = useState<string | null>(null)
   const [migrasiCompany, setMigrasiCompany] = useState('')
-  const [prosesLoading, setProsesLoading] = useState(false)
-  const [showStruk, setShowStruk] = useState(false)
-  const [lastTrx, setLastTrx] = useState<any>(null)
-  const [lastItems, setLastItems] = useState<any[]>([])
   const [settingsData, setSettingsData] = useState<any>({
     nama_apotek: '', alamat: '', nomor_ijin: '', nomor_telepon: ''
   })
@@ -98,14 +85,6 @@ export default function Dashboard() {
   useEffect(() => { if (activePage === 'pengaturan' && settingsTab === 'langganan') fetchKuota() }, [activePage, settingsTab])
 
   useEffect(() => { fetchSettings() }, [])
-  // Kasir masih memerlukan daftar layanan untuk dijual. Selama halaman ini
-  // belum ikut pindah, ia mengambilnya sendiri.
-  const [services, setServices] = useState<any[]>([])
-  useEffect(() => {
-    if (activePage !== 'transaksi') return
-    scopeQ(supabase.from('services').select('*').order('nama')).then(({ data }: any) => setServices(data || []))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePage, superViewCompany])
   useEffect(() => { if (activePage === 'pengaturan') fetchUsers() }, [activePage])
   useEffect(() => { if (activePage === 'migrasi' && isSuper) fetchCompanies() }, [activePage, isSuper])
   useEffect(() => { if (isSuper) fetchCompanies() }, [isSuper])
@@ -212,7 +191,6 @@ export default function Dashboard() {
 
   const langgananState = subscriptionState(session?.company ?? null)
   const langgananPesan = pesanLangganan(langgananState, t)
-  const kasirTerkunci = isLapsed(langgananState)
   const fitur = session?.company?.features ?? FULL_PLAN
 
   // Akses = daftar modul user (jika diatur) ; kalau kosong pakai default role.
@@ -385,7 +363,6 @@ export default function Dashboard() {
       const { error } = await supabase.from('products').insert(payload)
       if (error) { setImportInfo(p => ({ ...p, produk: 'Error: ' + error.message })); return }
       setImportInfo(p => ({ ...p, produk: `✅ ${payload.length} produk berhasil diimpor.` }))
-      if (activePage === 'produk') fetchProducts()
     } catch (e: any) { setImportInfo(p => ({ ...p, produk: 'Gagal membaca file: ' + (e?.message || e) })) }
     finally { setImporting(null) }
   }
@@ -522,18 +499,6 @@ export default function Dashboard() {
     ]))
   }
 
-  const fetchProducts = async () => {
-    setLoading(true)
-    const { data } = await scopeQ(supabase.from('products').select('*').order('kode'))
-    setProducts(data || [])
-    setLoading(false)
-  }
-
-  const filteredProducts = products.filter(p =>
-    p.nama_obat?.toLowerCase().includes(search.toLowerCase()) ||
-    p.nama_generik?.toLowerCase().includes(search.toLowerCase()) ||
-    p.kandungan?.toLowerCase().includes(search.toLowerCase())
-  )
 
   // Spanduk keadaan langganan.
   //
@@ -656,96 +621,6 @@ export default function Dashboard() {
 
   return (
     <>
-      {/* Modal Struk */}
-      {showStruk && lastTrx && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[var(--surface)] rounded-2xl shadow-xl w-full max-w-sm">
-            <div id="struk-print" className="p-6">
-              <div className="text-center mb-4 border-b border-dashed border-gray-300 pb-4">
-                <h2 className="font-bold text-lg text-[var(--brand)]">{settingsData.nama_apotek}</h2>
-                <p className="text-xs text-gray-500 mt-1">{settingsData.alamat}</p>
-                <p className="text-xs text-gray-500">{settingsData.nomor_telepon}</p>
-                {settingsData.nomor_ijin && <p className="text-xs text-gray-400 mt-1">SIA: {settingsData.nomor_ijin}</p>}
-              </div>
-              <div className="text-xs text-gray-500 mb-3 flex justify-between">
-                <span>{lastTrx.nomor_transaksi}</span>
-                <span>{new Date().toLocaleString('id-ID')}</span>
-              </div>
-              <div className="border-t border-dashed border-gray-300 pt-3 space-y-1.5">
-                {lastItems.map((item, i) => (
-                  <div key={i} className="text-xs">
-                    <div className="flex justify-between text-[var(--brand)] font-medium">
-                      <span>{item.nama_obat}</span>
-                      <span>Rp {item.subtotal?.toLocaleString('id-ID')}</span>
-                    </div>
-                    <div className="text-gray-400">{item.jumlah} x Rp {item.harga_jual?.toLocaleString('id-ID')}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="border-t border-dashed border-gray-300 mt-3 pt-3 space-y-1 text-xs">
-                <div className="flex justify-between font-bold text-sm text-[var(--brand)]">
-                  <span>Total</span><span>Rp {lastTrx.total?.toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between text-gray-500">
-                  <span>{t('Bayar', 'Paid')} ({lastTrx.metode_bayar || 'Tunai'})</span><span>Rp {lastTrx.bayar?.toLocaleString('id-ID')}</span>
-                </div>
-                <div className="flex justify-between text-gray-500">
-                  <span>{t('Kembalian', 'Change')}</span><span>Rp {lastTrx.kembalian?.toLocaleString('id-ID')}</span>
-                </div>
-              </div>
-              <p className="text-center text-xs text-gray-400 mt-4 border-t border-dashed border-gray-300 pt-3">
-                {t('Terima kasih atas kunjungan Anda', 'Thank you for your visit')}
-              </p>
-            </div>
-            <div className="flex gap-2 p-4 border-t border-gray-100">
-              <button onClick={() => setShowStruk(false)}
-                className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">{t('Tutup', 'Close')}</button>
-              <button onClick={() => {
-                const win = window.open('', '_blank', 'width=350,height=600')
-                win?.document.write(`<html><head><title>Struk</title><style>
-                  * { margin:0; padding:0; box-sizing:border-box; }
-                  body { font-family:'Courier New',monospace; font-size:12px; padding:16px; width:300px; }
-                  h2 { font-size:13px; text-align:center; font-weight:bold; margin-bottom:2px; }
-                  p { text-align:center; font-size:10px; color:#555; margin:1px 0; }
-                  .divider { border-top:1px dashed #999; margin:8px 0; }
-                  .row { display:flex; justify-content:space-between; margin:2px 0; }
-                  .bold { font-weight:bold; }
-                  .small { font-size:10px; color:#555; }
-                </style></head><body>
-                  <h2>${settingsData.nama_apotek}</h2>
-                  <p>${settingsData.alamat}</p>
-                  <p>SIA: ${settingsData.nomor_ijin}</p>
-                  <p>Telp: ${settingsData.nomor_telepon}</p>
-                  <div class="divider"></div>
-                  <div class="row small"><span>No.</span><span>${lastTrx?.nomor_transaksi}</span></div>
-                  <div class="row small"><span>Waktu</span><span>${new Date().toLocaleString('id-ID')}</span></div>
-                  <div class="divider"></div>
-                  ${lastItems.map(item => `
-                    <div style="margin:4px 0;">
-                      <div class="bold" style="font-size:11px;">${item.nama_obat}</div>
-                      <div class="row small">
-                        <span>${item.jumlah} x Rp ${item.harga_jual?.toLocaleString('id-ID')}</span>
-                        <span>Rp ${item.subtotal?.toLocaleString('id-ID')}</span>
-                      </div>
-                    </div>`).join('')}
-                  <div class="divider"></div>
-                  <div class="row bold"><span>TOTAL</span><span>Rp ${lastTrx?.total?.toLocaleString('id-ID')}</span></div>
-                  <div class="row small"><span>Bayar (${lastTrx?.metode_bayar || 'Tunai'})</span><span>Rp ${lastTrx?.bayar?.toLocaleString('id-ID')}</span></div>
-                  <div class="row small" style="color:green;"><span>Kembalian</span><span>Rp ${lastTrx?.kembalian?.toLocaleString('id-ID')}</span></div>
-                  <div class="divider"></div>
-                  <p style="margin-top:8px;">Terima kasih atas kunjungan Anda</p>
-                  <p>Semoga lekas sembuh</p>
-                </body></html>`)
-                win?.document.close()
-                win?.print()
-              }} className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium">
-                🖨️ {t('Cetak', 'Print')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="sw-ambient min-h-screen">
         {/* ── Topbar mobile ── */}
         <div className="md:hidden sticky top-0 z-30 flex items-center gap-3 h-14 px-4 bg-[var(--brand)] text-[var(--on-brand)]">
@@ -884,257 +759,6 @@ export default function Dashboard() {
         <div className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8">
 
           {langgananBanner}
-
-          {/* COMPANIES (super admin) */}
-          {/* KASIR */}
-          {activePage === 'transaksi' && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h1 className="text-2xl font-bold text-[var(--brand)] mb-1">{t('Kasir', 'Cashier')}</h1>
-                  <p className="text-[var(--ink-soft)] text-sm">{t('Transaksi penjualan obat', 'Medicine sales transactions')}</p>
-                </div>
-              </div>
-              {isSuper && !superViewCompany && (
-                <div className="mb-5 flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-800">
-                  <AlertTriangle size={18} className="shrink-0 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-semibold">{t('Transaksi dikunci', 'Transactions locked')}</p>
-                    <p className="text-amber-700">{t('Dropdown "Lihat sebagai apotek" masih menampilkan semua apotek. Pilih satu apotek di sidebar agar transaksi tidak mempengaruhi stok apotek lain.', 'The "View as pharmacy" dropdown still shows all pharmacies. Pick a specific pharmacy in the sidebar so transactions don\'t affect other pharmacies\' stock.')}</p>
-                  </div>
-                </div>
-              )}
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
-                <div className="lg:col-span-3 space-y-4">
-                  <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 rounded-xl shadow-sm p-4">
-                    <input type="text" placeholder={t('Cari obat by nama, generik, atau kandungan...', 'Search by name, generic, or ingredient...')}
-                      value={search} onChange={(e) => { setSearch(e.target.value); if (e.target.value.length > 1) fetchProducts() }}
-                      className="w-full border border-[var(--line)] rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-                    {search && (
-                      <div className="mt-3 space-y-1 max-h-64 overflow-y-auto">
-                        {filteredProducts.map(p => (
-                          <div key={p.id} onClick={() => {
-                            if ((p.stok_total ?? 0) <= 0) { alert(t(`Stok ${p.nama_obat} habis, tidak bisa dijual.`, `${p.nama_obat} is out of stock.`)); return }
-                            const exists = keranjang.find(k => k.id === p.id)
-                            if (exists) {
-                              if (exists.jumlah + 1 > (p.stok_total ?? 0)) { alert(t(`Stok ${p.nama_obat} hanya ${p.stok_total}.`, `Only ${p.stok_total} of ${p.nama_obat} in stock.`)); return }
-                              setKeranjang(keranjang.map(k => k.id === p.id ? {...k, jumlah: k.jumlah + 1} : k))
-                            }
-                            else { setKeranjang([...keranjang, {...p, jumlah: 1}]) }
-                            setSearch('')
-                          }} className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--surface-2)] cursor-pointer">
-                            <div>
-                              <div className="text-sm font-medium text-[var(--brand)]">{p.nama_obat}</div>
-                              <div className="text-xs text-[var(--ink-faint)]">{p.nama_generik} · {t('Stok', 'Stock')}: {p.stok_total}</div>
-                            </div>
-                            <div className="text-sm font-medium text-[var(--brand)]">Rp {p.harga_jual?.toLocaleString('id-ID')}</div>
-                          </div>
-                        ))}
-                        {services.filter((s: any) => s.status === 'aktif' && s.nama?.toLowerCase().includes(search.toLowerCase())).map((s: any) => (
-                          <div key={'svc-' + s.id} onClick={() => {
-                            const kid = 'svc-' + s.id
-                            const exists = keranjang.find(k => k.id === kid)
-                            if (exists) { setKeranjang(keranjang.map(k => k.id === kid ? {...k, jumlah: k.jumlah + 1} : k)) }
-                            else { setKeranjang([...keranjang, { id: kid, nama_obat: s.nama, harga_jual: s.harga || 0, jumlah: 1, is_jasa: true, kategori: 'jasa', stok_total: 0 }]) }
-                            setSearch('')
-                          }} className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--paper)] cursor-pointer">
-                            <div>
-                              <div className="text-sm font-medium text-[var(--brand)]">{s.nama}</div>
-                              <div className="text-xs text-[var(--brand-soft)] inline-flex items-center gap-1"><HeartPulse size={11} /> {t('Layanan Jasa', 'Service')}</div>
-                            </div>
-                            <div className="text-sm font-medium text-[var(--brand)]">Rp {(s.harga || 0).toLocaleString('id-ID')}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className={TBL_WRAP}>
-                    <table className={TBL}>
-                      <thead className={THEAD}>
-                        <tr>
-                          <th className={TH_L}>{t('Produk', 'Product')}</th>
-                          <th className={TH_C}>Qty</th>
-                          <th className={TH_R}>{t('Harga', 'Price')}</th>
-                          <th className={TH_R}>Subtotal</th>
-                          <th className="px-4 py-3"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {keranjang.length === 0 ? (
-                          <tr><td colSpan={5} className="px-4 py-8 text-center text-[var(--ink-faint)]">{t('Belum ada produk, cari obat di atas', 'No products yet, search above')}</td></tr>
-                        ) : (
-                          keranjang.map(item => (
-                            <tr key={item.id} className={TR}>
-                              <td className="px-4 py-3">
-                                <div className="font-medium text-[var(--brand)]">{item.nama_obat}</div>
-                                <div className="text-xs text-[var(--ink-faint)]">{item.is_jasa ? item.kode : `${item.kode || ''}${item.kode ? ' · ' : ''}${t('Stok', 'Stock')}: ${item.stok_total}`}</div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center justify-center gap-2">
-                                  <button onClick={() => setKeranjang(keranjang.map(k => k.id === item.id ? {...k, jumlah: Math.max(1, k.jumlah - 1)} : k))}
-                                    className="w-6 h-6 rounded bg-[var(--surface-2)] text-[var(--brand)] font-bold text-xs">−</button>
-                                  <input type="number" min={1} max={item.is_jasa ? undefined : item.stok_total} value={item.jumlah}
-                                    onChange={e => { const v = Math.max(1, +e.target.value); const capped = (!item.is_jasa && v > (item.stok_total ?? 0)) ? (item.stok_total ?? 0) : v; setKeranjang(keranjang.map(k => k.id === item.id ? {...k, jumlah: capped} : k)) }}
-                                    className="w-12 text-center text-sm border border-[var(--line)] rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-[var(--brand)]" />
-                                  <button onClick={() => {
-                                    if (!item.is_jasa && item.jumlah + 1 > (item.stok_total ?? 0)) { alert(t(`Stok ${item.nama_obat} hanya ${item.stok_total}.`, `Only ${item.stok_total} of ${item.nama_obat} in stock.`)); return }
-                                    setKeranjang(keranjang.map(k => k.id === item.id ? {...k, jumlah: k.jumlah + 1} : k))
-                                  }}
-                                    className="w-6 h-6 rounded bg-[var(--surface-2)] text-[var(--brand)] font-bold text-xs">+</button>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 text-right text-[var(--brand)]">Rp {item.harga_jual?.toLocaleString('id-ID')}</td>
-                              <td className="px-4 py-3 text-right font-medium text-[var(--brand)]">Rp {(item.harga_jual * item.jumlah)?.toLocaleString('id-ID')}</td>
-                              <td className="px-4 py-3 text-center">
-                                <button onClick={() => setKeranjang(keranjang.filter(k => k.id !== item.id))}
-                                  className="text-red-400 hover:text-red-600 text-xs">✕</button>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-                <div className="lg:col-span-2">
-                  <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 rounded-xl shadow-sm p-5">
-                    <h3 className="font-semibold text-[var(--brand)] mb-4">{t('Ringkasan Transaksi', 'Transaction Summary')}</h3>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-[var(--ink-soft)]">{t('Total Item', 'Total Items')}</span>
-                        <span className="text-[var(--brand)]">{keranjang.reduce((a, b) => a + b.jumlah, 0)} {t('item', 'items')}</span>
-                      </div>
-                      <div className="flex justify-between text-sm font-semibold border-t border-[var(--line-soft)] pt-2">
-                        <span className="text-[var(--brand)]">Total</span>
-                        <span className="text-[var(--brand)]">Rp {keranjang.reduce((a, b) => a + b.harga_jual * b.jumlah, 0).toLocaleString('id-ID')}</span>
-                      </div>
-                    </div>
-                    {(() => {
-                      const hasGolongan = keranjang.some(k => ['narkotika','psikotropika','prekursor'].includes(k.kategori))
-                      return (<>
-                      {!hasGolongan && (
-                        <label className="mb-3 flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] cursor-pointer hover:bg-[var(--surface-2)] transition">
-                          <input type="checkbox" checked={isResep} onChange={e => setIsResep(e.target.checked)}
-                            className="w-4 h-4 accent-[var(--brand)]" />
-                          <div>
-                            <span className="text-sm font-medium text-[var(--brand)]">{t('Transaksi berupa resep', 'This is a prescription sale')}</span>
-                            <p className="text-xs text-[var(--ink-faint)]">{t('Centang untuk mengisi data pasien & no. resep', 'Tick to record patient data & prescription no.')}</p>
-                          </div>
-                        </label>
-                      )}
-                      {(hasGolongan || isResep) && (
-                      <div className={`mb-4 p-3 rounded-xl border space-y-2 ${hasGolongan ? 'border-amber-300 bg-amber-50' : 'border-[var(--line)] bg-[var(--surface-2)]'}`}>
-                        <p className={`text-xs font-semibold ${hasGolongan ? 'text-amber-800' : 'text-[var(--brand-soft)]'}`}>{hasGolongan ? '⚠️ ' + t('Ada obat Narkotika/Psikotropika/Prekursor, wajib isi data pasien & resep', 'Contains Narcotics/Psychotropics/Precursors, patient & prescription data required') : '📋 ' + t('Data Pasien & Resep', 'Patient & Prescription Data')}</p>
-                        <input value={pasienForm.nomor_resep} onChange={e => setPasienForm({...pasienForm, nomor_resep: e.target.value})}
-                          placeholder={t('No. Resep *', 'Prescription No. *')} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-                        <input value={pasienForm.nama_pasien} onChange={e => setPasienForm({...pasienForm, nama_pasien: e.target.value})}
-                          placeholder={t('Nama Pasien *', 'Patient Name *')} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-                        <div className="grid grid-cols-2 gap-2">
-                          <input value={pasienForm.kontak_pasien} onChange={e => setPasienForm({...pasienForm, kontak_pasien: e.target.value})}
-                            placeholder={t('Kontak (HP)', 'Contact (Phone)')} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-                          <input value={pasienForm.alamat_pasien} onChange={e => setPasienForm({...pasienForm, alamat_pasien: e.target.value})}
-                            placeholder={t('Alamat', 'Address')} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
-                        </div>
-                      </div>
-                      )}
-                      </>)
-                    })()}
-                    <div className="mb-3">
-                      <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Metode Pembayaran', 'Payment Method')}</label>
-                      <div className="grid grid-cols-3 gap-1.5 mb-3">
-                        {['Tunai','QRIS','Transfer','Debit','Kartu Kredit'].map(m => (
-                          <button key={m} onClick={() => setMetodeBayar(m)}
-                            className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition ${metodeBayar === m ? 'bg-[var(--brand)] text-[var(--on-brand)] border-[var(--brand)]' : 'border-[var(--line)] text-[var(--ink-soft)] hover:bg-[var(--surface-2)]'}`}>
-                            {m}
-                          </button>
-                        ))}
-                      </div>
-                      <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Bayar (Rp)', 'Pay (Rp)')}</label>
-                      <input type="text" inputMode="numeric" value={bayar ? bayar.toLocaleString('id-ID') : ''}
-                        onChange={e => setBayar(+e.target.value.replace(/\D/g, '') || 0)}
-                        onDoubleClick={() => setBayar(keranjang.reduce((a, b) => a + b.harga_jual * b.jumlah, 0))}
-                        className="w-full border border-[var(--line)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" placeholder="0" />
-                      <p className="text-[11px] text-[var(--ink-faint)] mt-1">{t('Klik 2× untuk isi otomatis sesuai total.', 'Double-click to auto-fill the total.')}</p>
-                    </div>
-                    {bayar > 0 && (
-                      <div className="flex justify-between text-sm font-semibold text-green-600 mb-4">
-                        <span>{t('Kembalian', 'Change')}</span>
-                        <span>Rp {Math.max(0, bayar - keranjang.reduce((a, b) => a + b.harga_jual * b.jumlah, 0)).toLocaleString('id-ID')}</span>
-                      </div>
-                    )}
-                    <button disabled={prosesLoading || kasirTerkunci || (isSuper && !superViewCompany)} onClick={async () => {
-                      if (prosesLoading) return
-                      if (kasirTerkunci) return alert(langgananPesan?.isi || '')
-                      if (isSuper && !superViewCompany) return alert(t('⚠️ Dropdown "Lihat sebagai apotek" masih menampilkan SEMUA apotek. Pilih satu apotek dulu sebelum transaksi agar tidak mempengaruhi stok apotek lain.', '⚠️ The "View as pharmacy" dropdown still shows ALL pharmacies. Select a specific pharmacy before making a transaction to avoid affecting other pharmacies\' stock.'))
-                      if (keranjang.length === 0) return alert(t('Keranjang kosong!', 'Cart is empty!'))
-                      const over = keranjang.find(k => !k.is_jasa && k.jumlah > (k.stok_total ?? 0))
-                      if (over) return alert(t(`Stok ${over.nama_obat} tidak cukup, tersedia ${over.stok_total}, diminta ${over.jumlah}.`, `Insufficient stock for ${over.nama_obat}, available ${over.stok_total}, requested ${over.jumlah}.`))
-                      const total = keranjang.reduce((a, b) => a + b.harga_jual * b.jumlah, 0)
-                      if (bayar < total) return alert(t('Pembayaran kurang!', 'Insufficient payment!'))
-                      const hasGolongan = keranjang.some(k => ['narkotika','psikotropika','prekursor'].includes(k.kategori))
-                      const perluResep = hasGolongan || isResep
-                      if (perluResep && (!pasienForm.nama_pasien.trim() || !pasienForm.nomor_resep.trim())) {
-                        return alert(hasGolongan
-                          ? t('Obat golongan Narkotika/Psikotropika/Prekursor wajib mengisi Nama Pasien dan No. Resep.', 'Narcotics/Psychotropics/Precursors require Patient Name and Prescription No.')
-                          : t('Transaksi resep wajib mengisi Nama Pasien dan No. Resep.', 'Prescription sale requires Patient Name and Prescription No.'))
-                      }
-                      setProsesLoading(true)
-                      try {
-                        // Satu panggilan, satu transaksi database.
-                        //
-                        // Sebelumnya urutannya dijalankan browser satu per satu:
-                        // insert transaksi → insert item → lalu satu UPDATE stok
-                        // per produk di dalam perulangan. Kalau jaringan putus di
-                        // tengah perulangan, transaksinya sudah tersimpan tapi
-                        // sebagian stok belum terpotong, dan tidak ada yang tahu
-                        // sampai opname berikutnya. `stok_batch` bahkan tidak
-                        // pernah ikut dipotong sama sekali, padahal angka batch
-                        // itulah yang dipakai laporan SIPNAP dan penelusuran obat
-                        // kadaluarsa.
-                        const { data: trx, error } = await supabase.rpc('apply_transaction', {
-                          p_items: keranjang.map(k => ({
-                            product_id: k.is_jasa ? null : k.id,
-                            is_jasa: !!k.is_jasa,
-                            nama_obat: k.nama_obat,
-                            harga_jual: k.harga_jual,
-                            jumlah: k.jumlah,
-                          })),
-                          p_bayar: bayar,
-                          p_metode_bayar: metodeBayar,
-                          p_pasien: perluResep ? {
-                            nama_pasien: pasienForm.nama_pasien.trim(),
-                            alamat_pasien: pasienForm.alamat_pasien.trim(),
-                            kontak_pasien: pasienForm.kontak_pasien.trim(),
-                            nomor_resep: pasienForm.nomor_resep.trim(),
-                          } : null,
-                          p_company: (isSuper && superViewCompany) || null,
-                        })
-                        if (error) { alert(pesanError(error)); setProsesLoading(false); return }
-                        setLastTrx(trx)
-                        setLastItems(keranjang.map(k => ({ ...k, subtotal: k.harga_jual * k.jumlah })))
-                        setShowStruk(true)
-                        setKeranjang([])
-                        setBayar(0)
-                        setMetodeBayar('Tunai')
-                        setPasienForm({ nama_pasien: '', alamat_pasien: '', kontak_pasien: '', nomor_resep: '' }); setIsResep(false)
-                        // Stok di layar sudah tidak sama dengan stok di database.
-                        if (activePage === 'transaksi') fetchProducts()
-                      } catch(e) { alert(t('Terjadi kesalahan, coba lagi', 'An error occurred, please try again')) }
-                      finally { setProsesLoading(false) }
-                    }} className="w-full bg-[var(--brand)] text-[var(--on-brand)] py-3 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                      {kasirTerkunci ? t('🔒 Langganan berakhir', '🔒 Subscription ended')
-                        : (isSuper && !superViewCompany) ? t('🔒 Pilih apotek dulu', '🔒 Select a pharmacy first')
-                        : prosesLoading ? t('Memproses...', 'Processing...') : t('Proses Transaksi', 'Process Transaction')}
-                    </button>
-                    <button onClick={() => { setKeranjang([]); setBayar(0); setMetodeBayar('Tunai'); setPasienForm({ nama_pasien: '', alamat_pasien: '', kontak_pasien: '', nomor_resep: '' }); setIsResep(false) }}
-                      className="w-full mt-2 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm hover:bg-gray-50 transition">
-                      {t('Batal / Reset', 'Cancel / Reset')}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* PENGATURAN */}
           {activePage === 'pengaturan' && (() => {

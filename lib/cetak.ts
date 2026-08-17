@@ -416,3 +416,70 @@ table.rep th{text-align:center;font-weight:bold;}
 </div>
 </body></html>`
 }
+
+// ── Struk penjualan ──
+
+export type BarisStruk = { nama_obat?: string | null; jumlah?: number; harga_jual?: number; subtotal?: number }
+
+export type DataStruk = {
+  nomor_transaksi?: string | null
+  created_at?: string | null
+  total?: number
+  bayar?: number
+  kembalian?: number
+  metode_bayar?: string | null
+  nama_pasien?: string | null
+  nomor_resep?: string | null
+}
+
+/**
+ * Struk kasir, lebar 58mm (kertas termal yang paling umum di apotek kecil).
+ *
+ * Pindah ke sini dari dalam komponen kasir, dan ikut dibetulkan dua hal:
+ * nama apotek serta nama obat dulu ditempel mentah ke HTML, dan waktunya
+ * diambil dari `new Date()` alih-alih waktu transaksinya, jadi struk yang
+ * dicetak ulang menunjukkan jam cetak, bukan jam penjualan.
+ */
+export function strukPenjualan(p: ProfilApotek, d: DataStruk, items: BarisStruk[]): string {
+  const waktu = d.created_at ? new Date(d.created_at) : new Date()
+  const baris = items.map(i => `
+    <div style="margin:4px 0;">
+      <div class="bold" style="font-size:11px;">${teks(i.nama_obat, '')}</div>
+      <div class="row small">
+        <span>${i.jumlah ?? 0} x ${rupiah(i.harga_jual)}</span>
+        <span>${rupiah(i.subtotal)}</span>
+      </div>
+    </div>`).join('')
+
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8">
+<title>Struk ${teks(d.nomor_transaksi, '')}</title><style>
+@page { margin: 4mm; }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Courier New',monospace;font-size:12px;padding:16px;width:300px;color:#000;background:#fff;}
+h2{font-size:13px;text-align:center;font-weight:bold;margin-bottom:2px;}
+p{text-align:center;font-size:10px;color:#555;margin:1px 0;}
+.divider{border-top:1px dashed #999;margin:8px 0;}
+.row{display:flex;justify-content:space-between;margin:2px 0;gap:8px;}
+.bold{font-weight:bold;}
+.small{font-size:10px;color:#555;}
+</style></head><body>
+<h2>${teks(p.nama_apotek)}</h2>
+<p>${teks(p.alamat, '')}</p>
+${p.nomor_ijin ? `<p>SIA: ${teks(p.nomor_ijin)}</p>` : ''}
+${p.nomor_telepon ? `<p>Telp: ${teks(p.nomor_telepon)}</p>` : ''}
+<div class="divider"></div>
+<div class="row small"><span>No.</span><span>${teks(d.nomor_transaksi, '')}</span></div>
+<div class="row small"><span>Waktu</span><span>${waktu.toLocaleString('id-ID')}</span></div>
+${d.nomor_resep ? `<div class="row small"><span>Resep</span><span>${teks(d.nomor_resep)}</span></div>` : ''}
+${d.nama_pasien ? `<div class="row small"><span>Pasien</span><span>${teks(d.nama_pasien)}</span></div>` : ''}
+<div class="divider"></div>
+${baris}
+<div class="divider"></div>
+<div class="row bold"><span>TOTAL</span><span>${rupiah(d.total)}</span></div>
+<div class="row small"><span>Bayar (${teks(d.metode_bayar, 'Tunai')})</span><span>${rupiah(d.bayar)}</span></div>
+<div class="row small"><span>Kembalian</span><span>${rupiah(d.kembalian)}</span></div>
+<div class="divider"></div>
+<p style="margin-top:8px;">Terima kasih atas kunjungan Anda</p>
+<p>Semoga lekas sembuh</p>
+</body></html>`
+}
