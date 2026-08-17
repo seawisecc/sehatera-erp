@@ -8,6 +8,8 @@ import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TH_R, TR } from '@/lib/ui'
 import { rupiah, tanggal, tanggalInput } from '@/lib/format'
 import JejakAudit from '@/components/JejakAudit'
+import Tagihan from '@/components/klien/Tagihan'
+import EditorPaket from '@/components/klien/EditorPaket'
 
 /**
  * Klien: daftar faskes yang berlangganan. Hanya untuk super admin.
@@ -33,7 +35,7 @@ export default function HalamanKlien() {
   const [paket, setPaket] = useState('')
   const [simpanan, setSimpanan] = useState(false)
   const [sibuk, setSibuk] = useState(false)
-  const [tab, setTab] = useState<'daftar' | 'jejak'>('daftar')
+  const [tab, setTab] = useState<'daftar' | 'tagihan' | 'paket' | 'jejak'>('daftar')
 
   // Paket dibaca dari database, bukan dihard-code: harga dan batasnya memang
   // dirancang bisa diubah tanpa deploy ulang.
@@ -142,8 +144,10 @@ export default function HalamanKlien() {
 
       <div className="flex gap-1 mb-5">
         {([
-          { id: 'daftar', label: t('Daftar Klien', 'Client List') },
-          { id: 'jejak',  label: t('Jejak Audit', 'Audit Trail') },
+          { id: 'daftar',  label: t('Daftar Klien', 'Client List') },
+          { id: 'tagihan', label: t('Tagihan', 'Invoices') },
+          { id: 'paket',   label: t('Paket', 'Plans') },
+          { id: 'jejak',   label: t('Jejak Audit', 'Audit Trail') },
         ] as const).map(x => (
           <button key={x.id} onClick={() => setTab(x.id)}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition ${tab === x.id ? 'bg-[var(--brand)] text-[var(--on-brand)]' : 'text-[var(--ink-soft)] hover:bg-[var(--surface)]/60'}`}>
@@ -152,6 +156,8 @@ export default function HalamanKlien() {
         ))}
       </div>
 
+      {tab === 'tagihan' && <Tagihan />}
+      {tab === 'paket' && <EditorPaket />}
       {tab === 'jejak' && <JejakAudit tampilkanFaskes />}
 
       {tab === 'daftar' && (<>

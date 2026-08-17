@@ -12,7 +12,7 @@ import { useLang } from '@/lib/i18n'
 import { useTheme, ThemePicker } from '@/lib/theme'
 import { pesanError } from '@/lib/session'
 import { menuItems, ROLE_PAGES } from '@/lib/navigation'
-import { tanggal } from '@/lib/format'
+import { tanggal, rupiah } from '@/lib/format'
 import JejakAudit from '@/components/JejakAudit'
 
 /**
@@ -53,6 +53,7 @@ export default function HalamanPengaturan() {
   const [editUser, setEditUser] = useState<any>(null)
   const [savingUser, setSavingUser] = useState(false)
   const [kuota, setKuota] = useState<any>(null)
+  const [tagihan, setTagihan] = useState<any[]>([])
   const [sibuk, setSibuk] = useState(false)
   const [undangan, setUndangan] = useState<any[]>([])
   const [undanganBaru, setUndanganBaru] = useState<{ tautan: string; email: string } | null>(null)
@@ -75,6 +76,8 @@ export default function HalamanPengaturan() {
     if (tab !== 'langganan') return
     scope(supabase.from('v_company_quota').select('*')).maybeSingle()
       .then(({ data }: any) => setKuota(data))
+    scope(supabase.from('billing_invoices').select('*').order('periode_mulai', { ascending: false }).limit(24))
+      .then(({ data }: any) => setTagihan(data || []))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, app.superViewCompany])
 
@@ -375,6 +378,37 @@ export default function HalamanPengaturan() {
                           </div>
                         ) : (
                           <p className="text-sm text-[var(--ink-faint)]">{t('Memuat pemakaian…', 'Loading usage…')}</p>
+                        )}
+
+                        <h3 className="text-sm font-semibold text-[var(--ink)] mt-8 mb-3">{t('Tagihan', 'Invoices')}</h3>
+                        {tagihan.length === 0 ? (
+                          <p className="text-sm text-[var(--ink-faint)]">
+                            {t('Belum ada tagihan. Selama masa coba memang belum ada yang ditagihkan.',
+                               'No invoices yet. Nothing is billed during the trial.')}
+                          </p>
+                        ) : (
+                          <div className="border border-[var(--line)] rounded-xl overflow-hidden">
+                            {tagihan.map((b: any) => (
+                              <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-[var(--line-soft)] last:border-0">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-[var(--ink)] num">{b.nomor}</p>
+                                  <p className="text-xs text-[var(--ink-faint)] num">
+                                    {tanggal(b.periode_mulai)} &rarr; {tanggal(b.periode_selesai)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm font-medium text-[var(--ink)] num">{rupiah(b.jumlah)}</span>
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    b.status === 'lunas' ? 'bg-green-100 text-green-800'
+                                    : b.status === 'dibatalkan' ? 'bg-gray-100 text-gray-500'
+                                    : 'bg-amber-100 text-amber-800'}`}>
+                                    {b.status === 'lunas' ? t('Lunas', 'Paid')
+                                      : b.status === 'dibatalkan' ? t('Dibatalkan', 'Cancelled') : t('Belum bayar', 'Unpaid')}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         )}
 
                         <div className="mt-6 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4">

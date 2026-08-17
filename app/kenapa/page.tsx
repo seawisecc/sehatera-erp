@@ -3,10 +3,11 @@
 import { useEffect } from 'react'
 import {
   ShoppingCart, ClipboardList, Receipt, BarChart2, Database,
-  Users, ShieldCheck, Pill, Truck, CalendarClock, Wallet, Check, ArrowRight,
-  Wand2, TrendingUp, PieChart, Languages, LayoutDashboard, Settings, Menu
+  Users, ShieldCheck, Pill, Truck, CalendarClock, Wallet, ArrowRight,
+  Wand2, TrendingUp, Languages, LayoutDashboard, Settings, Menu
 } from 'lucide-react'
 import { Mark } from '../../components/Logo'
+import DaftarPaket from '../../components/DaftarPaket'
 import { useLang, LangToggle } from '../../lib/i18n'
 
 const CSS = `
@@ -67,15 +68,6 @@ function AppWindow({ children }: { children: React.ReactNode }) {
   )
 }
 
-function Stat({ chip, label, value, Icon }: any) {
-  return (
-    <div className="bg-[var(--surface)]/70 border border-white/60 shadow-sm rounded-xl p-3">
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${chip}`}><Icon size={15} /></div>
-      <p className="text-[10px] text-[var(--ink-soft)] uppercase tracking-wide">{label}</p>
-      <p className="text-base font-bold text-[var(--ink)]">{value}</p>
-    </div>
-  )
-}
 
 // Recreation Dashboard (di dalam layar MacBook) + Kasir mobile (di dalam iPhone)
 function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
@@ -356,33 +348,31 @@ export default function Kenapa() {
         </div>
       </section>
 
-      {/* Pricing */}
+      {/* Pricing.
+          Harganya dibaca dari tabel `plans`, bukan ditulis di sini. Sampai
+          sekarang halaman ini memasang Rp216.000/bulan dan Rp2.160.000/tahun,
+          dua angka yang tidak ada di database dan tidak pernah ditagihkan;
+          siapa pun yang membacanya lalu mendaftar akan menemukan harga yang
+          sama sekali lain begitu masuk. */}
       <section id="harga" className="kn-dark text-white py-20 sm:py-28">
-        <div className="max-w-3xl mx-auto px-5 text-center">
-          <p className="reveal text-[var(--on-brand-soft)] text-xs font-semibold uppercase tracking-[0.2em] mb-4">{t('Harga', 'Pricing')}</p>
-          <h2 className="reveal kn-headline text-4xl sm:text-6xl font-bold mb-3" style={{ transitionDelay: '.05s' }}>{t('Hanya', 'Only')} Rp6.000<span className="text-[var(--on-brand-soft)] text-2xl sm:text-3xl font-semibold">{t('/hari', '/day')}</span></h2>
-          <p className="reveal text-[var(--on-brand-soft)] text-lg mb-10" style={{ transitionDelay: '.1s' }}>{t('Lebih murah dari satu strip obat yang terbuang karena kadaluarsa.', 'Cheaper than a single strip of medicine wasted to expiry.')}</p>
-          <div className="reveal grid sm:grid-cols-2 gap-5 text-left" style={{ transitionDelay: '.15s' }}>
-            <div className="bg-white/[0.06] border border-white/10 rounded-2xl p-7">
-              <p className="text-[var(--on-brand-soft)] text-sm mb-1">{t('Bulanan', 'Monthly')}</p>
-              <p className="text-3xl font-bold mb-1">Rp216.000<span className="text-base text-[var(--on-brand-soft)] font-medium">{t('/bulan', '/month')}</span></p>
-              <p className="text-[var(--on-brand-soft)] text-sm">{t('Fleksibel, bisa berhenti kapan saja.', 'Flexible, cancel anytime.')}</p>
-            </div>
-            <div className="relative bg-[var(--surface)] text-[var(--ink)] rounded-2xl p-7 shadow-xl">
-              <span className="absolute -top-3 right-5 bg-[var(--accent)] text-white text-xs font-semibold px-3 py-1 rounded-full">{t('Hemat 2 bulan', 'Save 2 months')}</span>
-              <p className="text-[var(--ink-soft)] text-sm mb-1">{t('Tahunan', 'Yearly')}</p>
-              <p className="text-3xl font-bold mb-1">Rp2.160.000<span className="text-base text-[var(--ink-soft)] font-medium">{t('/tahun', '/year')}</span></p>
-              <p className="text-[var(--brand)] text-sm font-medium">{t('Setara Rp6.000/hari · gratis 2 bulan (hemat Rp432.000).', 'Equals Rp6,000/day · 2 months free (save Rp432,000).')}</p>
-            </div>
+        <div className="max-w-5xl mx-auto px-5">
+          <div className="text-center mb-10">
+            <p className="reveal text-[var(--on-brand-soft)] text-xs font-semibold uppercase tracking-[0.2em] mb-4">{t('Harga', 'Pricing')}</p>
+            <h2 className="reveal kn-headline text-4xl sm:text-5xl font-bold mb-3" style={{ transitionDelay: '.05s' }}>
+              {t('Bayar sesuai ukuran apotekmu', 'Pay for the size of your pharmacy')}
+            </h2>
+            <p className="reveal text-[var(--on-brand-soft)] text-lg" style={{ transitionDelay: '.1s' }}>
+              {t('Naik paket saat apotekmu tumbuh, bukan sebelum itu.', 'Move up when your pharmacy grows, not before.')}
+            </p>
           </div>
-          <div className="reveal mt-8 space-y-2 text-left max-w-md mx-auto" style={{ transitionDelay: '.2s' }}>
-            {[t('Semua fitur, tanpa batasan', 'All features, no limits'), t('Dashboard analitik & laporan real-time', 'Real-time analytics dashboard & reports'), t('Order terpandu & dwibahasa ID/EN', 'Guided ordering & bilingual ID/EN'), t('Multi-pengguna dengan hak akses', 'Multi-user with role-based access'), t('Migrasi data & pendampingan awal', 'Data migration & onboarding support'), t('Update fitur berkelanjutan', 'Continuous feature updates')].map((f, i) => (
-              <div key={i} className="flex items-center gap-2.5 text-[var(--on-brand)]"><Check size={16} className="text-[var(--brand-soft)] shrink-0" /> <span className="text-sm">{f}</span></div>
-            ))}
+          <div className="reveal" style={{ transitionDelay: '.15s' }}>
+            <DaftarPaket nada="gelap" />
           </div>
-          <a href="/" className="reveal inline-flex items-center gap-2 mt-10 bg-[var(--surface)] text-[var(--brand)] px-7 py-3.5 rounded-xl font-bold hover:bg-[var(--line-soft)] transition" style={{ transitionDelay: '.25s' }}>
-            {t('Daftarkan Apotek Sekarang', 'Register Your Pharmacy Now')} <ArrowRight size={18} />
-          </a>
+          <div className="text-center">
+            <a href="/" className="reveal inline-flex items-center gap-2 mt-10 bg-[var(--surface)] text-[var(--brand)] px-7 py-3.5 rounded-xl font-bold hover:bg-[var(--line-soft)] transition" style={{ transitionDelay: '.25s' }}>
+              {t('Daftarkan Apotek Sekarang', 'Register Your Pharmacy Now')} <ArrowRight size={18} />
+            </a>
+          </div>
         </div>
       </section>
 
