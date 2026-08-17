@@ -28,6 +28,15 @@
   --grad-3: #f7797d;
   --grad: linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 48%, var(--grad-3) 100%);
 
+  /* Gradien LAMBANG, terpisah dari gradien suasana di atas.
+     Keduanya perlu dibedakan: gradien suasana boleh pastel karena ia mengisi
+     bidang besar, sedangkan lambang sering tampil 16 sampai 30 piksel di atas
+     putih, dan pastel pada ukuran itu larut jadi noda pucat. Rona tetap sama,
+     kejenuhannya yang berbeda. */
+  --mark-1: #6fd6a4;
+  --mark-2: #f0b64a;
+  --mark-3: #ef5f66;
+
   /* Warna tanda tangan: diturunkan dari ujung coral supaya teks putih di
      atasnya lolos kontras, sesuatu yang #f7797d sendiri tidak bisa. */
   --brand:        #a93c50;
@@ -66,85 +75,110 @@
 }
 
 /* ---------- Vital Tide: terang, biru ke hijau ----------
-   Palet yang paling "kesehatan" dari keempatnya: biru azur ke teal ke hijau,
-   warna yang sudah lama dipakai rumah sakit dan alat medis. Ini tema yang
-   paling aman dipakai saat menemui calon klien klinik. */
+   Palet yang paling "kesehatan" dari keempatnya: biru langit ke pirus ke hijau
+   daun muda, warna yang sudah lama dipakai rumah sakit dan alat medis.
+
+   Gradiennya sengaja PASTEL, setara Sunrise Sorbet. Versi pertamanya memakai
+   azur dan teal penuh (#2f7ff5, #17c1c4): benar sebagai warna kesehatan, tapi
+   di layar yang ditatap sepanjang jam buka warna sejenuh itu menarik mata
+   terus-menerus ke bagian yang justru tidak perlu dibaca. Yang pastel tetap
+   terbaca sebagai biru ke hijau, tanpa berteriak.
+
+   Warna tanda tangan (--brand) tetap pekat, karena ia yang menanggung teks
+   putih di sidebar dan tombol. Pastel ada di gradien, bukan di sana. */
 [data-theme="vital-tide"] {
-  --grad-1: #2f7ff5;
-  --grad-2: #17c1c4;
-  --grad-3: #4fd98f;
+  --grad-1: #9fd8f7;
+  --grad-2: #8fe0d4;
+  --grad-3: #b6efc4;
   --grad: linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 50%, var(--grad-3) 100%);
 
-  /* Diturunkan dari ujung biru sampai teks putih di atasnya lolos kontras -
-     #2f7ff5 sendiri terlalu terang untuk itu. */
-  --brand:        #0a628f;
-  --brand-hover:  #084f74;
-  --brand-soft:   #2f9dc4;
-  --on-brand:     #eef9ff;
-  --on-brand-soft:#a8d8ea;
+  --mark-1: #4aa8d8;
+  --mark-2: #2fb8ab;
+  --mark-3: #3fb87a;
 
-  --accent:       #0f7a55;   /* diturunkan dari ujung hijau */
-  --accent-soft:  #dcf4e9;
+  /* Teal-biru yang diredam, bukan azur penuh: kontrasnya dengan teks terang
+     5,6:1, praktis sama dengan Sunrise Sorbet (5,7:1), jadi kedua tema terasa
+     sekeras yang sama di sidebar. */
+  --brand:        #1f6b80;
+  --brand-hover:  #175565;
+  --brand-soft:   #2e7d94;
+  --on-brand:     #f0fbff;
+  --on-brand-soft:#bfe3ee;
 
-  --on-grad:      #06303f;
-  --on-grad-soft: #1d5265;
+  --accent:       #167a5b;   /* diturunkan dari ujung hijau */
+  --accent-soft:  #dff4ea;
 
-  --paper:        #f4fbfb;
+  --on-grad:      #0a3a46;
+  --on-grad-soft: #24606f;
+
+  --paper:        #f5fbfc;
   --surface:      #ffffff;
-  --surface-2:    #e6f5f6;
-  --surface-3:    #f0fafa;
+  --surface-2:    #e9f5f7;
+  --surface-3:    #f2fafb;
 
-  --ink:          #0f272c;
-  --ink-mid:      #2d4b52;
-  --ink-soft:     #52737a;
-  --ink-faint:    #86a4aa;
+  --ink:          #12292e;
+  --ink-mid:      #2f4d54;
+  --ink-soft:     #55747b;
+  --ink-faint:    #8aa6ab;
 
-  --line:         #d0e7ea;
-  --line-soft:    #e4f2f4;
+  --line:         #d5e9ec;
+  --line-soft:    #e8f3f5;
 
-  --shadow-sm: 0 1px 2px rgba(15, 39, 44, .05);
-  --shadow-md: 0 10px 30px -14px rgba(15, 39, 44, .3);
+  --shadow-sm: 0 1px 2px rgba(18, 41, 46, .05);
+  --shadow-md: 0 10px 30px -14px rgba(18, 41, 46, .3);
 
   color-scheme: light;
 }
 
-/* ---------- Lilac Dawn: terang, lembut ----------
-   Ungu-lavender. Ada di sini karena tiga palet sebelumnya semuanya biru atau
-   hangat; tanpa satu yang benar-benar lain, "pilihan tema" cuma jadi tiga
-   varian dari selera yang sama. */
+/* ---------- Lilac Dawn: terang, tiga rona fajar ----------
+   Versi pertamanya lavender ke ungu ke magenta: tiga nilai dari SATU rona,
+   jadi gradiennya cuma terbaca sebagai "ungu yang memudar", sementara tiga
+   tema lain punya tiga rona yang benar-benar berbeda. Sekarang mengikuti
+   urutan warna fajar sungguhan: biru periwinkle di langit yang belum lepas
+   dari malam, lilac di tengah, lalu merah muda hangat di garis cakrawala.
+
+   Ada di sini karena tiga palet lain semuanya biru atau hangat; tanpa satu
+   yang benar-benar lain, "pilihan tema" cuma jadi tiga varian dari selera
+   yang sama. */
 [data-theme="lilac-dawn"] {
-  --grad-1: #a78bfa;
-  --grad-2: #c084fc;
-  --grad-3: #f0abfc;
+  --grad-1: #a8b8f2;
+  --grad-2: #d3a8f5;
+  --grad-3: #fbb8c4;
   --grad: linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 50%, var(--grad-3) 100%);
 
-  --brand:        #6d28d9;
-  --brand-hover:  #5b21b6;
-  --brand-soft:   #a78bfa;
-  --on-brand:     #f6f3ff;
-  --on-brand-soft:#ddd6fe;
+  --mark-1: #7b8ee6;
+  --mark-2: #a86ad9;
+  --mark-3: #e86f90;
 
-  --accent:       #be185d;
-  --accent-soft:  #fce7f3;
+  --brand:        #5f3f96;
+  --brand-hover:  #4b3079;
+  --brand-soft:   #8368b8;
+  --on-brand:     #f7f3ff;
+  --on-brand-soft:#d9cdf2;
 
-  --on-grad:      #3b0764;
-  --on-grad-soft: #6b21a8;
+  /* Diambil dari ujung merah muda gradiennya, supaya aksen dan gradien terasa
+     satu keluarga, bukan dua keputusan terpisah. */
+  --accent:       #b03a63;
+  --accent-soft:  #fce8ef;
 
-  --paper:        #faf8ff;
+  --on-grad:      #3b2352;
+  --on-grad-soft: #66497f;
+
+  --paper:        #faf8fd;
   --surface:      #ffffff;
-  --surface-2:    #f3efff;
-  --surface-3:    #f8f5ff;
+  --surface-2:    #f2eefb;
+  --surface-3:    #f7f4fd;
 
-  --ink:          #241b33;
-  --ink-mid:      #453a5c;
-  --ink-soft:     #665b7d;
-  --ink-faint:    #9d93b3;
+  --ink:          #261d35;
+  --ink-mid:      #473c5e;
+  --ink-soft:     #685d7f;
+  --ink-faint:    #9f95b4;
 
-  --line:         #e6dcf7;
-  --line-soft:    #f1ebfb;
+  --line:         #e7def5;
+  --line-soft:    #f2ecfa;
 
-  --shadow-sm: 0 1px 2px rgba(36, 27, 51, .05);
-  --shadow-md: 0 10px 30px -14px rgba(36, 27, 51, .28);
+  --shadow-sm: 0 1px 2px rgba(38, 29, 53, .05);
+  --shadow-md: 0 10px 30px -14px rgba(38, 29, 53, .28);
 
   color-scheme: light;
 }
@@ -162,6 +196,10 @@
   --grad-2: #64748b;
   --grad-3: #94a3b8;
   --grad: linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 52%, var(--grad-3) 100%);
+
+  --mark-1: #3f4c60;
+  --mark-2: #56657d;
+  --mark-3: #7c8ca3;
 
   --brand:        #334155;
   --brand-hover:  #1e293b;
@@ -196,6 +234,19 @@
   --shadow-md: 0 10px 30px -14px rgba(15, 23, 42, .25);
 
   color-scheme: light;
+}
+
+/* Gradien lambang.
+   Stop gradiennya dipakai dari DALAM SVG di `components/Logo.tsx`, lewat
+   atribut `stop-color`, bukan lewat kelas. Pengoptimal CSS hanya melihat
+   rujukan yang datang dari CSS, dan Tailwind hanya memindai rujukan yang
+   datang dari kelas, jadi tanpa aturan ini ketiga token --mark-* dibuang dari
+   berkas yang benar-benar dikirim ke peramban dan lambangnya jadi hitam.
+   Kelas ini dipasang pada elemen <svg> lambang; gradien di sini sendiri tidak
+   pernah terlihat karena ukurannya nol. */
+.sw-mark {
+  background-image: linear-gradient(135deg, var(--mark-1) 0%, var(--mark-2) 52%, var(--mark-3) 100%);
+  background-size: 0 0;
 }
 
 /* Token didaftarkan ke Tailwind supaya `bg-surface`, `text-ink`, `border-line`

@@ -3,7 +3,7 @@
 import { Suspense } from 'react'
 import { AppProvider, useApp } from '@/lib/app-context'
 import { AppShell } from '@/components/layout/AppShell'
-import { useLang } from '@/lib/i18n'
+import { Mark } from '@/components/Logo'
 
 /**
  * Layout untuk seluruh halaman di dalam aplikasi.
@@ -18,9 +18,6 @@ import { useLang } from '@/lib/i18n'
  */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    // useSearchParams di dalam AppShell (jembatan `?p=` selama pemecahan)
-    // mewajibkan batas Suspense; tanpa ini seluruh grup dipaksa render dinamis
-    // dan build memberi peringatan.
     <Suspense fallback={<Memuat />}>
       <AppProvider>
         <Gerbang>{children}</Gerbang>
@@ -43,11 +40,26 @@ function Gerbang({ children }: { children: React.ReactNode }) {
   return <AppShell>{children}</AppShell>
 }
 
+/**
+ * Layar tunggu sebelum sesi terbaca.
+ *
+ * Memakai lambang Sehatera, bukan cuma lingkaran berputar. Ini layar pertama
+ * yang dilihat orang tiap kali membuka aplikasi, dan sampai sekarang ia satu-
+ * satunya tempat yang masih terasa milik aplikasi lain. Cincin berputarnya
+ * mengelilingi lambang, jadi tetap jelas bahwa sesuatu sedang berjalan.
+ */
 function Memuat() {
   return (
-    <div className="sw-ambient min-h-screen flex flex-col items-center justify-center gap-3">
-      <div className="w-8 h-8 rounded-full border-2 border-[var(--line)] border-t-[var(--brand)] animate-spin" />
-      <p className="text-sm text-[var(--ink-faint)]">Memuat…</p>
+    <div className="sw-ambient min-h-screen flex flex-col items-center justify-center gap-4">
+      <div className="relative w-16 h-16 flex items-center justify-center">
+        <span
+          className="absolute inset-0 rounded-full border-2 border-[var(--line)] border-t-[var(--brand)] animate-spin motion-reduce:animate-none"
+          aria-hidden="true"
+        />
+        <Mark size={30} />
+      </div>
+      <p className="text-sm font-medium text-[var(--ink-soft)]">Sehatera</p>
+      <span className="sr-only" role="status">Memuat</span>
     </div>
   )
 }

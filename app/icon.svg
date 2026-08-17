@@ -1,11 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <!-- Favicon Sehatera. Warnanya tetap (Vital Tide) karena bilah tab peramban
-       tidak mengenal token tema aplikasi. -->
+  <!-- Favicon Sehatera. Warnanya tetap, karena bilah tab peramban tidak
+       mengenal token tema aplikasi. Ronanya sama dengan gradien Vital Tide,
+       tapi lebih jenuh: pada 16 piksel warna pastel hilang di antara ikon tab
+       lain, sementara ronanya masih terbaca sebagai keluarga yang sama. -->
   <defs>
     <linearGradient id="g" x1="4" y1="2" x2="28" y2="30" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#2f7ff5"/>
-      <stop offset="52%" stop-color="#17c1c4"/>
-      <stop offset="100%" stop-color="#4fd98f"/>
+      <stop offset="0%" stop-color="#4aa8d8"/>
+      <stop offset="52%" stop-color="#2fb8ab"/>
+      <stop offset="100%" stop-color="#5cc98a"/>
     </linearGradient>
   </defs>
   <path d="M16 2.2 27.2 6.4V16c0 6.5-4.7 12.1-11.2 13.8C9.5 28.1 4.8 22.5 4.8 16V6.4L16 2.2Z" fill="url(#g)"/>

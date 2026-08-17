@@ -80,7 +80,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   // Keempat tema terang, jadi bilah peramban satu warna saja, mengikuti Vital
   // Tide yang jadi bawaan.
-  themeColor: "#f4fbfb",
+  themeColor: "#f5fbfc",
 };
 
 export default function RootLayout({

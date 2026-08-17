@@ -29,22 +29,26 @@ export function Mark({
   // id unik supaya beberapa logo di satu halaman tidak saling merebut gradien
   const gid = `sehatera-grad-${variant}`
 
+  // Gradiennya memakai --mark-*, BUKAN --grad-* yang mengisi bidang besar.
+  // Gradien suasana boleh pastel; lambang sering tampil 16 sampai 30 piksel di
+  // atas putih, dan pastel pada ukuran itu larut jadi noda pucat.
+
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 32 32"
       fill="none"
-      className={className}
+      className={`${variant === 'gradient' ? 'sw-mark ' : ''}${className}`}
       role="img"
       aria-label="Sehatera"
     >
       {variant === 'gradient' && (
         <defs>
           <linearGradient id={gid} x1="4" y1="2" x2="28" y2="30" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="var(--grad-1)" />
-            <stop offset="52%" stopColor="var(--grad-2)" />
-            <stop offset="100%" stopColor="var(--grad-3)" />
+            <stop offset="0%" stopColor="var(--mark-1)" />
+            <stop offset="52%" stopColor="var(--mark-2)" />
+            <stop offset="100%" stopColor="var(--mark-3)" />
           </linearGradient>
         </defs>
       )}

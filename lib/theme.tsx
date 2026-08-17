@@ -38,10 +38,10 @@ export const THEMES: {
     label: 'Vital Tide',
     mode: 'terang',
     hint: {
-      id: 'Biru ke hijau: warna yang sudah lama dipakai dunia kesehatan.',
-      en: 'Blue into green: the colours healthcare has long used.',
+      id: 'Biru ke hijau pastel: warna yang sudah lama dipakai dunia kesehatan.',
+      en: 'Pastel blue into green: the colours healthcare has long used.',
     },
-    swatch: ['#2f7ff5', '#17c1c4', '#4fd98f'],
+    swatch: ['#9fd8f7', '#8fe0d4', '#b6efc4'],
   },
   {
     id: 'sunrise-sorbet',
@@ -58,10 +58,10 @@ export const THEMES: {
     label: 'Lilac Dawn',
     mode: 'terang',
     hint: {
-      id: 'Ungu lavender: satu-satunya yang benar-benar lain dari tiga lainnya.',
-      en: 'Lavender violet: the only one genuinely unlike the other three.',
+      id: 'Periwinkle, lilac, merah muda: urutan warna langit menjelang pagi.',
+      en: 'Periwinkle, lilac, rose: the order the sky takes just before morning.',
     },
-    swatch: ['#a78bfa', '#c084fc', '#f0abfc'],
+    swatch: ['#a8b8f2', '#d3a8f5', '#fbb8c4'],
   },
   {
     id: 'clean-slate',

@@ -2,10 +2,11 @@
 
 import { useEffect } from 'react'
 import {
-  FlaskConical, ShoppingCart, ClipboardList, Receipt, BarChart2, Database,
+  ShoppingCart, ClipboardList, Receipt, BarChart2, Database,
   Users, ShieldCheck, Pill, Truck, CalendarClock, Wallet, Check, ArrowRight,
   Wand2, TrendingUp, PieChart, Languages, LayoutDashboard, Settings, Menu
 } from 'lucide-react'
+import { Mark } from '../../components/Logo'
 import { useLang, LangToggle } from '../../lib/i18n'
 
 const CSS = `
@@ -57,7 +58,7 @@ function AppWindow({ children }: { children: React.ReactNode }) {
       </div>
       <div className="flex min-h-[240px]">
         <div className="w-16 sm:w-20 shrink-0 bg-gradient-to-b from-[var(--brand)] to-[var(--brand-hover)] flex flex-col items-center py-4 gap-4">
-          <div className="w-8 h-8 rounded-xl bg-[var(--surface)]/10 flex items-center justify-center"><FlaskConical size={16} className="text-white" /></div>
+          <div className="w-8 h-8 rounded-xl bg-[var(--surface)]/10 flex items-center justify-center"><Mark size={16} variant="mono" className="text-[var(--on-brand)]" /></div>
           {[Pill, ShoppingCart, ClipboardList, BarChart2].map((I, i) => <I key={i} size={16} className="text-[var(--on-brand-soft)]" />)}
         </div>
         <div className="flex-1 p-5">{children}</div>
@@ -112,7 +113,7 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
             {/* Sidebar */}
             <div className="w-[24%] shrink-0 bg-gradient-to-b from-[var(--brand)] to-[var(--brand-hover)] px-[3%] py-[3.5%] flex flex-col">
               <div className="flex items-center gap-1.5 mb-[8%]">
-                <div className="w-[18%] aspect-square rounded-md bg-[var(--surface)]/10 flex items-center justify-center"><FlaskConical className="text-white w-1/2 h-1/2" /></div>
+                <div className="w-[18%] aspect-square rounded-md bg-[var(--surface)]/10 flex items-center justify-center"><Mark size={12} variant="mono" className="text-[var(--on-brand)] w-1/2 h-1/2" /></div>
                 <div className="leading-none"><div className="text-white font-bold text-[0.62vw] sm:text-[0.6vw]" style={{ fontSize: 'clamp(6px,0.85vw,11px)' }}>Sehatera</div><div className="text-[var(--on-brand-soft)]" style={{ fontSize: 'clamp(5px,0.7vw,9px)' }}>by Seawise Studio</div></div>
               </div>
               <div className="rounded-md bg-[var(--surface)]/10 text-white/90 px-2 py-1 mb-[7%] truncate" style={{ fontSize: 'clamp(5px,0.75vw,10px)' }}>Apotek Rakyat Sejahtera</div>
@@ -275,9 +276,7 @@ export default function Kenapa() {
       <nav className="kn-nav sticky top-0 z-30 bg-[var(--surface)]/60 border-b border-black/5">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="relative w-9 h-9 rounded-xl bg-[var(--brand)] flex items-center justify-center">
-              <FlaskConical size={18} className="text-white" /><span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
-            </div>
+            <Mark size={36} />
             <div className="leading-tight"><div className="font-bold text-sm">Sehatera</div><div className="text-[10px] text-[var(--ink-faint)]">by Seawise Studio</div></div>
           </div>
           <div className="flex items-center gap-2">
@@ -396,7 +395,7 @@ export default function Kenapa() {
 
       <footer className="border-t border-black/5 py-8 text-center text-sm text-[var(--ink-faint)]">
         <div className="flex items-center justify-center gap-2 mb-2">
-          <FlaskConical size={16} className="text-[var(--brand)]" /> <span className="font-semibold text-[var(--ink)]">Sehatera</span>
+          <Mark size={18} /> <span className="font-semibold text-[var(--ink)]">Sehatera</span>
         </div>
         © {new Date().getFullYear()} Seawise Studio · Sehatera
       </footer>
