@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   Pill, PackageOpen, LogOut, Settings, Truck,
-  FlaskConical, CalendarClock, ClipboardList, Printer, Pencil,
+  FlaskConical, ClipboardList, Pencil,
   Receipt, CreditCard, Building2, Users, ChevronRight,
   UserPlus, Trash2, Upload, ShieldCheck, Check, ArrowLeft, Menu, X, Download, Database, HeartPulse,
   Search, AlertTriangle, LayoutGrid
@@ -14,7 +14,6 @@ import { useTheme, ThemePicker, ThemeToggle } from '../../lib/theme'
 import { getSessionContext, pesanError, type SessionContext } from '../../lib/session'
 import { FULL_PLAN, lockedModules } from '../../lib/plan'
 import { subscriptionState, isLapsed, pesanLangganan } from '../../lib/subscription'
-import { bukaCetak, beritaAcaraPemusnahan } from '../../lib/cetak'
 import { parseCSV, unduhCSV } from '../../lib/csv'
 import { menuItems, menuSuper, ROLE_PAGES, ROLE_LABELS, RUTE_SIAP } from '../../lib/navigation'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD, KATEGORI_BADGE } from '../../lib/ui'
@@ -90,11 +89,6 @@ export default function Dashboard() {
   const [produkBatches, setProdukBatches] = useState<any[]>([])
   const [produkTrxOut, setProdukTrxOut] = useState<any[]>([])
   const [produkTrxIn, setProdukTrxIn] = useState<any[]>([])
-  const [showTindakLanjut, setShowTindakLanjut] = useState<any>(null)
-  const [tindakLanjutMode, setTindakLanjutMode] = useState<'pilih'|'musnahkan'|'retur'>('pilih')
-  const [formMusnahkan, setFormMusnahkan] = useState({ tanggal_musnahkan: new Date().toISOString().split('T')[0], qty_musnahkan: 0, metode: 'Dibakar', saksi_1: '', saksi_2: '', keterangan: '' })
-  const [formRetur, setFormRetur] = useState({ supplier_id: '', tanggal_retur: new Date().toISOString().split('T')[0], qty_retur: 0, alasan: '' })
-  const [batchSupplier, setBatchSupplier] = useState<any>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -111,9 +105,6 @@ export default function Dashboard() {
   const [userForm, setUserForm] = useState({ nama: '', email: '', password: '', role: 'kasir', modules: ROLE_PAGES['kasir'] as string[] })
   const [editUser, setEditUser] = useState<any>(null)
   const [savingUser, setSavingUser] = useState(false)
-  const [tindakLanjutTab, setTindakLanjutTab] = useState<'musnahkan'|'retur'>('musnahkan')
-  const [riwayatMusnah, setRiwayatMusnah] = useState<any[]>([])
-  const [riwayatRetur, setRiwayatRetur] = useState<any[]>([])
 
   // Kuota dibaca dari `v_company_quota`: view yang sama yang dipakai trigger
   // penegak kuota. Kalau layar menghitung sendiri, angkanya cepat atau lambat
@@ -126,7 +117,6 @@ export default function Dashboard() {
   useEffect(() => { if (activePage === 'pengaturan' && settingsTab === 'langganan') fetchKuota() }, [activePage, settingsTab])
 
   useEffect(() => { fetchSettings() }, [])
-  useEffect(() => { if (activePage === 'tindaklanjut') { fetchRiwayatMusnah(); fetchRiwayatRetur() } }, [activePage])
   useEffect(() => { if (activePage === 'produk') { fetchProducts(); fetchExpiredAlerts() } }, [activePage])
   // Kasir masih memerlukan daftar layanan untuk dijual. Selama halaman ini
   // belum ikut pindah, ia mengambilnya sendiri.
@@ -144,7 +134,6 @@ export default function Dashboard() {
     if (!isSuper) return
     fetchSettings()
     if (activePage === 'produk') { fetchProducts(); fetchExpiredAlerts() }
-    else if (activePage === 'tindaklanjut') { fetchRiwayatMusnah(); fetchRiwayatRetur() }
     else if (activePage === 'pengaturan') fetchUsers()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [superViewCompany])
@@ -605,123 +594,6 @@ export default function Dashboard() {
       new Date(b.purchase_orders?.tanggal_terima || 0).getTime() - new Date(a.purchase_orders?.tanggal_terima || 0).getTime()))
   }
 
-  const openTindakLanjut = async (batch: any) => {
-  setShowTindakLanjut(batch)
-  setTindakLanjutMode('pilih')
-  setFormMusnahkan({ tanggal_musnahkan: new Date().toISOString().split('T')[0], qty_musnahkan: batch.stok_batch, metode: 'Dibakar', saksi_1: settingsData.nama_apoteker || '', saksi_2: '', keterangan: '' })
-  setFormRetur({ supplier_id: '', tanggal_retur: new Date().toISOString().split('T')[0], qty_retur: batch.stok_batch, alasan: 'Produk mendekati/melebihi expired date' })
-  setBatchSupplier(null)
-  if (batch.po_id) {
-    const { data: po } = await supabase.from('purchase_orders').select('*, suppliers(*)').eq('id', batch.po_id).single()
-    if (po) setBatchSupplier(po.suppliers)
-  } else {
-    const { data: ps } = await supabase.from('product_suppliers').select('*, suppliers(*)').eq('product_id', batch.product_id).limit(1).single()
-    if (ps) setBatchSupplier(ps.suppliers)
-  }
-}
-
-const submitCloseBatch = async () => {
-  if (!showTindakLanjut) return
-  if (!confirm(t('Tandai batch ini selesai ditindaklanjuti?\nAlert akan dihapus. Stok total TIDAK dipotong, ini hanya pengingat.', 'Mark this batch as followed up?\nThe alert will be removed. Total stock is NOT deducted, reminder only.'))) return
-  // Hanya menghapus batch dari daftar reminder (stok_batch -> 0).
-  // Stok total produk TIDAK diubah di sini (bukan mutasi stok, hanya pengingat).
-  await supabase.from('product_batches').update({ stok_batch: 0 }).eq('id', showTindakLanjut.id)
-  setShowTindakLanjut(null)
-  fetchExpiredAlerts()
-  if (showProdukDetail) openProdukDetail(showProdukDetail)
-  alert(t('✅ Batch ditandai selesai, alert dihapus. Stok total tidak berubah.', '✅ Batch marked done, alert removed. Total stock unchanged.'))
-}
-
-const submitMusnahkan = async () => {
-  if (!showTindakLanjut) return
-  const { data: ba, error } = await supabase.from('pemusnahan').insert([{ batch_id: showTindakLanjut.id, product_id: showTindakLanjut.product_id, ...formMusnahkan }]).select().single()
-  if (error) { alert('Error: ' + error.message); return }
-  await supabase.from('product_batches').update({ stok_batch: Math.max(0, showTindakLanjut.stok_batch - formMusnahkan.qty_musnahkan) }).eq('id', showTindakLanjut.id)
-  await supabase.from('products').update({ stok_total: Math.max(0, (showProdukDetail?.stok_total || 0) - formMusnahkan.qty_musnahkan) }).eq('id', showTindakLanjut.product_id)
-  setShowTindakLanjut(null)
-  fetchExpiredAlerts()
-  if (showProdukDetail) openProdukDetail(showProdukDetail)
-  bukaCetak(beritaAcaraPemusnahan(settingsData, {
-    nomor_ba: ba.nomor_ba,
-    tanggal_musnahkan: formMusnahkan.tanggal_musnahkan,
-    nama_produk: showProdukDetail?.nama_obat,
-    satuan: showProdukDetail?.satuan,
-    batch_number: showTindakLanjut.batch_number,
-    expired_date: showTindakLanjut.expired_date,
-    qty_musnahkan: formMusnahkan.qty_musnahkan,
-    metode: formMusnahkan.metode,
-    keterangan: formMusnahkan.keterangan,
-    saksi_1: formMusnahkan.saksi_1,
-    saksi_2: formMusnahkan.saksi_2,
-  }))
-}
-
-const submitRetur = async () => {
-  if (!showTindakLanjut) return
-  const supplierId = formRetur.supplier_id || batchSupplier?.id
-  if (!supplierId) { alert(t('Pilih supplier dulu!', 'Choose a supplier first!')); return }
-  // Retur hanya DIAJUKAN dulu, stok belum berkurang sampai dikonfirmasi.
-  const { error } = await supabase.from('retur_supplier').insert([{ batch_id: showTindakLanjut.id, product_id: showTindakLanjut.product_id, supplier_id: supplierId, qty_retur: formRetur.qty_retur, tanggal_retur: formRetur.tanggal_retur, alasan: formRetur.alasan, status: 'diajukan' }])
-  if (error) { alert('Error: ' + error.message); return }
-  setShowTindakLanjut(null)
-  fetchExpiredAlerts()
-  if (showProdukDetail) openProdukDetail(showProdukDetail)
-  alert(t('✅ Retur diajukan. Stok belum berubah, konfirmasi di menu Tindak Lanjut → Retur untuk memproses.', '✅ Return filed. Stock unchanged, confirm it in Follow-up → Returns to process.'))
-}
-
-// Konfirmasi retur: stok fisik keluar → kurangi batch & stok total, status jadi 'selesai'
-const konfirmasiRetur = async (row: any) => {
-  if (row.status === 'selesai') { alert(t('Retur ini sudah dikonfirmasi.', 'This return is already confirmed.')); return }
-  if (!confirm(t(`Konfirmasi retur ${row.nomor_retur || ''}?\nStok "${row.products?.nama_obat || ''}" akan dikurangi ${row.qty_retur} ${row.products?.satuan || ''}.`, `Confirm return ${row.nomor_retur || ''}?\nStock of "${row.products?.nama_obat || ''}" will be reduced by ${row.qty_retur} ${row.products?.satuan || ''}.`))) return
-  const { data: batch } = await supabase.from('product_batches').select('stok_batch').eq('id', row.batch_id).single()
-  const { data: prod } = await supabase.from('products').select('stok_total').eq('id', row.product_id).single()
-  await supabase.from('product_batches').update({ stok_batch: Math.max(0, (batch?.stok_batch || 0) - row.qty_retur) }).eq('id', row.batch_id)
-  await supabase.from('products').update({ stok_total: Math.max(0, (prod?.stok_total || 0) - row.qty_retur) }).eq('id', row.product_id)
-  await supabase.from('retur_supplier').update({ status: 'selesai' }).eq('id', row.id)
-  fetchRiwayatRetur()
-  fetchExpiredAlerts()
-  alert(t('✅ Retur dikonfirmasi. Stok sudah diperbarui.', '✅ Return confirmed. Stock updated.'))
-}
-
-// Batalkan retur yang masih diajukan (stok tidak terpengaruh karena belum dikurangi)
-const batalRetur = async (row: any) => {
-  if (row.status === 'selesai') { alert(t('Retur sudah selesai, tidak bisa dibatalkan.', 'Return is completed and cannot be cancelled.')); return }
-  if (!confirm(t(`Batalkan retur ${row.nomor_retur || ''}?`, `Cancel return ${row.nomor_retur || ''}?`))) return
-  await supabase.from('retur_supplier').update({ status: 'dibatalkan' }).eq('id', row.id)
-  fetchRiwayatRetur()
-  alert(t('Retur dibatalkan.', 'Return cancelled.'))
-}
-
-  const fetchRiwayatMusnah = async () => {
-    const { data } = await scopeQ(supabase.from('pemusnahan')
-      .select('*, products(nama_obat, satuan, kode), product_batches(batch_number, expired_date)')
-      .order('created_at', { ascending: false }))
-    setRiwayatMusnah(data || [])
-  }
-
-  const fetchRiwayatRetur = async () => {
-    const { data } = await scopeQ(supabase.from('retur_supplier')
-      .select('*, products(nama_obat, satuan, kode), suppliers(nama_supplier), product_batches(batch_number, expired_date)')
-      .order('created_at', { ascending: false }))
-    setRiwayatRetur(data || [])
-  }
-
-  const reprintBA = (row: any) => {
-    bukaCetak(beritaAcaraPemusnahan(settingsData, {
-      nomor_ba: row.nomor_ba,
-      tanggal_musnahkan: row.tanggal_musnahkan,
-      nama_produk: row.products?.nama_obat,
-      satuan: row.products?.satuan,
-      batch_number: row.product_batches?.batch_number,
-      expired_date: row.product_batches?.expired_date,
-      qty_musnahkan: row.qty_musnahkan,
-      metode: row.metode,
-      keterangan: row.keterangan,
-      saksi_1: row.saksi_1,
-      saksi_2: row.saksi_2,
-    }))
-  }
-
   const fetchSuppliers = async () => {
     const { data } = await scopeQ(supabase.from('suppliers').select('*').order('kode'))
     setSuppliers(data || [])
@@ -897,76 +769,6 @@ const batalRetur = async (row: any) => {
 
   return (
     <>
-      {/* Modal Tindak Lanjut Batch */}
-{showTindakLanjut && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-    <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
-      <div className="mb-4">
-        <h2 className="text-lg font-bold text-[var(--brand)]">{t('Tindak Lanjut Batch', 'Batch Follow-up')}</h2>
-        <p className="text-xs text-[var(--ink-soft)]">{showProdukDetail?.nama_obat} · Batch: {showTindakLanjut.batch_number || '-'} · Exp: {showTindakLanjut.expired_date ? new Date(showTindakLanjut.expired_date).toLocaleDateString('id-ID') : '-'} · {t('Stok', 'Stock')}: {showTindakLanjut.stok_batch}</p>
-      </div>
-      {tindakLanjutMode === 'pilih' && (
-        <div className="space-y-3">
-          <button onClick={submitCloseBatch} className="w-full flex items-start gap-4 p-4 border-2 border-[var(--line)] rounded-xl hover:border-[var(--brand)] hover:bg-[var(--surface-2)] transition text-left">
-            <span className="text-2xl">✅</span>
-            <div><p className="font-semibold text-[var(--brand)] text-sm">{t('Tandai Selesai (Reminder)', 'Mark Done (Reminder)')}</p><p className="text-xs text-[var(--ink-soft)] mt-0.5">{t('Hapus alert batch ini dari daftar. Stok total tidak dipotong, hanya pengingat.', 'Remove this batch alert from the list. Total stock is not deducted, reminder only.')}</p></div>
-          </button>
-          <button onClick={() => setTindakLanjutMode('musnahkan')} className="w-full flex items-start gap-4 p-4 border-2 border-[var(--line)] rounded-xl hover:border-red-400 hover:bg-red-50 transition text-left">
-            <span className="text-2xl">🔥</span>
-            <div><p className="font-semibold text-[var(--brand)] text-sm">{t('Musnahkan', 'Destroy')}</p><p className="text-xs text-[var(--ink-soft)] mt-0.5">{t('Buat Berita Acara Pemusnahan dan cetak dokumen resmi.', 'Create a Destruction Report and print the official document.')}</p></div>
-          </button>
-          <button onClick={() => setTindakLanjutMode('retur')} className="w-full flex items-start gap-4 p-4 border-2 border-[var(--line)] rounded-xl hover:border-blue-400 hover:bg-blue-50 transition text-left">
-            <span className="text-2xl">↩️</span>
-            <div><p className="font-semibold text-[var(--brand)] text-sm">{t('Retur ke Supplier', 'Return to Supplier')}</p><p className="text-xs text-[var(--ink-soft)] mt-0.5">{batchSupplier ? `${t('Retur ke', 'Return to')} ${batchSupplier.nama_supplier}` : t('Pilih supplier untuk retur', 'Choose a supplier for the return')}</p></div>
-          </button>
-          <button onClick={() => setShowTindakLanjut(null)} className="w-full border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">{t('Batal', 'Cancel')}</button>
-        </div>
-      )}
-      {tindakLanjutMode === 'musnahkan' && (
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Tanggal Pemusnahan', 'Destruction Date')}</label><input type="date" value={formMusnahkan.tanggal_musnahkan} onChange={e => setFormMusnahkan({...formMusnahkan, tanggal_musnahkan: e.target.value})} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" /></div>
-            <div><label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Qty Dimusnahkan', 'Qty Destroyed')}</label><input type="number" value={formMusnahkan.qty_musnahkan} max={showTindakLanjut.stok_batch} onChange={e => setFormMusnahkan({...formMusnahkan, qty_musnahkan: +e.target.value})} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" /></div>
-          </div>
-          <div><label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Metode', 'Method')}</label>
-            <select value={formMusnahkan.metode} onChange={e => setFormMusnahkan({...formMusnahkan, metode: e.target.value})} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">
-              <option>Dibakar</option><option>Dikubur</option><option>Dihancurkan</option><option>Dilarutkan & Dibuang</option><option>Lainnya</option>
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Saksi 1', 'Witness 1')}</label><input value={formMusnahkan.saksi_1} onChange={e => setFormMusnahkan({...formMusnahkan, saksi_1: e.target.value})} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" /></div>
-            <div><label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Saksi 2', 'Witness 2')}</label><input value={formMusnahkan.saksi_2} onChange={e => setFormMusnahkan({...formMusnahkan, saksi_2: e.target.value})} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" /></div>
-          </div>
-          <div><label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Keterangan', 'Notes')}</label><textarea value={formMusnahkan.keterangan} rows={2} onChange={e => setFormMusnahkan({...formMusnahkan, keterangan: e.target.value})} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" /></div>
-          <div className="flex gap-3"><button onClick={() => setTindakLanjutMode('pilih')} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">{t('Kembali', 'Back')}</button><button onClick={submitMusnahkan} className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-medium">🔥 {t('Musnahkan & Cetak BA', 'Destroy & Print Report')}</button></div>
-        </div>
-      )}
-      {tindakLanjutMode === 'retur' && (
-        <div className="space-y-3">
-          {batchSupplier ? (
-            <div className="p-3 bg-[var(--surface-2)] rounded-lg"><p className="text-xs text-[var(--ink-soft)] mb-0.5">{t('Supplier dari PO asal', 'Supplier from original PO')}</p><p className="font-semibold text-[var(--brand)]">{batchSupplier.nama_supplier}</p></div>
-          ) : (
-            <div><label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Pilih Supplier *', 'Choose Supplier *')}</label>
-              <select value={formRetur.supplier_id} onChange={e => setFormRetur({...formRetur, supplier_id: e.target.value})} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">
-                <option value="">{t('-- Pilih Supplier --', '-- Choose Supplier --')}</option>
-                {suppliers.map(s => <option key={s.id} value={s.id}>{s.nama_supplier}</option>)}
-              </select>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Tanggal Retur', 'Return Date')}</label><input type="date" value={formRetur.tanggal_retur} onChange={e => setFormRetur({...formRetur, tanggal_retur: e.target.value})} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" /></div>
-            <div><label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Qty Retur', 'Return Qty')}</label><input type="number" value={formRetur.qty_retur} max={showTindakLanjut.stok_batch} onChange={e => setFormRetur({...formRetur, qty_retur: +e.target.value})} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" /></div>
-          </div>
-          <div><label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Alasan', 'Reason')}</label><textarea value={formRetur.alasan} rows={2} onChange={e => setFormRetur({...formRetur, alasan: e.target.value})} className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" /></div>
-          <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
-            <span>ℹ️</span><span>{t('Retur diajukan dulu.', 'The return is filed first.')} <b>{t('Stok baru berkurang setelah kamu Konfirmasi', 'Stock is only reduced after you Confirm')}</b> {t('di menu Tindak Lanjut → Retur.', 'in Follow-up → Returns.')}</span>
-          </div>
-          <div className="flex gap-3"><button onClick={() => setTindakLanjutMode('pilih')} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">{t('Kembali', 'Back')}</button><button onClick={submitRetur} className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium">↩️ {t('Ajukan Retur', 'File Return')}</button></div>
-        </div>
-      )}
-    </div>
-  </div>
-)}
 {/* Modal Detail Produk */}
       {showProdukDetail && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -1117,10 +919,10 @@ const batalRetur = async (row: any) => {
                               </td>
                               <td className="px-3 py-2 text-center">
                                 {b.stok_batch > 0 ? (
-                                  <button onClick={() => openTindakLanjut(b)}
-                                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition ${isExpired || isDanger ? 'bg-red-600 text-white hover:bg-red-700' : 'border border-[var(--line)] text-[var(--brand)] hover:bg-[var(--surface-2)]'}`}>
-                                    Tindak Lanjut
-                                  </button>
+                                  <a href="/tindak-lanjut"
+                                    className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium transition ${isExpired || isDanger ? 'bg-red-600 text-white hover:bg-red-700' : 'border border-[var(--line)] text-[var(--brand)] hover:bg-[var(--surface-2)]'}`}>
+                                    {t('Tindak Lanjut', 'Follow up')}
+                                  </a>
                                 ) : (
                                   <span className="text-xs text-[var(--ink-faint)]">-</span>
                                 )}
@@ -1574,135 +1376,6 @@ const batalRetur = async (row: any) => {
           {langgananBanner}
 
           {/* COMPANIES (super admin) */}
-          {/* TINDAK LANJUT, Riwayat Barang Expired */}
-          {activePage === 'tindaklanjut' && (
-            <div>
-              <h1 className="text-3xl font-bold text-[var(--ink)] mb-1">{t('Tindak Lanjut Barang Expired', 'Expired Goods Follow-up')}</h1>
-              <p className="text-[var(--ink-soft)] text-sm mb-6">{t('Riwayat pemusnahan & retur atas batch yang expired / mendekati expired', 'History of destruction & returns for expired / near-expiry batches')}</p>
-
-              {/* Tabs */}
-              <div className="flex gap-1 mb-5">
-                {([
-                  { id: 'musnahkan', label: `${t('Pemusnahan', 'Destruction')} (${riwayatMusnah.length})` },
-                  { id: 'retur', label: `${t('Retur Supplier', 'Supplier Returns')} (${riwayatRetur.length})` },
-                ] as const).map(tab => (
-                  <button key={tab.id} onClick={() => setTindakLanjutTab(tab.id)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
-                      tindakLanjutTab === tab.id ? 'bg-[var(--brand)] text-[var(--on-brand)]' : 'text-[var(--ink-soft)] hover:bg-[var(--surface)]/60'
-                    }`}>
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-white/60 shadow-sm rounded-2xl overflow-x-auto">
-                {/* PEMUSNAHAN */}
-                {tindakLanjutTab === 'musnahkan' && (
-                  riwayatMusnah.length === 0 ? (
-                    <p className="text-center text-[var(--ink-faint)] py-12 text-sm">{t('Belum ada riwayat pemusnahan', 'No destruction history yet')}</p>
-                  ) : (
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-[var(--brand)] text-[var(--on-brand)]">
-                          <th className="text-left px-4 py-3 text-xs font-medium">No. BA</th>
-                          <th className="text-left px-4 py-3 text-xs font-medium">Tanggal</th>
-                          <th className="text-left px-4 py-3 text-xs font-medium">Produk</th>
-                          <th className="text-left px-4 py-3 text-xs font-medium">Batch / Exp</th>
-                          <th className="text-center px-4 py-3 text-xs font-medium">Qty</th>
-                          <th className="text-left px-4 py-3 text-xs font-medium">Metode</th>
-                          <th className="text-center px-4 py-3 text-xs font-medium">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {riwayatMusnah.map((r: any, i: number) => (
-                          <tr key={i} className={TR}>
-                            <td className="px-4 py-3 font-mono text-xs text-[var(--ink)]">{r.nomor_ba || '-'}</td>
-                            <td className="px-4 py-3 text-xs text-[var(--ink-soft)]">{r.tanggal_musnahkan ? new Date(r.tanggal_musnahkan).toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'}) : '-'}</td>
-                            <td className="px-4 py-3 text-[var(--ink)] font-medium">{r.products?.nama_obat || '-'}</td>
-                            <td className="px-4 py-3 text-xs text-[var(--ink-soft)]">
-                              {r.product_batches?.batch_number || '-'}
-                              {r.product_batches?.expired_date && <span className="text-[var(--ink-faint)]"> · exp {new Date(r.product_batches.expired_date).toLocaleDateString('id-ID', {month:'short',year:'numeric'})}</span>}
-                            </td>
-                            <td className="px-4 py-3 text-center text-[var(--ink)] font-medium">{r.qty_musnahkan} {r.products?.satuan || ''}</td>
-                            <td className="px-4 py-3 text-xs text-[var(--ink-soft)]">{r.metode || '-'}</td>
-                            <td className="px-4 py-3 text-center">
-                              <button onClick={() => reprintBA(r)}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--line)] text-[var(--brand)] text-xs font-medium hover:bg-[var(--surface-2)] transition">
-                                <Printer size={13} /> Cetak BA
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )
-                )}
-
-                {/* RETUR */}
-                {tindakLanjutTab === 'retur' && (
-                  riwayatRetur.length === 0 ? (
-                    <p className="text-center text-[var(--ink-faint)] py-12 text-sm">{t('Belum ada riwayat retur', 'No return history yet')}</p>
-                  ) : (
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-[var(--brand)] text-[var(--on-brand)]">
-                          <th className="text-left px-4 py-3 text-xs font-medium">No. Retur</th>
-                          <th className="text-left px-4 py-3 text-xs font-medium">Tanggal</th>
-                          <th className="text-left px-4 py-3 text-xs font-medium">Produk</th>
-                          <th className="text-left px-4 py-3 text-xs font-medium">Supplier</th>
-                          <th className="text-left px-4 py-3 text-xs font-medium">Batch / Exp</th>
-                          <th className="text-center px-4 py-3 text-xs font-medium">Qty</th>
-                          <th className="text-left px-4 py-3 text-xs font-medium">Alasan</th>
-                          <th className="text-center px-4 py-3 text-xs font-medium">Status</th>
-                          <th className="text-center px-4 py-3 text-xs font-medium">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {riwayatRetur.map((r: any, i: number) => (
-                          <tr key={i} className={TR}>
-                            <td className="px-4 py-3 font-mono text-xs text-[var(--ink)]">{r.nomor_retur || '-'}</td>
-                            <td className="px-4 py-3 text-xs text-[var(--ink-soft)]">{r.tanggal_retur ? new Date(r.tanggal_retur).toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'}) : '-'}</td>
-                            <td className="px-4 py-3 text-[var(--ink)] font-medium">{r.products?.nama_obat || '-'}</td>
-                            <td className="px-4 py-3 text-xs text-[var(--ink-soft)]">{r.suppliers?.nama_supplier || '-'}</td>
-                            <td className="px-4 py-3 text-xs text-[var(--ink-soft)]">
-                              {r.product_batches?.batch_number || '-'}
-                              {r.product_batches?.expired_date && <span className="text-[var(--ink-faint)]"> · exp {new Date(r.product_batches.expired_date).toLocaleDateString('id-ID', {month:'short',year:'numeric'})}</span>}
-                            </td>
-                            <td className="px-4 py-3 text-center text-[var(--ink)] font-medium">{r.qty_retur} {r.products?.satuan || ''}</td>
-                            <td className="px-4 py-3 text-xs text-[var(--ink-soft)] max-w-[220px] truncate">{r.alasan || '-'}</td>
-                            <td className="px-4 py-3 text-center">
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                r.status === 'selesai' ? 'bg-green-100 text-green-700'
-                                : r.status === 'dibatalkan' ? 'bg-gray-100 text-gray-500'
-                                : 'bg-yellow-100 text-yellow-700'
-                              }`}>{r.status || 'diajukan'}</span>
-                            </td>
-                            <td className="px-4 py-3">
-                              {(!r.status || r.status === 'diajukan') ? (
-                                <div className="flex items-center justify-center gap-2">
-                                  <button onClick={() => konfirmasiRetur(r)}
-                                    className="px-2.5 py-1 rounded-lg bg-[var(--brand)] text-[var(--on-brand)] text-xs font-medium hover:bg-[var(--brand-hover)] transition whitespace-nowrap">
-                                    Konfirmasi
-                                  </button>
-                                  <button onClick={() => batalRetur(r)}
-                                    className="px-2.5 py-1 rounded-lg border border-[var(--line)] text-[var(--ink-soft)] text-xs font-medium hover:bg-[var(--surface-2)] transition">
-                                    Batal
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="text-center text-xs text-[var(--ink-faint)]">-</div>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )
-                )}
-              </div>
-            </div>
-          )}
-
           {/* PRODUK */}
           {activePage === 'produk' && (
             <div>
@@ -1717,59 +1390,15 @@ const batalRetur = async (row: any) => {
                 </button>
               </div>
 
-              {/* Alert Expired */}
               {expiredAlerts.length > 0 && (
-                <div className="mb-6 space-y-3">
-                  {(() => {
-                    const today0 = new Date(); today0.setHours(0, 0, 0, 0)
-                    const in30 = new Date(today0); in30.setDate(today0.getDate() + 30)
-                    const merah = expiredAlerts.filter(b => new Date(b.expired_date) <= in30)
-                    const kuning = expiredAlerts.filter(b => new Date(b.expired_date) > in30)
-                    const groups = [
-                      { items: merah, tone: 'red', Icon: AlertTriangle,
-                        wrap: 'bg-red-50 border-red-200', title: t('Segera Kadaluarsa', 'Expiring Soon'), sub: `≤30 ${t('hari', 'days')}`,
-                        titleCls: 'text-red-700', badgeCls: 'bg-red-100 text-red-700', card: 'border-red-100',
-                        dayCls: 'text-red-600', btn: 'bg-red-600 hover:bg-red-700' },
-                      { items: kuning, tone: 'amber', Icon: CalendarClock,
-                        wrap: 'bg-amber-50 border-amber-200', title: t('Perlu Perhatian', 'Needs Attention'), sub: `31–60 ${t('hari', 'days')}`,
-                        titleCls: 'text-amber-800', badgeCls: 'bg-amber-100 text-amber-800', card: 'border-amber-100',
-                        dayCls: 'text-amber-700', btn: 'bg-amber-600 hover:bg-amber-700' },
-                    ]
-                    return groups.filter(g => g.items.length > 0).map((g, gi) => (
-                      <div key={gi} className={`border rounded-2xl p-3 sm:p-4 ${g.wrap}`}>
-                        <div className="flex items-center gap-2 mb-3">
-                          <g.Icon size={17} className={g.titleCls} />
-                          <span className={`font-semibold text-sm ${g.titleCls}`}>{g.title}</span>
-                          <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${g.badgeCls}`}>{g.items.length} {t('batch', 'batches')} · {g.sub}</span>
-                        </div>
-                        <div className="space-y-2">
-                          {g.items.map((b: any, i: number) => {
-                            const days = Math.ceil((new Date(b.expired_date).getTime() - today0.getTime()) / 86400000)
-                            const exp = new Date(b.expired_date).toLocaleDateString(lang === 'en' ? 'en-US' : 'id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-                            return (
-                              <div key={i} className={`flex items-center gap-3 bg-[var(--surface)] rounded-xl border px-3 py-2.5 ${g.card}`}>
-                                <div className="shrink-0 w-12 text-center">
-                                  <div className={`text-base font-bold leading-none ${g.dayCls}`}>{days < 0 ? '!' : days}</div>
-                                  <div className="text-[9px] text-[var(--ink-faint)] mt-0.5 leading-none">{days < 0 ? t('lewat', 'past') : t('hari lagi', 'days left')}</div>
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="font-medium text-[var(--ink)] text-sm leading-tight truncate">{b.products?.nama_obat || '-'}</p>
-                                  <p className="text-[11px] text-[var(--ink-soft)] leading-tight mt-0.5">
-                                    <span className="font-mono">{b.batch_number || '-'}</span> · {t('Exp', 'Exp')} {exp} · {t('Stok', 'Stock')} {b.stok_batch}
-                                  </p>
-                                </div>
-                                <button onClick={() => { setShowProdukDetail(b.products); openTindakLanjut(b) }}
-                                  className={`shrink-0 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition ${g.btn}`}>
-                                  {t('Tindak Lanjut', 'Follow up')}
-                                </button>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ))
-                  })()}
-                </div>
+                <a href="/tindak-lanjut"
+                  className="mb-6 flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 transition">
+                  <AlertTriangle size={18} className="shrink-0" />
+                  <span className="text-sm">
+                    <b>{expiredAlerts.length} {t('batch', 'batches')}</b> {t('mendekati atau melewati kadaluarsa.', 'are nearing or past expiry.')}
+                    {' '}<span className="underline">{t('Buka Tindak Lanjut', 'Open Follow-up')}</span>
+                  </span>
+                </a>
               )}
 
               {showForm && (
