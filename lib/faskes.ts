@@ -59,29 +59,26 @@ export function istilah(sektor: Sektor, kunci: keyof Istilah, en: boolean): stri
   return ISTILAH[sektor][kunci][en ? 1 : 0]
 }
 
+const FARMASI = [
+  'produk', 'transaksi', 'layanan', 'pembelian',
+  'faktur', 'supplier', 'tindaklanjut',
+] as const
+
 /**
  * Modul yang MASUK AKAL untuk tiap jenis fasilitas.
  *
- * Tiap jenis memuat semua yang di bawahnya: klinik tetap punya apotek di
- * dalamnya karena klinik menyerahkan obat, dan rumah sakit punya keduanya.
- * Itu juga alasan modul obat, batch, FEFO, dan SIPNAP dipakai ulang apa
- * adanya, bukan ditulis dua kali.
+ * Tiap jenis memuat semua yang di bawahnya: klinik tetap punya seluruh modul
+ * apotek karena klinik menyerahkan obat, dan rumah sakit punya keduanya. Itu
+ * juga alasan modul obat, batch, FEFO, dan SIPNAP dipakai ULANG apa adanya,
+ * bukan ditulis dua kali. Yang ditulis dua kali akan menyimpang, dan yang
+ * menanggung selisihnya laporan SIPNAP.
  *
- * Daftar ini SENGAJA belum memuat modul klinik. Modulnya belum dibangun, dan
- * menuliskannya di sini lebih dulu berarti menu yang mengantar ke halaman
- * kosong.
+ * Rumah sakit untuk sekarang sama persis dengan klinik. Rawat inap, kamar,
+ * laboratorium, dan radiologi adalah produk tersendiri; menuliskan menunya di
+ * sini lebih dulu cuma menghasilkan menu yang mengantar ke halaman kosong.
  */
 export const MODUL_SEKTOR: Record<Sektor, string[]> = {
-  apotek: [
-    'dashboard', 'produk', 'transaksi', 'layanan', 'pembelian',
-    'faktur', 'supplier', 'tindaklanjut', 'laporan', 'pengaturan',
-  ],
-  klinik: [
-    'dashboard', 'produk', 'transaksi', 'layanan', 'pembelian',
-    'faktur', 'supplier', 'tindaklanjut', 'laporan', 'pengaturan',
-  ],
-  rumah_sakit: [
-    'dashboard', 'produk', 'transaksi', 'layanan', 'pembelian',
-    'faktur', 'supplier', 'tindaklanjut', 'laporan', 'pengaturan',
-  ],
+  apotek: ['dashboard', ...FARMASI, 'laporan', 'pengaturan'],
+  klinik: ['dashboard', 'kunjungan', 'pasien', ...FARMASI, 'laporan', 'pengaturan'],
+  rumah_sakit: ['dashboard', 'kunjungan', 'pasien', ...FARMASI, 'laporan', 'pengaturan'],
 }

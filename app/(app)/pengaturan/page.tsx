@@ -211,6 +211,8 @@ export default function HalamanPengaturan() {
     pemilik: t('Pemilik', 'Owner'), apoteker: t('Apoteker', 'Pharmacist'),
     asisten_apoteker: t('Asisten Apoteker', 'Pharmacist Assistant'),
     kasir: t('Kasir', 'Cashier'), admin: 'Admin',
+    dokter: t('Dokter', 'Doctor'), perawat: t('Perawat', 'Nurse'),
+    pendaftaran: t('Pendaftaran', 'Front desk'),
   }
   const settingsMenu = [
     { id: 'profil',    label: t('Profil Apotek', 'Pharmacy Profile'),   desc: t('Nama, alamat, logo', 'Name, address, logo'),                Icon: Building2 },
@@ -576,10 +578,17 @@ export default function HalamanPengaturan() {
                               <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">Role</label>
                               <select value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value, modules: ROLE_PAGES[e.target.value] || []})} className={inputCls}>
                                 <option value="pemilik">{t('Pemilik', 'Owner')}</option>
+                                <option value="admin">Admin</option>
                                 <option value="apoteker">{t('Apoteker', 'Pharmacist')}</option>
                                 <option value="asisten_apoteker">{t('Asisten Apoteker', 'Pharmacist Assistant')}</option>
                                 <option value="kasir">{t('Kasir', 'Cashier')}</option>
-                                <option value="admin">Admin</option>
+                                {app.sektor !== 'apotek' && (
+                                  <>
+                                    <option value="dokter">{t('Dokter', 'Doctor')}</option>
+                                    <option value="perawat">{t('Perawat', 'Nurse')}</option>
+                                    <option value="pendaftaran">{t('Pendaftaran', 'Front desk')}</option>
+                                  </>
+                                )}
                               </select>
                             </div>
                           </div>
@@ -615,10 +624,17 @@ export default function HalamanPengaturan() {
                               <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">Role</label>
                               <select value={editUser.role} onChange={e => setEditUser({...editUser, role: e.target.value})} className={inputCls}>
                                 <option value="pemilik">{t('Pemilik', 'Owner')}</option>
+                                <option value="admin">Admin</option>
                                 <option value="apoteker">{t('Apoteker', 'Pharmacist')}</option>
                                 <option value="asisten_apoteker">{t('Asisten Apoteker', 'Pharmacist Assistant')}</option>
                                 <option value="kasir">{t('Kasir', 'Cashier')}</option>
-                                <option value="admin">Admin</option>
+                                {app.sektor !== 'apotek' && (
+                                  <>
+                                    <option value="dokter">{t('Dokter', 'Doctor')}</option>
+                                    <option value="perawat">{t('Perawat', 'Nurse')}</option>
+                                    <option value="pendaftaran">{t('Pendaftaran', 'Front desk')}</option>
+                                  </>
+                                )}
                               </select>
                             </div>
                             <div>

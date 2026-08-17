@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Pill, ShoppingCart, PackageOpen, BarChart2, Settings, Truck,
-  ClipboardList, Receipt, HeartPulse, Building2,
+  ClipboardList, Receipt, HeartPulse, Building2, Stethoscope, UsersRound,
 } from 'lucide-react'
 
 /**
@@ -35,7 +35,11 @@ export type MenuItem = {
 }
 
 export const menuItems: MenuItem[] = [
-  { id: 'dashboard',    href: '/beranda',       label: 'Dashboard',         en: 'Dashboard',        icon: LayoutDashboard },
+  { id: 'dashboard',    href: '/beranda',       label: 'Beranda',           en: 'Home',             icon: LayoutDashboard },
+  // Dua menu klinik. Untuk apotek keduanya disaring habis oleh MODUL_SEKTOR,
+  // jadi urutannya di sini tidak membebani siapa pun yang tidak memakainya.
+  { id: 'kunjungan',    href: '/kunjungan',     label: 'Kunjungan',         en: 'Visits',           icon: Stethoscope },
+  { id: 'pasien',       href: '/pasien',        label: 'Pasien',            en: 'Patients',         icon: UsersRound },
   { id: 'produk',       href: '/produk',        label: 'Produk & Stok',     en: 'Products & Stock', icon: Pill },
   { id: 'transaksi',    href: '/kasir',         label: 'Transaksi',         en: 'Sales',            icon: ShoppingCart },
   { id: 'layanan',      href: '/layanan',       label: 'Layanan Jasa',      en: 'Services',         icon: HeartPulse },
@@ -54,11 +58,18 @@ export const menuSuper: MenuItem[] = [
 
 /** Halaman yang boleh dibuka tiap peran, kalau pemilik tidak mengatur sendiri. */
 export const ROLE_PAGES: Record<string, string[]> = {
-  pemilik:          ['dashboard','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
-  admin:            ['dashboard','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
-  apoteker:         ['dashboard','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan'],
+  pemilik:          ['dashboard','kunjungan','pasien','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
+  admin:            ['dashboard','kunjungan','pasien','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
+  apoteker:         ['dashboard','kunjungan','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan'],
   asisten_apoteker: ['dashboard','produk','transaksi','layanan','tindaklanjut','laporan'],
   kasir:            ['dashboard','transaksi','layanan'],
+
+  // Peran klinik. Pembagiannya mengikuti siapa memegang apa, bukan siapa lebih
+  // senior: pendaftaran memegang identitas dan antrean tapi TIDAK boleh
+  // membuka rekam medis, dokter memegang pemeriksaan tapi tidak perlu kasir.
+  dokter:           ['dashboard','kunjungan','pasien','laporan'],
+  perawat:          ['dashboard','kunjungan','pasien'],
+  pendaftaran:      ['dashboard','kunjungan','pasien','transaksi'],
 }
 
 export const ROLE_LABELS: Record<string, string> = {
@@ -67,6 +78,9 @@ export const ROLE_LABELS: Record<string, string> = {
   asisten_apoteker: 'Asisten Apoteker',
   kasir: 'Kasir',
   admin: 'Admin',
+  dokter: 'Dokter',
+  perawat: 'Perawat',
+  pendaftaran: 'Pendaftaran',
   superadmin: 'Super Admin',
 }
 
