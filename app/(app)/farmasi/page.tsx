@@ -180,7 +180,15 @@ export default function HalamanFarmasi() {
 
                 <div className="space-y-2">
                   {isi.map(r => (
-                    <div key={r.id} className={K}>
+                    <div key={r.id}
+                      /* Tepi merah HANYA pada yang sudah siap tapi belum
+                         dibayar. Di kelompok "Resep baru" hampir semua baris
+                         belum dibayar dan itu wajar, jadi mewarnainya merah
+                         cuma membuat merah berhenti berarti apa-apa. Yang
+                         genting adalah obat yang sudah di tangan farmasi dan
+                         tinggal diserahkan. */
+                      className={`${K} ${r.status === 'siap' && !r.sudah_bayar
+                        ? 'border-red-300 bg-red-50/40' : ''}`}>
                       <div className="flex items-start gap-3 flex-wrap">
                         <span className="num text-sm font-bold text-[var(--brand)] shrink-0">
                           {r.nomor_antre || '-'}
@@ -202,8 +210,8 @@ export default function HalamanFarmasi() {
                             <HandCoins size={11} /> {t('SUDAH BAYAR', 'PAID')}
                           </span>
                         ) : (
-                          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--surface-2)] text-[var(--ink-faint)]">
-                            {t('BELUM BAYAR', 'UNPAID')}
+                          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">
+                            <AlertTriangle size={11} /> {t('BELUM BAYAR', 'UNPAID')}
                           </span>
                         )}
                       </div>
@@ -285,9 +293,9 @@ export default function HalamanFarmasi() {
                               <Check size={14} /> {t('Serahkan obat', 'Hand over')}
                             </button>
                             {!r.sudah_bayar && (
-                              <span className="text-xs text-[var(--ink-faint)]">
-                                {t('Menunggu kasir. Bisa diserahkan lebih dulu, tapi alasannya dicatat.',
-                                   'Waiting for the cashier. It can be handed over first, but the reason is recorded.')}
+                              <span className="text-xs font-medium text-red-700">
+                                {t('Belum dibayar. Bisa diserahkan lebih dulu, tapi alasannya dicatat.',
+                                   'Not paid yet. It can be handed over first, but the reason is recorded.')}
                               </span>
                             )}
                             <button onClick={() => pindah(r, 'disiapkan')} disabled={sibuk === r.id}
