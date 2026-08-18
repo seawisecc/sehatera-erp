@@ -70,6 +70,8 @@ memasang lubang keamanan yang sudah ditutup.
 | `0032_glosarium_kunci_ternormalisasi` | Kunci glosarium dibandingkan setelah dinormalkan |
 | `0033_glosarium_tindakan` | 81 kata kerja tindakan: jahit, cabut, pasang, angkat |
 | `0034_riwayat_pasien` | `riwayat_pasien()`: pintu ke rekam medis kunjungan lama |
+| `0035_jabat_tangan_farmasi` | Keadaan `disiapkan` & `siap`, `serahkan_resep()`, kasir berhenti menyatakan penyerahan |
+| `0036_resep_ikut_keadaan_baru` | `resep_kunjungan()` mengenal keadaan baru, `isi_resep()` untuk farmasi |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -367,6 +369,42 @@ batasnya sudah menunggu di jalur mana pun yang ditulis nanti.
 Penyerahan obat dari resep TIDAK punya jalur stok sendiri: ia mengisi keranjang
 kasir lalu keluar lewat `apply_transaction`. Jalur kedua berarti dua tempat yang
 harus benar, dan yang kedua akan ketinggalan pada perbaikan berikutnya.
+
+### Uang dan penyerahan adalah dua kejadian terpisah
+
+**Kasir mencatat UANG. Farmasi menyatakan PENYERAHAN.** Sampai migrasi 0035
+keduanya satu klik: kasir memanggil `tandai_resep_dilayani` saat pembayaran,
+jadi database mencatat obat sudah diserahkan pada detik uang diterima. Pasien
+yang membayar lalu pulang tanpa mengambil obatnya tercatat sudah menerima, dan
+untuk narkotika serta psikotropika itu catatan bertanda tangan apoteker yang
+isinya salah.
+
+Rel keadaan resep sekarang lima, dan tiap perpindahan ditulis oleh yang
+benar-benar mengerjakannya:
+
+| Keadaan | Siapa | Artinya |
+| --- | --- | --- |
+| `draf` | dokter | belum selesai berpikir, tidak masuk antrean farmasi |
+| `final` | dokter | muncul di layar Farmasi |
+| `disiapkan` | farmasi | sedang dikerjakan, kasir sudah boleh menagih |
+| `siap` | farmasi | obat siap, menunggu pembayaran |
+| `dilayani` | farmasi | benar-benar berpindah tangan |
+
+`serahkan_resep()` MENUNTUT pembayaran sudah tercatat, tapi tidak memalang
+mati: `p_tanpa_bayar` membukanya dengan syarat alasannya ditulis, dan alasan
+itu masuk jejak audit beserta kolom `serah_tanpa_bayar`. Palang yang tidak
+bisa dilewati akan diakali dengan cara yang tidak meninggalkan jejak sama
+sekali, yaitu menekan tombol bayar padahal belum dibayar.
+
+`dilayani` sengaja tidak diganti nama jadi `diserahkan`: baris lama memakai
+nilai itu. **Baris `dilayani` sebelum migrasi 0035 `dilayani_pada`-nya adalah
+waktu BAYAR, bukan waktu serah.** Tidak bisa diperbaiki surut.
+
+**Menambah nilai status berarti memeriksa tiap tempat yang menyebut nilai
+lama.** Migrasi 0036 lahir persis karena itu terlewat: `resep_kunjungan()`
+menyaring daftar harfiah tiga status, jadi resep yang sedang disiapkan farmasi
+hilang dari layar dokter. Daftar harfiah tidak pernah mengeluh saat
+ketinggalan.
 
 ## Di mana pekerjaannya berhenti
 

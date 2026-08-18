@@ -40,6 +40,7 @@ export const menuItems: MenuItem[] = [
   // jadi urutannya di sini tidak membebani siapa pun yang tidak memakainya.
   { id: 'kunjungan',    href: '/kunjungan',     label: 'Kunjungan',         en: 'Visits',           icon: Stethoscope },
   { id: 'pasien',       href: '/pasien',        label: 'Pasien',            en: 'Patients',         icon: UsersRound },
+  { id: 'farmasi',      href: '/farmasi',       label: 'Farmasi',           en: 'Pharmacy',         icon: Pill },
   { id: 'produk',       href: '/produk',        label: 'Produk & Stok',     en: 'Products & Stock', icon: Pill },
   { id: 'transaksi',    href: '/kasir',         label: 'Transaksi',         en: 'Sales',            icon: ShoppingCart },
   { id: 'layanan',      href: '/layanan',       label: 'Layanan Jasa',      en: 'Services',         icon: HeartPulse },
@@ -58,11 +59,13 @@ export const menuSuper: MenuItem[] = [
 
 /** Halaman yang boleh dibuka tiap peran, kalau pemilik tidak mengatur sendiri. */
 export const ROLE_PAGES: Record<string, string[]> = {
-  pemilik:          ['dashboard','kunjungan','pasien','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
-  admin:            ['dashboard','kunjungan','pasien','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
-  apoteker:         ['dashboard','kunjungan','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan'],
-  asisten_apoteker: ['dashboard','produk','transaksi','layanan','tindaklanjut','laporan'],
-  kasir:            ['dashboard','transaksi','layanan'],
+  pemilik:          ['dashboard','kunjungan','pasien','farmasi','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
+  admin:            ['dashboard','kunjungan','pasien','farmasi','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
+  apoteker:         ['dashboard','kunjungan','farmasi','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan'],
+  asisten_apoteker: ['dashboard','farmasi','produk','transaksi','layanan','tindaklanjut','laporan'],
+  // Kasir melihat antrean farmasi supaya tahu obat sudah siap sebelum
+  // memanggil pasien ke loket. Ia tidak menyerahkan obatnya.
+  kasir:            ['dashboard','farmasi','transaksi','layanan'],
 
   // Peran klinik. Pembagiannya mengikuti siapa memegang apa, bukan siapa lebih
   // senior: pendaftaran memegang identitas dan antrean tapi TIDAK boleh

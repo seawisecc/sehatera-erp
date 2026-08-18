@@ -79,6 +79,9 @@ const FARMASI = [
  */
 export const MODUL_SEKTOR: Record<Sektor, string[]> = {
   apotek: ['dashboard', ...FARMASI, 'laporan', 'pengaturan'],
-  klinik: ['dashboard', 'kunjungan', 'pasien', ...FARMASI, 'laporan', 'pengaturan'],
-  rumah_sakit: ['dashboard', 'kunjungan', 'pasien', ...FARMASI, 'laporan', 'pengaturan'],
+  // `farmasi` (antrean penyiapan resep) hanya ada di klinik dan RS. Apotek
+  // tidak punya dokter yang menuliskan resep ke dalam sistem ini, jadi
+  // antreannya akan selamanya kosong dan cuma jadi menu yang membingungkan.
+  klinik: ['dashboard', 'kunjungan', 'pasien', 'farmasi', ...FARMASI, 'laporan', 'pengaturan'],
+  rumah_sakit: ['dashboard', 'kunjungan', 'pasien', 'farmasi', ...FARMASI, 'laporan', 'pengaturan'],
 }

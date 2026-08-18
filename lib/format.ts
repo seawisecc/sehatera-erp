@@ -44,6 +44,14 @@ export function tanggalJam(iso: string | null | undefined): string {
     + ', ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
 }
 
+/** ISO atau Date -> "14:30". Untuk penanda "terakhir disegarkan". */
+export function jam(nilai: string | Date | null | undefined): string {
+  if (!nilai) return ''
+  const d = nilai instanceof Date ? nilai : new Date(nilai)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+}
+
 /** ISO -> "2026-08-17", bentuk yang dipakai <input type="date">. */
 export function tanggalInput(iso: string | null | undefined): string {
   if (!iso) return ''

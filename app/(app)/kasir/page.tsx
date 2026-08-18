@@ -208,22 +208,26 @@ export default function HalamanKasir() {
     setSibuk(false)
     if (error) { alert(pesanError(error)); return }
 
-    // Resep ditandai dilayani SESUDAH penjualannya berhasil, tidak sebelumnya.
-    // Kalau urutannya dibalik lalu penjualannya gagal, resep itu hilang dari
-    // antrean farmasi padahal obatnya belum diserahkan, dan tidak ada yang tahu
-    // sampai pasien kembali bertanya. Fungsinya idempoten, jadi aman diulang.
+    // Pembayaran dicatat SESUDAH penjualannya berhasil, tidak sebelumnya.
+    // Fungsinya idempoten, jadi aman diulang.
+    //
+    // Kasir mencatat UANG, bukan penyerahan. Sampai migrasi 0035 baris ini
+    // memanggil `tandai_resep_dilayani`, yang berarti database mencatat obat
+    // sudah diserahkan pada detik uang diterima, padahal obatnya masih di
+    // belakang. Yang menyatakan penyerahan sekarang farmasi, di layar
+    // Farmasi, dan hanya sesudah baris ini berjalan.
     if (visitId) {
       await supabase.rpc('tandai_kunjungan_dibayar', {
         p_visit: visitId, p_transaksi: (data as any)?.id ?? null,
       })
     }
     if (resepId) {
-      const { error: e2 } = await supabase.rpc('tandai_resep_dilayani', {
+      const { error: e2 } = await supabase.rpc('tandai_resep_dibayar', {
         p_resep: resepId, p_transaksi: (data as any)?.id ?? null,
       })
       if (e2) {
-        alert(t('Penjualan tersimpan, tapi resepnya gagal ditandai sudah diserahkan. Ia masih akan muncul di antrean farmasi. Beri tahu saya kalau ini terjadi.',
-                'The sale was saved, but the prescription could not be marked as dispensed. It will still show in the pharmacy queue.')
+        alert(t('Penjualan tersimpan, tapi pembayaran resepnya gagal dicatat. Layar Farmasi akan tetap menampilkannya sebagai BELUM BAYAR, jadi obatnya bisa tertahan. Beri tahu saya kalau ini terjadi.',
+                'The sale was saved, but the prescription payment could not be recorded. The Pharmacy screen will still show it as UNPAID, so the medicine may be held back.')
               + '\n\n' + pesanError(e2))
       }
     }
