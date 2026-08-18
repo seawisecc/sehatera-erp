@@ -72,6 +72,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0034_riwayat_pasien` | `riwayat_pasien()`: pintu ke rekam medis kunjungan lama |
 | `0035_jabat_tangan_farmasi` | Keadaan `disiapkan` & `siap`, `serahkan_resep()`, kasir berhenti menyatakan penyerahan |
 | `0036_resep_ikut_keadaan_baru` | `resep_kunjungan()` mengenal keadaan baru, `isi_resep()` untuk farmasi |
+| `0037_kembalikan_nilai_biaya` | Mengembalikan `nilai_biaya` yang terhapus saat 0035 membuat ulang view |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -461,6 +462,22 @@ jalur lain: panggil RPC-nya dengan anon key, lalu baca pesannya. `permission
 denied for function X` berarti fungsinya ADA; `Could not find the function`
 berarti tidak ada. Jangan pernah menjalankan ulang migrasi karena dasbor
 terlihat menggantung.
+
+**Jangan pernah menyalin definisi VIEW dari berkas migrasi lama.** Migrasi
+0035 membuat ulang `v_antrean_hari_ini` dengan DROP lalu CREATE memakai
+definisi dari migrasi 0023, padahal 0024 sudah menambahkan `nilai_biaya`.
+Kolom itu hilang, dan karena kasir memilihnya eksplisit, PostgREST menolak
+seluruh kueri: **daftar kunjungan di layar Kasir kosong SELURUHNYA**, bukan
+sebagian. Tidak ada yang gagal saat migrasi dijalankan; galatnya muncul di
+peramban orang lain sebagai daftar kosong yang tampak seperti "memang belum
+ada pasien". Ditemukan pemilik, bukan oleh saya.
+
+`create or replace view` menolak menggeser kolom, dan **itu justru penjaga**.
+Begitu DROP dipakai untuk melewatinya, satu-satunya alat yang akan mengeluh
+ikut hilang. Ambil definisi yang SEDANG BERLAKU dari database
+(`pg_get_viewdef`), bukan dari berkas migrasi mana pun: berkas cuma tahu
+keadaan saat ia ditulis. `supabase/uji/0037_kolom_view_antrean.sql` sekarang
+memegang daftar kolom kedua view itu sebagai kontrak.
 
 **`saveSettings` di halaman Pengaturan memakai daftar kolom yang eksplisit.**
 Kolom `settings` baru yang lupa didaftarkan di sana akan tersimpan diam-diam
