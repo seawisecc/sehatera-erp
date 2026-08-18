@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Check, PackageX, Plus, Search, Trash2, X } from 'lucide-react'
+import { AlertTriangle, Check, HandHelping, PackageX, Plus, Search, Trash2, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -39,6 +39,10 @@ type Item = {
   aturan_pakai: string
   stok?: number | null
   kategori?: string | null
+  /** Dokter sengaja tidak memilih produknya dan menyerahkannya ke farmasi. */
+  permintaan_terbuka?: boolean
+  permintaan_asli?: string | null
+  diisi_oleh?: string | null
 }
 
 type Produk = { id: string; nama_obat: string; satuan: string | null; stok_total: number; kategori: string | null }
@@ -76,6 +80,8 @@ export default function Resep({
     setCatatan(d.resep?.catatan || '')
     setItems((d.items || []).map((x: any) => ({
       product_id: x.product_id, nama_obat: x.nama_obat,
+      permintaan_terbuka: x.permintaan_terbuka, permintaan_asli: x.permintaan_asli,
+      diisi_oleh: x.diisi_oleh,
       jumlah: x.jumlah != null ? String(Number(x.jumlah)) : '',
       satuan: x.satuan || '', dosis: x.dosis || '', frekuensi: x.frekuensi || '',
       rute: x.rute || 'oral', aturan_pakai: x.aturan_pakai || '',
@@ -122,6 +128,26 @@ export default function Resep({
     setCari(''); setHasil([])
   }
 
+  /**
+   * Baris yang produknya sengaja tidak dipilih dokter.
+   *
+   * Bedanya dengan "luar katalog": luar katalog artinya obatnya memang tidak
+   * ada di sini dan pasien menebusnya di tempat lain. Permintaan terbuka
+   * artinya obatnya ADA di sini, dokter cuma menyerahkan pilihannya ke
+   * apoteker. Yang tercatat sebagai peresep tetap dokter, karena baris inilah
+   * resepnya.
+   */
+  const tambahPermintaanTerbuka = () => {
+    const n = cari.trim()
+    if (!n) return
+    setItems([...items, {
+      product_id: null, nama_obat: n, jumlah: '', satuan: '', dosis: '',
+      frekuensi: '', rute: 'oral', aturan_pakai: '', stok: null,
+      permintaan_terbuka: true,
+    }])
+    setCari(''); setHasil([])
+  }
+
   const ubah = (idx: number, k: keyof Item, v: string) =>
     setItems(items.map((x, n) => n === idx ? { ...x, [k]: v } : x))
 
@@ -141,6 +167,7 @@ export default function Resep({
         product_id: i.product_id, nama_obat: i.nama_obat, jumlah: i.jumlah,
         satuan: i.satuan, dosis: i.dosis, frekuensi: i.frekuensi,
         rute: i.rute, aturan_pakai: i.aturan_pakai,
+        permintaan_terbuka: i.permintaan_terbuka ?? false,
       })),
       p_catatan: catatan,
       p_final: final,
@@ -248,6 +275,11 @@ export default function Resep({
                         <Plus size={13} />
                         {t(`Tulis "${cari.trim()}" sebagai obat luar katalog`, `Write "${cari.trim()}" as an off-catalogue drug`)}
                       </button>
+                      <button onClick={tambahPermintaanTerbuka}
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--surface-2)] text-[var(--ink-soft)] flex items-center gap-2 border-t border-[var(--line)]">
+                        <HandHelping size={13} />
+                        {t(`Minta "${cari.trim()}", biar farmasi yang pilih`, `Request "${cari.trim()}", let the pharmacy choose`)}
+                      </button>
                     </div>
                   )}
                 </section>
@@ -266,8 +298,24 @@ export default function Resep({
                       <div key={idx} className={`rounded-xl border p-3 bg-[var(--surface)] ${kurang ? 'border-amber-300' : 'border-[var(--line)]'}`}>
                         <div className="flex items-center gap-2 mb-2">
                           <span className="num text-xs font-bold text-[var(--ink-faint)] shrink-0">{idx + 1}</span>
-                          <span className="text-sm font-semibold text-[var(--ink)] truncate flex-1">{it.nama_obat}</span>
-                          {luar ? (
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-semibold text-[var(--ink)] truncate">{it.nama_obat}</span>
+                            {/* Permintaan asli tetap terbaca berdampingan dengan
+                                isian farmasi. Kalau ditimpa, rekamnya jadi
+                                seolah dokter yang memilih produk itu. */}
+                            {it.permintaan_asli && (
+                              <span className="block text-[11px] text-[var(--ink-faint)] truncate">
+                                {t('diminta', 'requested')}: {it.permintaan_asli}
+                                {it.diisi_oleh && ` · ${t('diisi', 'filled by')} ${it.diisi_oleh}`}
+                              </span>
+                            )}
+                          </span>
+                          {it.permintaan_terbuka ? (
+                            <span title={t('Farmasi yang memilih produknya. Permintaanmu tetap tercatat apa adanya.', 'The pharmacy picks the product. Your request stays recorded as written.')}
+                              className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[var(--accent-bg)] text-[var(--accent)]">
+                              <HandHelping size={11} /> {it.diisi_oleh ? t('diisi farmasi', 'filled by pharmacy') : t('farmasi yang pilih', 'pharmacy chooses')}
+                            </span>
+                          ) : luar ? (
                             <span title={t('Tidak ada di katalog, jadi tidak bisa dilayani dari stok sini.', 'Not in the catalogue, so it cannot be dispensed from this stock.')}
                               className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[var(--surface-2)] text-[var(--ink-faint)]">
                               <PackageX size={11} /> {t('luar katalog', 'off catalogue')}

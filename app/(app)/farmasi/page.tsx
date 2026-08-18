@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, Check, ChevronDown, ChevronRight, HandCoins, Package, Pill, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Check, ChevronDown, ChevronRight, HandCoins, HandHelping, Package, Pill, RefreshCw, Search, StickyNote } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -42,6 +42,8 @@ type Resep = {
   nomor_rm: string | null
   alergi: string | null
   jumlah_item: number
+  jumlah_belum_diisi: number
+  catatan: string | null
   sudah_bayar: boolean
   dokter_email: string | null
   difinalkan_pada: string | null
@@ -62,6 +64,9 @@ export default function HalamanFarmasi() {
   const [buka, setBuka] = useState<string | null>(null)
   const [items, setItems] = useState<Record<string, any[]>>({})
   const [segarPada, setSegarPada] = useState<Date | null>(null)
+  const [isiUntuk, setIsiUntuk] = useState<string | null>(null)
+  const [cari, setCari] = useState('')
+  const [hasil, setHasil] = useState<any[]>([])
 
   const muat = useCallback(async () => {
     const { data, error } = await app.scope(
@@ -80,13 +85,47 @@ export default function HalamanFarmasi() {
     return () => clearInterval(jam)
   }, [muat])
 
+  const muatIsi = async (resepId: string) => {
+    const { data, error } = await supabase.rpc('isi_resep', { p_resep: resepId })
+    if (error) { alert(pesanError(error)); return }
+    setItems(x => ({ ...x, [resepId]: (data as any)?.items ?? [] }))
+  }
+
   const lihatIsi = async (r: Resep) => {
     if (buka === r.id) { setBuka(null); return }
     setBuka(r.id)
     if (items[r.id]) return
-    const { data, error } = await supabase.rpc('isi_resep', { p_resep: r.id })
+    muatIsi(r.id)
+  }
+
+  /** Cari obat di katalog untuk mengisi permintaan terbuka. */
+  useEffect(() => {
+    const q = cari.trim()
+    if (!isiUntuk || q.length < 2) { setHasil([]); return }
+    let hidup = true
+    const jam = setTimeout(async () => {
+      const { data } = await app.scope(
+        supabase.from('products')
+          .select('id,nama_obat,satuan,stok_total,kategori')
+          .ilike('nama_obat', `%${q}%`).limit(8),
+      )
+      if (hidup) setHasil((data as any[]) || [])
+    }, 250)
+    return () => { hidup = false; clearTimeout(jam) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cari, isiUntuk])
+
+  const isiPermintaan = async (resepId: string, itemId: string, p: any) => {
+    setSibuk(resepId)
+    const { error } = await supabase.rpc('isi_permintaan_farmasi', {
+      p_item: itemId, p_product: p.id, p_nama: p.nama_obat,
+      p_jumlah: null, p_satuan: p.satuan,
+    })
+    setSibuk(null)
     if (error) { alert(pesanError(error)); return }
-    setItems(x => ({ ...x, [r.id]: (data as any)?.items ?? [] }))
+    setIsiUntuk(null); setCari(''); setHasil([])
+    await muatIsi(resepId)
+    muat()
   }
 
   const pindah = async (r: Resep, status: string) => {
@@ -205,6 +244,11 @@ export default function HalamanFarmasi() {
                           </p>
                         </div>
 
+                        {r.jumlah_belum_diisi > 0 && (
+                          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--accent-bg)] text-[var(--accent)]">
+                            <HandHelping size={11} /> {r.jumlah_belum_diisi} {t('MENUNGGU DIPILIH', 'TO CHOOSE')}
+                          </span>
+                        )}
                         {r.sudah_bayar ? (
                           <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">
                             <HandCoins size={11} /> {t('SUDAH BAYAR', 'PAID')}
@@ -225,6 +269,17 @@ export default function HalamanFarmasi() {
                         </div>
                       )}
 
+                      {/* Catatan dokter. Kolomnya sudah ada sejak migrasi 0023
+                          dan tidak pernah ditampilkan ke orang yang dituju. */}
+                      {r.catatan && (
+                        <div className="mt-2 flex items-start gap-2 rounded-lg bg-[var(--accent-bg)] border border-[var(--line)] px-3 py-2">
+                          <StickyNote size={14} className="text-[var(--accent)] shrink-0 mt-0.5" />
+                          <p className="text-sm text-[var(--ink)]">
+                            <span className="font-semibold">{t('Catatan dokter', 'Doctor note')}:</span> {r.catatan}
+                          </p>
+                        </div>
+                      )}
+
                       <button onClick={() => lihatIsi(r)}
                         className="mt-2 inline-flex items-center gap-1 text-xs text-[var(--ink-soft)] hover:text-[var(--brand)]">
                         {buka === r.id ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
@@ -239,6 +294,11 @@ export default function HalamanFarmasi() {
                             <div key={it.id} className="text-sm">
                               <div className="flex items-baseline gap-2 flex-wrap">
                                 <span className="font-medium text-[var(--ink)]">{it.nama_obat}</span>
+                                {it.permintaan_terbuka && !it.diisi_pada && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--accent-bg)] text-[var(--accent)]">
+                                    {t('DOKTER MINTA KAMU PILIH', 'CHOOSE THIS ONE')}
+                                  </span>
+                                )}
                                 <span className="num text-xs text-[var(--ink-soft)]">
                                   {it.jumlah} {it.satuan || it.satuan_produk || ''}
                                 </span>
@@ -258,6 +318,51 @@ export default function HalamanFarmasi() {
                                 <p className="text-xs text-[var(--ink-faint)]">
                                   {[it.dosis, it.frekuensi, it.rute, it.aturan_pakai].filter(Boolean).join(' · ')}
                                 </p>
+                              )}
+
+                              {/* Permintaan asli dokter tidak pernah hilang dari
+                                  layar, supaya selalu terbaca siapa meminta apa. */}
+                              {it.permintaan_asli && (
+                                <p className="text-xs text-[var(--ink-faint)]">
+                                  {t('diminta', 'requested')}: {it.permintaan_asli}
+                                  {it.diisi_oleh && ` · ${t('diisi', 'filled by')} ${it.diisi_oleh}`}
+                                </p>
+                              )}
+
+                              {it.permintaan_terbuka && r.status !== 'final' && (
+                                <div className="mt-1.5">
+                                  {isiUntuk === it.id ? (
+                                    <div className="relative">
+                                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]" />
+                                      <input autoFocus value={cari} onChange={e => setCari(e.target.value)}
+                                        placeholder={t('Cari obat di katalog…', 'Search the catalogue…')}
+                                        className="w-full border border-[var(--line)] rounded-lg pl-8 pr-3 py-1.5 text-sm bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
+                                      {hasil.length > 0 && (
+                                        <div className="mt-1 border border-[var(--line)] rounded-lg overflow-hidden bg-[var(--surface)]">
+                                          {hasil.map((p: any) => (
+                                            <button key={p.id} onClick={() => isiPermintaan(r.id, it.id, p)}
+                                              className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-2)] flex items-center gap-2">
+                                              <span className="truncate flex-1">{p.nama_obat}</span>
+                                              <span className={`num text-xs shrink-0 ${Number(p.stok_total) <= 0 ? 'text-red-600' : 'text-[var(--ink-faint)]'}`}>
+                                                {Number(p.stok_total) <= 0 ? t('habis', 'out') : `${p.stok_total} ${p.satuan || ''}`}
+                                              </span>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+                                      <button onClick={() => { setIsiUntuk(null); setCari(''); setHasil([]) }}
+                                        className="mt-1 text-xs text-[var(--ink-faint)] hover:text-[var(--ink)] underline underline-offset-2">
+                                        {t('batal', 'cancel')}
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button onClick={() => { setIsiUntuk(it.id); setCari('') }}
+                                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--line)] text-xs font-medium text-[var(--accent)] hover:bg-[var(--surface)]">
+                                      <HandHelping size={12} />
+                                      {it.diisi_pada ? t('Ganti pilihan', 'Change choice') : t('Pilih obatnya', 'Choose the drug')}
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
                           ))}

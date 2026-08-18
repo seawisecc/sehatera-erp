@@ -73,6 +73,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0035_jabat_tangan_farmasi` | Keadaan `disiapkan` & `siap`, `serahkan_resep()`, kasir berhenti menyatakan penyerahan |
 | `0036_resep_ikut_keadaan_baru` | `resep_kunjungan()` mengenal keadaan baru, `isi_resep()` untuk farmasi |
 | `0037_kembalikan_nilai_biaya` | Mengembalikan `nilai_biaya` yang terhapus saat 0035 membuat ulang view |
+| `0038_permintaan_terbuka_farmasi` | Dokter meminta tanpa memilih produk, farmasi yang mengisi |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -390,6 +391,23 @@ benar-benar mengerjakannya:
 | `disiapkan` | farmasi | sedang dikerjakan, kasir sudah boleh menagih |
 | `siap` | farmasi | obat siap, menunggu pembayaran |
 | `dilayani` | farmasi | benar-benar berpindah tangan |
+
+### Permintaan terbuka: dokter meminta, farmasi memilih
+
+Dokter boleh menulis baris tanpa memilih produk ("antihistamin oral, 10
+tablet") dan menandainya `permintaan_terbuka`. Farmasi mengisinya lewat
+`isi_permintaan_farmasi()`. Kata-kata dokter pindah ke `permintaan_asli` dan
+**tidak pernah ditimpa**, jadi rekamnya selalu terbaca "dokter meminta X,
+farmasi mengisi Y, oleh siapa, jam berapa". Pola yang sama dengan adendum.
+
+**Farmasi TIDAK BISA menambah baris obat yang tidak ditulis dokter, dan tidak
+bisa mengganti baris yang produknya sudah dipilih dokter.** Itu bukan batas
+kenyamanan: yang tercatat sebagai peresep harus tetap dokter. Kalau obatnya
+habis, jalannya menghubungi dokternya, bukan mengganti diam-diam. Ditegakkan
+`isi_permintaan_farmasi()`, bukan disembunyikan di layar.
+
+Bedakan dari **luar katalog** (`product_id` null tanpa penanda): itu artinya
+obatnya memang tidak ada di sini dan pasien menebusnya di tempat lain.
 
 `serahkan_resep()` MENUNTUT pembayaran sudah tercatat, tapi tidak memalang
 mati: `p_tanpa_bayar` membukanya dengan syarat alasannya ditulis, dan alasan
