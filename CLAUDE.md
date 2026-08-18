@@ -68,6 +68,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0030_cari_icd_bahasa_indonesia` | `normalisasi_medis()`, `icd_kata` (162 pasang), `nama_norm`, pencarian dua bahasa |
 | `0031_normalisasi_rh` | `rh` luruh jadi `r`: cirrhosis = sirosis |
 | `0032_glosarium_kunci_ternormalisasi` | Kunci glosarium dibandingkan setelah dinormalkan |
+| `0033_glosarium_tindakan` | 81 kata kerja tindakan: jahit, cabut, pasang, angkat |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -262,6 +263,16 @@ Tiga hal yang perlu diingat sebelum menyentuhnya lagi:
   **Menambah baris di `icd_kata` itu tempat pertama yang dilihat kalau ada
   keluhan "kok tidak ketemu"**: satu baris di sana memperbaiki pencarian untuk
   ribuan kode sekaligus, sedangkan satu alias cuma memperbaiki satu kode.
+
+  **Diagnosis dan tindakan butuh JENIS KATA yang berbeda, dan itu terlewat
+  sekali.** Glosarium 0030 seluruhnya kata benda, karena disusun sambil
+  memikirkan kotak diagnosis: keluhan, organ, sifat. Seluruh ICD-9-CM justru
+  kata kerja (suture, excision, insertion), jadi kotak tindakan sebenarnya
+  cuma bisa dicari dalam bahasa Inggris dan tidak ada uji yang menangkapnya.
+  Ketahuan saat formnya dibuka sungguhan di peramban. Migrasi 0033 menambal
+  dengan 81 kata kerja. **Uji yang memakai daftar kata susunan sendiri tidak
+  bisa menemukan kata yang tidak terpikirkan; hanya memakai aplikasinya yang
+  bisa.**
 
   **Yang sengaja TIDAK dilakukan: menerjemahkan 18.543 nama dengan mesin.**
   Terjemahan medis yang setengah benar lebih berbahaya daripada tidak ada,

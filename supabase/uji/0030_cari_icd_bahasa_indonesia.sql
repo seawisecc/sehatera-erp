@@ -51,7 +51,17 @@ begin
 
   -- 3. Glosarium terisi -------------------------------------------------
   select count(*) into v_n from public.icd_kata;
-  if v_n < 150 then raise exception 'Glosarium cuma % baris, seharusnya 162.', v_n; end if;
+  if v_n < 240 then raise exception 'Glosarium cuma % baris, seharusnya 243 sesudah migrasi 0033.', v_n; end if;
+
+  -- Kata KERJA harus ada, bukan cuma kata benda. Glosarium 0030 seluruhnya
+  -- keluhan dan organ, jadi kotak ICD-9-CM sebenarnya cuma bisa dicari dalam
+  -- bahasa Inggris, dan itu baru ketahuan saat aplikasinya benar-benar dibuka.
+  for r in select * from (values ('jahit'), ('cabut'), ('pasang'), ('angkat'), ('suntik')) as t(k)
+  loop
+    if not exists (select 1 from public.icd_kata where id_kata = r.k) then
+      raise exception 'Kata tindakan "%" tidak ada di glosarium.', r.k;
+    end if;
+  end loop;
 
   -- 4. Yang dulu tidak mungkin, sekarang ketemu -------------------------
   -- Semua ini SEBELUM migrasi 0030 mengembalikan nol baris, karena nama
@@ -105,6 +115,21 @@ begin
   if not exists (select 1 from public.cari_icd9('jantung', 50)) then
     raise exception 'cari_icd9 "jantung" tidak dapat apa-apa.';
   end if;
+
+  -- Tindakan dicari dalam bahasa Indonesia. Ketiganya mengembalikan NOL
+  -- sebelum migrasi 0033, dan itu tidak tertangkap uji mana pun sampai
+  -- formnya dibuka sungguhan di peramban.
+  for r in select * from (values
+      ('jahit kulit', '86.5'),   -- Suture of skin and subcutaneous tissue
+      ('cabut gigi',  '23.'),    -- Extraction of tooth
+      ('pasang kateter', '57.')  -- Insertion of catheter
+    ) as t(ketik, harap)
+  loop
+    if not exists (select 1 from public.cari_icd9(r.ketik, 50)
+                    where kode like r.harap || '%') then
+      raise exception 'cari_icd9 "%" tidak menemukan kode yang diawali %.', r.ketik, r.harap;
+    end if;
+  end loop;
 
   -- 8. Masih cukup cepat untuk diketik huruf demi huruf -----------------
   -- Kotak diagnosis memanggil ini tiap orang berhenti mengetik 250 ms.
