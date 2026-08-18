@@ -10,6 +10,7 @@ import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TR } from '@/lib/ui'
 import { tanggal } from '@/lib/format'
 import FormPasien, { type Pasien } from '@/components/klinik/FormPasien'
 import RiwayatPasien from '@/components/klinik/RiwayatPasien'
+import { boleh } from '@/lib/hak'
 
 /**
  * Daftar pasien.
@@ -186,10 +187,12 @@ export default function HalamanPasien() {
                           yang paling sering dicari dari daftar pasien adalah
                           "apa yang terjadi terakhir kali", bukan mendaftarkan
                           kunjungan baru. */}
+                      {boleh(app.currentRole, 'rekam_medis.baca', app.isSuper) && (
                       <button onClick={e => { e.stopPropagation(); setRiwayat(p.id) }}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--line)] text-[var(--ink-soft)] text-xs font-medium hover:bg-[var(--surface-2)] hover:text-[var(--brand)] transition whitespace-nowrap">
                         <History size={13} /> {t('Riwayat', 'History')}
                       </button>
+                      )}
                       <button onClick={e => { e.stopPropagation(); mulaiKunjungan(p) }} disabled={sibuk}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--line)] text-[var(--brand)] text-xs font-medium hover:bg-[var(--surface-2)] transition whitespace-nowrap disabled:opacity-50">
                         <Stethoscope size={13} /> {t('Daftarkan Kunjungan', 'Start Visit')}

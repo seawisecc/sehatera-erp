@@ -75,7 +75,7 @@ export async function getSessionContext(): Promise<SessionContext> {
 }
 
 /** Pesan penolakan dari database yang sudah ditulis untuk pemilik apotek. */
-const KODE_RAMAH = new Set(['SH001', 'SH002', 'SH003', 'SH004', 'SH005', 'SH006'])
+const KODE_RAMAH = new Set(['SH001', 'SH002', 'SH003', 'SH004', 'SH005', 'SH006', 'SH007'])
 
 /**
  * Kuota, masa aktif, dan kewajiban resep ditolak di database dengan SQLSTATE

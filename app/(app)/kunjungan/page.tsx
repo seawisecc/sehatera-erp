@@ -12,6 +12,7 @@ import { pesanError } from '@/lib/session'
 import { rupiah, tanggal, tanggalJam } from '@/lib/format'
 import FormPasien, { type Pasien } from '@/components/klinik/FormPasien'
 import RekamMedis from '@/components/klinik/RekamMedis'
+import { boleh } from '@/lib/hak'
 import Resep from '@/components/klinik/Resep'
 import TarifKunjungan from '@/components/klinik/TarifKunjungan'
 
@@ -174,6 +175,9 @@ export default function HalamanKunjungan() {
     setPilih((data as any)?.id ?? null)
     muat()
   }
+
+  const bolehRekam = boleh(app.currentRole, 'rekam_medis.baca', app.isSuper)
+  const bolehResep = boleh(app.currentRole, 'resep.baca', app.isSuper)
 
   const pindah = async (status: string, alasan?: string) => {
     if (!aktif) return
@@ -415,6 +419,11 @@ export default function HalamanKunjungan() {
                   tetap ditampilkan supaya bentuk kerjanya terbaca sekarang dan
                   tidak berubah begitu modulnya datang. */}
               <div className="mt-5 flex flex-wrap items-center gap-2">
+                {/* Disembunyikan untuk peran yang pasti ditolak database
+                    (migrasi 0039). Yang menahan tetap di sana, bukan di sini:
+                    ini cuma supaya petugas pendaftaran tidak menekan tombol
+                    lalu ditolak tanpa tahu kenapa. */}
+                {bolehRekam && (
                 <button onClick={() => setBukaRekam(true)}
                   className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-medium text-[var(--ink)] hover:border-[var(--brand)] transition">
                   <Stethoscope size={14} className="text-[var(--brand)]" />
@@ -425,6 +434,8 @@ export default function HalamanKunjungan() {
                     <Check size={13} className="text-emerald-600" />
                   )}
                 </button>
+                )}
+                {bolehResep && (
                 <button onClick={() => setBukaResep(true)}
                   className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-medium text-[var(--ink)] hover:border-[var(--brand)] transition">
                   <Pill size={14} className="text-[var(--brand)]" />
@@ -440,6 +451,7 @@ export default function HalamanKunjungan() {
                     <Check size={13} className="text-emerald-600" />
                   )}
                 </button>
+                )}
                 <button onClick={() => setBukaTarif(true)}
                   className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-medium text-[var(--ink)] hover:border-[var(--brand)] transition">
                   <Receipt size={14} className="text-[var(--brand)]" />

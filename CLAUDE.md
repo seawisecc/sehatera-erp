@@ -74,6 +74,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0036_resep_ikut_keadaan_baru` | `resep_kunjungan()` mengenal keadaan baru, `isi_resep()` untuk farmasi |
 | `0037_kembalikan_nilai_biaya` | Mengembalikan `nilai_biaya` yang terhapus saat 0035 membuat ulang view |
 | `0038_permintaan_terbuka_farmasi` | Dokter meminta tanpa memilih produk, farmasi yang mengisi |
+| `0039_hak_akses_sub_modul` | `peran_saya()`, `boleh()`, `wajib_boleh()`; sepuluh fungsi medis dijaga |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -121,6 +122,7 @@ ditampilkan apa adanya: lihat `pesanError()` di `lib/session.ts`.
 | `SH004` | Masukan tidak sah |
 | `SH005` | Stok tidak cukup |
 | `SH006` | Obat golongan tanpa identitas pasien / nomor resep |
+| `SH007` | Peran tidak berhak atas sub-modul yang diminta |
 
 **RLS menyaring baris, bukan kolom.** Policy yang mengizinkan pemilik apotek
 memperbarui profilnya otomatis mengizinkan ia menulis `status` dan tanggal
@@ -440,18 +442,34 @@ menarik:
 | | Apa | Keadaan |
 | --- | --- | --- |
 | 1 | Satu tagihan per kunjungan | **selesai** (migrasi 0024) |
-| 2 | Hak akses per sub-modul kunjungan | **berikutnya** |
+| 2 | Hak akses per sub-modul kunjungan | **selesai** (migrasi 0039) |
 | 3 | Layar antrean ruang tunggu + panggilan suara | belum |
 | 4 | ICD-10 resmi dan ICD-9-CM untuk tindakan | **selesai** (migrasi 0025..0029) |
 | 5 | Reservasi | belum, modul baru |
 | 6 | Kirim ke SatuSehat dan BPJS | belum, tertahan kredensial |
 
-### Berikutnya: hak akses per sub-modul kunjungan
+### Hak akses per sub-modul: SELESAI (migrasi 0039)
 
-Sekarang hak akses masih satu bongkah `kunjungan`. Harus dipecah, dan ini
-kepatuhan bukan kenyamanan: **petugas pendaftaran tidak boleh bisa membuka isi
-rekam medis orang.** Bentuk yang sudah diusulkan ke pemilik dan menunggu
-koreksinya:
+Sebelumnya hak akses cuma menyaring MENU lewat `ROLE_PAGES`. Yang menahan cuma
+tombolnya, jadi petugas pendaftaran yang mengetik alamatnya, atau memanggil
+`rekam_medis()` lewat kunci anon yang memang ada di dalam peramban, membaca
+SOAP dan diagnosis siapa pun di kliniknya.
+
+Sekarang penjaganya di database: `wajib_boleh()` dipanggil di dalam sepuluh
+fungsi medis, dan matriksnya ada di SATU tempat (`boleh()`), bukan disebar
+sebagai `if peran = ...` yang akan ketinggalan saat peran berikutnya lahir.
+
+`lib/hak.ts` adalah SALINAN matriks itu untuk menyembunyikan tombol.
+**Urutannya tidak boleh dibalik**: kalau berkas itu yang jadi penjaga, alamat
+fungsinya tetap bisa dipanggil langsung. Lupa menyamakan keduanya hanya
+membuat tombol muncul lalu ditolak, atau hilang padahal boleh; dua-duanya
+tidak membuka data, dan itu memang urutan yang diinginkan.
+
+`pemilik` dan `admin` sengaja mendapat semuanya. Mengunci pemilik dari datanya
+sendiri akan membuat klinik berhenti bekerja hari pertama, dan yang terjadi
+berikutnya adalah semua orang dibuatkan akun pemilik.
+
+Bentuk yang berlaku sekarang:
 
 - **pendaftaran** memegang identitas dan antrean, tidak membuka rekam medis
 - **perawat** menambah tanda vital dan tindakan, tidak menulis diagnosis
