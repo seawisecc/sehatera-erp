@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Search, Stethoscope, UserPlus } from 'lucide-react'
+import { History, Search, Stethoscope, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -9,6 +9,7 @@ import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TR } from '@/lib/ui'
 import { tanggal } from '@/lib/format'
 import FormPasien, { type Pasien } from '@/components/klinik/FormPasien'
+import RiwayatPasien from '@/components/klinik/RiwayatPasien'
 
 /**
  * Daftar pasien.
@@ -42,6 +43,7 @@ export default function HalamanPasien() {
   const [memuat, setMemuat] = useState(true)
   const [cari, setCari] = useState('')
   const [form, setForm] = useState<Pasien | null | undefined>(undefined)
+  const [riwayat, setRiwayat] = useState<string | null>(null)
   const [sibuk, setSibuk] = useState(false)
 
   const muat = useCallback(async () => {
@@ -178,11 +180,21 @@ export default function HalamanPasien() {
                       {PENJAMIN[p.penjamin]?.[lang === 'en' ? 1 : 0] || p.penjamin}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <button onClick={() => mulaiKunjungan(p)} disabled={sibuk}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--line)] text-[var(--brand)] text-xs font-medium hover:bg-[var(--surface-2)] transition whitespace-nowrap disabled:opacity-50">
-                      <Stethoscope size={13} /> {t('Daftarkan Kunjungan', 'Start Visit')}
-                    </button>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1.5">
+                      {/* Riwayat lebih dulu, dan itu bukan urutan sembarangan:
+                          yang paling sering dicari dari daftar pasien adalah
+                          "apa yang terjadi terakhir kali", bukan mendaftarkan
+                          kunjungan baru. */}
+                      <button onClick={e => { e.stopPropagation(); setRiwayat(p.id) }}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--line)] text-[var(--ink-soft)] text-xs font-medium hover:bg-[var(--surface-2)] hover:text-[var(--brand)] transition whitespace-nowrap">
+                        <History size={13} /> {t('Riwayat', 'History')}
+                      </button>
+                      <button onClick={e => { e.stopPropagation(); mulaiKunjungan(p) }} disabled={sibuk}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--line)] text-[var(--brand)] text-xs font-medium hover:bg-[var(--surface-2)] transition whitespace-nowrap disabled:opacity-50">
+                        <Stethoscope size={13} /> {t('Daftarkan Kunjungan', 'Start Visit')}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )
@@ -193,6 +205,10 @@ export default function HalamanPasien() {
 
       {form !== undefined && (
         <FormPasien pasien={form} sibuk={sibuk} onTutup={() => setForm(undefined)} onSimpan={simpan} />
+      )}
+
+      {riwayat && (
+        <RiwayatPasien pasienId={riwayat} onTutup={() => setRiwayat(null)} />
       )}
     </div>
   )

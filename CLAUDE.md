@@ -69,6 +69,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0031_normalisasi_rh` | `rh` luruh jadi `r`: cirrhosis = sirosis |
 | `0032_glosarium_kunci_ternormalisasi` | Kunci glosarium dibandingkan setelah dinormalkan |
 | `0033_glosarium_tindakan` | 81 kata kerja tindakan: jahit, cabut, pasang, angkat |
+| `0034_riwayat_pasien` | `riwayat_pasien()`: pintu ke rekam medis kunjungan lama |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -193,7 +194,18 @@ Keadaan yang dipakai bersama ada di `AppProvider` (`lib/app-context.tsx`);
 super admin sedang melihat klien.
 
 Modul klinik ada di `components/klinik/`: `FormPasien`, `RekamMedis`, `Resep`,
-`PengaturanPoli`. Semuanya dibuka DARI kunjungan, bukan dari menunya sendiri.
+`PengaturanPoli`, `RiwayatPasien`, `PilihICD9`.
+
+**Rekam medis dibuka dari DUA pintu, dan keduanya perlu.** Dari Kunjungan untuk
+pasien HARI INI, dan dari Pasien lewat tombol Riwayat untuk kunjungan lama.
+Pintu kedua sempat tidak ada sama sekali: layar Kunjungan cuma membaca
+`v_antrean_hari_ini`, jadi begitu hari berganti rekam medis yang sudah tercatat
+tidak bisa dibuka lagi oleh siapa pun. Datanya utuh, cuma tidak terjangkau.
+Itu menghapus alasan utama orang memakai rekam medis elektronik.
+
+`RekamMedis` sendiri sudah tahu membedakan keduanya: kunjungan berstatus
+`selesai` atau `batal` tampil sebagai bacaan yang hanya bisa ditambahi adendum,
+dan itu ditegakkan database sejak migrasi 0018, bukan oleh layarnya.
 
 Bahasa: **antarmuka dan komentar dalam bahasa Indonesia.** Ada dwibahasa ID/EN
 lewat `lib/i18n.tsx`: helper `t('teks id', 'english text')`. TokoKu tidak

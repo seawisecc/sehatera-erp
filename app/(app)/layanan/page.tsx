@@ -97,8 +97,14 @@ export default function HalamanLayanan() {
         <div className="min-w-0">
           <h1 className="text-3xl font-bold text-[var(--ink)] mb-1">{t('Layanan Jasa', 'Services')}</h1>
           <p className="text-[var(--ink-soft)] text-sm">
-            {t('Jasa apotek seperti racikan resep, cek gula darah, dan tensi. Semuanya bisa dijual di Kasir.',
-               'Pharmacy services such as compounding, blood-sugar checks, and blood pressure. All sellable at the register.')}
+            {/* Apotek menjual jasa, klinik mengerjakan tindakan. Menyebutnya
+                "jasa apotek" di klinik membuat halaman ini terbaca seperti
+                milik produk lain. */}
+            {app.sektor === 'apotek'
+              ? t('Jasa apotek seperti racikan resep, cek gula darah, dan tensi. Semuanya bisa dijual di Kasir.',
+                  'Pharmacy services such as compounding, blood-sugar checks, and blood pressure. All sellable at the register.')
+              : t('Tindakan dan layanan berbayar seperti konsultasi, jahit luka, dan nebulisasi. Semuanya masuk ke tagihan kunjungan.',
+                  'Billable procedures and services such as consultation, wound suturing, and nebulisation. All flow into the visit bill.')}
           </p>
         </div>
         <button
