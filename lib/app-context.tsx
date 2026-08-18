@@ -210,10 +210,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const fitur = session?.company?.features ?? FULL_PLAN
   const state = subscriptionState(session?.company ?? null)
 
-  const sektor = bacaSektor(session?.company?.sektor)
+  /**
+   * Jenis fasilitas yang sedang DILIHAT, bukan yang dimiliki akun ini.
+   *
+   * Super admin tidak punya fasilitas sendiri, jadi kalau sektornya dibaca dari
+   * akunnya, ia selalu jatuh ke 'apotek'. Akibatnya seluruh aplikasi berbentuk
+   * apotek meski yang sedang dibuka klinik: menu Kunjungan dan Pasien hilang,
+   * tab Poli tidak ada, dan istilahnya salah. Yang paling merepotkan, itu
+   * terjadi persis saat seseorang mencoba membantu kliennya lewat akun ini.
+   *
+   * Daftar `companies` memuat sektor tiap klien, jadi saat sedang melihat satu
+   * klien, sektornya diambil dari sana.
+   */
+  const sektor = bacaSektor(
+    isSuper && superViewCompany
+      ? companies.find((c: any) => c.id === superViewCompany)?.sektor
+      : session?.company?.sektor
+  )
 
   const allowedPages = (() => {
-    if (isSuper) return [...menuItems.map(m => m.id), 'klien', 'migrasi']
+    // Super admin melihat semua modul, tapi tetap disaring jenis fasilitas
+    // begitu ia memilih satu klien: menu Kunjungan di apotek bukan kemurahan
+    // hati, ia cuma menu yang tidak akan pernah berisi apa pun.
+    if (isSuper) {
+      const semua = [...menuItems.map(m => m.id), 'klien', 'migrasi']
+      if (!superViewCompany) return semua
+      const adaDiSektor = MODUL_SEKTOR[sektor]
+      return semua.filter(p => p === 'klien' || p === 'migrasi' || adaDiSektor.includes(p))
+    }
     if (!currentRole) return []
     const dasar = currentModules && currentModules.length
       ? currentModules
