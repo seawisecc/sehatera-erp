@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle, ArrowLeft, ArrowRight, Check, FileText, Pill, Receipt, Search,
-  Stethoscope, UserPlus, X,
+  Stethoscope, UserPlus, Volume2, X,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
@@ -66,6 +66,8 @@ type Antrean = {
   unit_id: string | null
   unit_nama: string | null
   unit_kode: string | null
+  dipanggil_pada: string | null
+  jumlah_panggil: number
 }
 
 type Poli = { id: string; nama: string; kode: string }
@@ -173,6 +175,16 @@ export default function HalamanKunjungan() {
     if (error) { alert(pesanError(error)); return }
     setBukaDaftar(false); setCariPasien(''); setHasilPasien([])
     setPilih((data as any)?.id ?? null)
+    muat()
+  }
+
+  /** Memanggil ulang nomor yang sama itu wajar: pasien sering tidak di tempat. */
+  const panggil = async () => {
+    if (!aktif) return
+    setSibuk(true)
+    const { error } = await supabase.rpc('panggil_antrean', { p_visit: aktif.id })
+    setSibuk(false)
+    if (error) { alert(pesanError(error)); return }
     muat()
   }
 
@@ -419,6 +431,16 @@ export default function HalamanKunjungan() {
                   tetap ditampilkan supaya bentuk kerjanya terbaca sekarang dan
                   tidak berubah begitu modulnya datang. */}
               <div className="mt-5 flex flex-wrap items-center gap-2">
+                {/* Panggil ada di depan dan tidak dijaga peran: memanggil nomor
+                    antrean tidak membuka data medis apa pun, dan yang memegang
+                    pengeras suara di poli sering bukan dokternya. */}
+                <button onClick={panggil} disabled={sibuk}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand)] text-xs font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
+                  <Volume2 size={14} />
+                  {aktif.jumlah_panggil > 0
+                    ? t(`Panggil lagi (${aktif.jumlah_panggil}x)`, `Call again (${aktif.jumlah_panggil}x)`)
+                    : t('Panggil', 'Call')}
+                </button>
                 {/* Disembunyikan untuk peran yang pasti ditolak database
                     (migrasi 0039). Yang menahan tetap di sana, bukan di sini:
                     ini cuma supaya petugas pendaftaran tidak menekan tombol

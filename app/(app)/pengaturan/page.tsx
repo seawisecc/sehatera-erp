@@ -536,7 +536,12 @@ export default function HalamanPengaturan() {
                   )}
 
                   {/* DATA APOTEKER */}
-                  {tab === 'poli' && <PengaturanPoli />}
+                  {tab === 'poli' && (
+                    <div className="space-y-6">
+                      <PengaturanPoli />
+                      <LayarAntrean />
+                    </div>
+                  )}
 
                   {tab === 'apoteker' && (
                     <div className="max-w-md">
@@ -898,6 +903,67 @@ export default function HalamanPengaturan() {
                     )
                   })()}        </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Alamat layar antrean ruang tunggu.
+ *
+ * Alamatnya membawa token, dan token itu SATU-SATUNYA yang menjaga layar itu.
+ * Jadi ia diperlakukan seperti kunci: ada tombol memutarnya, dan peringatan
+ * bahwa memutarnya membuat televisi yang sudah terpasang harus dibuka ulang.
+ */
+function LayarAntrean() {
+  const { t } = useLang()
+  const [token, setToken] = useState<string | null>(null)
+  const [sibuk, setSibuk] = useState(false)
+  const [tersalin, setTersalin] = useState(false)
+
+  const ambil = async (putar = false) => {
+    setSibuk(true)
+    const { data, error } = await supabase.rpc('token_antrean_saya', { p_putar: putar })
+    setSibuk(false)
+    if (error) { alert(pesanError(error)); return }
+    setToken(data as string)
+  }
+
+  const alamat = token && typeof window !== 'undefined'
+    ? `${window.location.origin}/antrean?t=${token}` : ''
+
+  return (
+    <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5">
+      <h3 className="text-base font-bold text-[var(--ink)] mb-1">
+        {t('Layar antrean ruang tunggu', 'Waiting room display')}
+      </h3>
+      <p className="text-sm text-[var(--ink-soft)] mb-4 max-w-prose">
+        {t('Buka alamat ini di televisi ruang tunggu. Layarnya TIDAK perlu login, dan memang tidak boleh: sesi petugas yang hidup di ruangan publik bisa dipakai siapa saja yang lewat. Alamat ini hanya bisa membaca nomor antrean hari ini, dan nama pasien sudah disingkat sebelum dikirim.',
+           'Open this address on the waiting room TV. It does NOT need a login, and must not have one: a staff session left running in a public room can be used by anyone passing by. This address can only read today queue numbers, and patient names are shortened before being sent.')}
+      </p>
+
+      {!token ? (
+        <button onClick={() => ambil(false)} disabled={sibuk}
+          className="inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
+          {t('Tampilkan alamat layar', 'Show display address')}
+        </button>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <code className="flex-1 min-w-0 truncate rounded-lg bg-[var(--surface-2)] border border-[var(--line)] px-3 py-2 text-xs">
+              {alamat}
+            </code>
+            <button onClick={() => { navigator.clipboard.writeText(alamat); setTersalin(true); setTimeout(() => setTersalin(false), 2000) }}
+              className="px-3 py-2 rounded-lg border border-[var(--line)] text-sm text-[var(--ink-soft)] hover:bg-[var(--surface-2)] transition">
+              {tersalin ? t('tersalin', 'copied') : t('Salin', 'Copy')}
+            </button>
+          </div>
+          <button onClick={() => { if (confirm(t('Putar tokennya? Televisi yang sudah terpasang harus dibuka ulang dengan alamat baru.', 'Rotate the token? Any TV already set up must be reopened with the new address.'))) ambil(true) }}
+            disabled={sibuk}
+            className="text-xs text-[var(--ink-faint)] hover:text-red-600 underline underline-offset-2 disabled:opacity-50">
+            {t('Putar token', 'Rotate token')}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -76,6 +76,8 @@ memasang lubang keamanan yang sudah ditutup.
 | `0038_permintaan_terbuka_farmasi` | Dokter meminta tanpa memilih produk, farmasi yang mengisi |
 | `0039_hak_akses_sub_modul` | `peran_saya()`, `boleh()`, `wajib_boleh()`; sepuluh fungsi medis dijaga |
 | `0040_rel_kunjungan_ikut_resep` | Rel bergeser sendiri mengikuti resep, dan boleh dilompati kalau tanpa obat |
+| `0041_layar_antrean` | `panggil_antrean()`, token layar, `layar_antrean()` yang dipanggil tanpa login |
+| `0042_antrean_bawa_panggilan` | `dipanggil_pada` & `jumlah_panggil` masuk ke `v_antrean_hari_ini` |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -363,6 +365,28 @@ melihat tarifnya tapi obatnya belum sampai, lalu menekan Proses; struk yang
 kurang satu baris baru ketahuan saat pasien sudah pulang.
 
 Tagihan terkunci begitu kunjungan berstatus `selesai` atau `batal`.
+
+## Layar ruang tunggu: tanpa login, dan itu keputusan keamanan
+
+`/antrean?t=<token>` dibuka di televisi ruang tunggu. **Tidak memakai sesi
+staf, dan tidak boleh:** sesi yang hidup di ruangan publik adalah sesi milik
+semua orang yang lewat, dan satu tekan tombol Beranda membuka rekam medis
+seluruh klinik. Token disimpan di `settings.token_antrean`, boleh diputar dari
+Pengaturan > Poli & Dokter, dan hanya membuka `layar_antrean()`.
+
+**Nama pasien disamarkan DI DATABASE**, bukan di peramban. Kalau penyamarannya
+di layar, nama lengkapnya tetap melewati jaringan dan tetap ada di dalam
+televisi itu. Bawaannya "Nyoman R."; `settings.antrean_nama_penuh` membuka
+nama penuh kalau kliniknya memang memanggil begitu.
+
+**Menambah kolom ke `layar_antrean()` berarti menambahkannya ke papan
+pengumuman ruang tunggu.** Ujinya menolak `nomor_rm`, `nik`, `keluhan`,
+`diagnosis`, `telepon`, dan `alergi` secara eksplisit.
+
+Suaranya dibangkitkan `speechSynthesis` peramban, bukan berkas rekaman, jadi
+nomor apa pun bisa diucapkan tanpa menyiapkan ratusan potongan audio. Muatan
+PERTAMA sengaja tidak diucapkan: televisi yang menyala jam sepuluh tidak boleh
+membacakan seluruh pagi itu.
 
 ## Rel kunjungan: digeser sendiri, bukan diklik
 

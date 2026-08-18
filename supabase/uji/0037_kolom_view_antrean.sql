@@ -33,7 +33,9 @@ declare
     -- dipakai layar Kasir. `nilai_biaya` inilah yang pernah hilang.
     'status_resep', 'nilai_biaya', 'transaction_id',
     -- ditambahkan migrasi 0035 untuk layar Farmasi
-    'resep_id'
+    'resep_id',
+    -- ditambahkan migrasi 0042 untuk layar antrean ruang tunggu
+    'dipanggil_pada', 'jumlah_panggil'
   ];
 begin
   select array_agg(k) into v_kurang
