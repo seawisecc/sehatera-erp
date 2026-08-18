@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Pill, ShoppingCart, PackageOpen, BarChart2, Settings, Truck,
-  ClipboardList, Receipt, HeartPulse, Building2, Stethoscope, UsersRound,
+  ClipboardList, Receipt, HeartPulse, Building2, Stethoscope, UsersRound, FlaskConical,
 } from 'lucide-react'
 
 /**
@@ -40,7 +40,11 @@ export const menuItems: MenuItem[] = [
   // jadi urutannya di sini tidak membebani siapa pun yang tidak memakainya.
   { id: 'kunjungan',    href: '/kunjungan',     label: 'Kunjungan',         en: 'Visits',           icon: Stethoscope },
   { id: 'pasien',       href: '/pasien',        label: 'Pasien',            en: 'Patients',         icon: UsersRound },
-  { id: 'farmasi',      href: '/farmasi',       label: 'Farmasi',           en: 'Pharmacy',         icon: Pill },
+  // Ikonnya sengaja BEDA dari Produk & Stok, walau keduanya soal obat.
+  // Farmasi itu pekerjaan menyiapkan dan menyerahkan; Produk & Stok itu
+  // barang yang ada di rak. Dua menu berturut-turut dengan ikon sama membuat
+  // orang mengklik yang salah dan menyalahkan dirinya sendiri.
+  { id: 'farmasi',      href: '/farmasi',       label: 'Farmasi',           en: 'Pharmacy',         icon: FlaskConical },
   { id: 'produk',       href: '/produk',        label: 'Produk & Stok',     en: 'Products & Stock', icon: Pill },
   { id: 'transaksi',    href: '/kasir',         label: 'Transaksi',         en: 'Sales',            icon: ShoppingCart },
   { id: 'layanan',      href: '/layanan',       label: 'Layanan Jasa',      en: 'Services',         icon: HeartPulse },

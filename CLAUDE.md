@@ -75,6 +75,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0037_kembalikan_nilai_biaya` | Mengembalikan `nilai_biaya` yang terhapus saat 0035 membuat ulang view |
 | `0038_permintaan_terbuka_farmasi` | Dokter meminta tanpa memilih produk, farmasi yang mengisi |
 | `0039_hak_akses_sub_modul` | `peran_saya()`, `boleh()`, `wajib_boleh()`; sepuluh fungsi medis dijaga |
+| `0040_rel_kunjungan_ikut_resep` | Rel bergeser sendiri mengikuti resep, dan boleh dilompati kalau tanpa obat |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -362,6 +363,28 @@ melihat tarifnya tapi obatnya belum sampai, lalu menekan Proses; struk yang
 kurang satu baris baru ketahuan saat pasien sudah pulang.
 
 Tagihan terkunci begitu kunjungan berstatus `selesai` atau `batal`.
+
+## Rel kunjungan: digeser sendiri, bukan diklik
+
+Keadaan `resep` dan `obat` menjawab "di mana pasiennya sekarang", dan itulah
+seluruh alasan rel ini ada. Yang dibuang di migrasi 0040 bukan keadaannya,
+melainkan **keharusan menggesernya dengan tangan**:
+
+- Resep difinalkan dokter -> kunjungan pindah ke `resep` sendiri.
+- Farmasi menekan Mulai siapkan -> kunjungan pindah ke `obat` sendiri.
+- Kunjungan TANPA resep boleh melompat langsung ke `selesai`.
+
+Lewat TRIGGER pada `prescriptions`, bukan dari dalam fungsi farmasinya,
+alasannya sama seperti pencatat riwayat keadaan di 0018 dan biaya administrasi
+di 0024. Triggernya hanya MAJU dan hanya satu langkah: kunjungan yang sudah
+lebih jauh dibiarkan, karena orang di depan pasien tahu lebih banyak.
+
+Melompati `diperiksa` tetap dilarang, dan kunjungan yang PUNYA resep tetap
+tidak boleh melompati tahap obat.
+
+**Satu pasien tidak boleh punya dua kunjungan terbuka di hari yang sama**
+(`uq_visits_terbuka`). Uji apa pun yang membuat beberapa kunjungan harus
+memakai pasien berbeda.
 
 ## Farmasi klinik: dua bentuk, beda hukum
 
