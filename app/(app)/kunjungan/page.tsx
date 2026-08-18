@@ -2,17 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  AlertTriangle, ArrowLeft, ArrowRight, Check, FileText, Pill, Search,
+  AlertTriangle, ArrowLeft, ArrowRight, Check, FileText, Pill, Receipt, Search,
   Stethoscope, UserPlus, X,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
 import { pesanError } from '@/lib/session'
-import { tanggal, tanggalJam } from '@/lib/format'
+import { rupiah, tanggal, tanggalJam } from '@/lib/format'
 import FormPasien, { type Pasien } from '@/components/klinik/FormPasien'
 import RekamMedis from '@/components/klinik/RekamMedis'
 import Resep from '@/components/klinik/Resep'
+import TarifKunjungan from '@/components/klinik/TarifKunjungan'
 
 /**
  * Kunjungan: satu layar kerja untuk seluruh hari.
@@ -59,6 +60,8 @@ type Antrean = {
   jumlah_diagnosis: number
   ada_vital: boolean
   status_resep: string | null
+  nilai_biaya: number
+  transaction_id: string | null
   unit_id: string | null
   unit_nama: string | null
   unit_kode: string | null
@@ -84,6 +87,7 @@ export default function HalamanKunjungan() {
   const [formPasien, setFormPasien] = useState<Pasien | null | undefined>(undefined)
   const [bukaRekam, setBukaRekam] = useState(false)
   const [bukaResep, setBukaResep] = useState(false)
+  const [bukaTarif, setBukaTarif] = useState(false)
   const [poli, setPoli] = useState<Poli[]>([])
   const [poliDipilih, setPoliDipilih] = useState<string | null>(null)
   const [dokter, setDokter] = useState<Dokter[]>([])
@@ -436,9 +440,16 @@ export default function HalamanKunjungan() {
                     <Check size={13} className="text-emerald-600" />
                   )}
                 </button>
+                <button onClick={() => setBukaTarif(true)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-medium text-[var(--ink)] hover:border-[var(--brand)] transition">
+                  <Receipt size={14} className="text-[var(--brand)]" />
+                  {t('Tarif & tindakan', 'Charges')}
+                  {aktif.nilai_biaya > 0 && (
+                    <span className="num text-[10px] font-bold text-[var(--brand)]">{rupiah(aktif.nilai_biaya)}</span>
+                  )}
+                </button>
                 {[
                   t('Serahkan obat', 'Dispense'),
-                  t('Bayar', 'Payment'),
                 ].map((x, i) => (
                   <span key={i}
                     title={t('Belum tersedia. Menyusul di tahap berikutnya.', 'Not available yet. Coming in the next stage.')}
@@ -603,6 +614,15 @@ export default function HalamanKunjungan() {
           alergi={aktif.alergi}
           tertutup={aktif.status === 'selesai' || aktif.status === 'batal'}
           onTutup={() => setBukaResep(false)}
+          onSimpan={muat} />
+      )}
+
+      {bukaTarif && aktif && (
+        <TarifKunjungan
+          visitId={aktif.id}
+          nama={`${aktif.pasien_nama}${aktif.nomor_rm ? ` · ${aktif.nomor_rm}` : ''}`}
+          tertutup={aktif.status === 'selesai' || aktif.status === 'batal'}
+          onTutup={() => setBukaTarif(false)}
           onSimpan={muat} />
       )}
 

@@ -95,6 +95,11 @@ export default function HalamanPengaturan() {
       logo_url: app.settingsData.logo_url,
       nama_apoteker: app.settingsData.nama_apoteker,
       nomor_sipa: app.settingsData.nomor_sipa,
+      // Daftar kolom di sini SENGAJA eksplisit, supaya kolom yang tidak boleh
+      // diubah dari layar ini tidak ikut terkirim. Akibatnya tiap kolom baru
+      // harus didaftarkan di sini juga, dan yang lupa akan tersimpan diam-diam
+      // sebagai tidak berubah, tanpa pesan galat apa pun.
+      biaya_administrasi: Number(app.settingsData.biaya_administrasi) || 0,
     }
     setSibuk(true)
     // Baris settings dicari DALAM lingkup apotek yang sedang aktif. Versi lama
@@ -575,6 +580,37 @@ export default function HalamanPengaturan() {
                               )
                             })}
                           </div>
+                          <hr className="my-8 border-[var(--line-soft)]" />
+                        </div>
+                      )}
+
+                      {/* Biaya administrasi. Disetel sekali di sini, lalu masuk
+                          sendiri ke tiap kunjungan yang dibuka. Bawaannya nol:
+                          memunculkan biaya yang tidak diminta lebih buruk
+                          daripada melupakannya. */}
+                      {klinik && (
+                        <div className="mb-8">
+                          <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Biaya administrasi', 'Administration fee')}</h2>
+                          <p className="text-sm text-[var(--ink-soft)] mb-3 leading-relaxed">
+                            {t('Ditambahkan sendiri ke tiap kunjungan yang dibuka. Kosongkan atau isi nol kalau kliniknya tidak menagih ini.',
+                               'Added automatically to every visit opened. Leave it at zero if the clinic does not charge this.')}
+                          </p>
+                          <div className="flex gap-3 items-end">
+                            <div className="flex-1 max-w-[220px]">
+                              <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">{t('Rupiah per kunjungan', 'Rupiah per visit')}</label>
+                              <input inputMode="numeric" value={app.settingsData.biaya_administrasi ?? 0}
+                                onChange={e => app.setSettingsData({ ...app.settingsData, biaya_administrasi: e.target.value.replace(/[^0-9]/g, '') })}
+                                className={inputCls + ' num'} />
+                            </div>
+                            <button onClick={saveSettings} disabled={sibuk}
+                              className="bg-[var(--brand)] text-[var(--on-brand)] px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
+                              {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
+                            </button>
+                          </div>
+                          <p className="text-xs text-[var(--ink-faint)] mt-2">
+                            {t('Tarif konsultasi disetel per poli di Poli & Dokter, bukan di sini, karena tiap poli bisa berbeda.',
+                               'Consultation fees are set per unit under Units & Doctors, since each unit can differ.')}
+                          </p>
                           <hr className="my-8 border-[var(--line-soft)]" />
                         </div>
                       )}

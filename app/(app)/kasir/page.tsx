@@ -212,6 +212,11 @@ export default function HalamanKasir() {
     // Kalau urutannya dibalik lalu penjualannya gagal, resep itu hilang dari
     // antrean farmasi padahal obatnya belum diserahkan, dan tidak ada yang tahu
     // sampai pasien kembali bertanya. Fungsinya idempoten, jadi aman diulang.
+    if (visitId) {
+      await supabase.rpc('tandai_kunjungan_dibayar', {
+        p_visit: visitId, p_transaksi: (data as any)?.id ?? null,
+      })
+    }
     if (resepId) {
       const { error: e2 } = await supabase.rpc('tandai_resep_dilayani', {
         p_resep: resepId, p_transaksi: (data as any)?.id ?? null,
@@ -258,34 +263,53 @@ export default function HalamanKasir() {
   useEffect(() => {
     if (!klinik) { setResepMenunggu([]); return }
     ;(async () => {
+      // Bukan cuma yang punya resep. Kunjungan yang cuma konsultasi tanpa obat
+      // tetap harus bisa ditagih, dan itu justru kejadian yang paling sering.
       const { data } = await app.scope(
-        supabase.from('v_resep_menunggu')
-          .select('id,nomor,visit_id,nomor_antre,pasien_nama,nomor_rm,alergi,poli,jumlah_item,catatan')
-          .order('difinalkan_pada')
+        supabase.from('v_antrean_hari_ini')
+          .select('id,nomor_antre,pasien_nama,nomor_rm,alergi,unit_nama,status,status_resep,nilai_biaya,transaction_id')
+          .not('status', 'in', '("batal")')
+          .is('transaction_id', null)
+          .order('dibuka_pada')
       )
-      setResepMenunggu((data as any[]) || [])
+      setResepMenunggu(((data as any[]) || []).map(x => ({ ...x, visit_id: x.id })))
     })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [klinik, app.superViewCompany, struk])
 
   /**
-   * Memuat isi resep ke keranjang.
+   * Memuat SELURUH tagihan satu kunjungan ke keranjang: tarif, tindakan, dan
+   * obat sekaligus.
    *
-   * Obat luar katalog dan yang stoknya habis TIDAK ikut, dan itu dikatakan,
-   * bukan didiamkan. Keranjang yang diam-diam berisi lebih sedikit daripada
-   * resepnya adalah cara paling mudah menyerahkan setengah resep tanpa ada yang
-   * sadar sampai pasien pulang.
+   * Satu panggilan, bukan dua. Kalau tarif dan obat diambil terpisah, ada
+   * jeda di mana kasir sudah melihat tarifnya tapi obatnya belum sampai, lalu
+   * menekan Proses. Struk yang kurang satu baris baru ketahuan saat pasien
+   * sudah pulang, dan saat itu tidak ada lagi yang bisa dilakukan.
+   *
+   * Obat luar katalog dan yang stoknya habis tidak ikut, dan itu DIKATAKAN.
+   * Keranjang yang diam-diam berisi lebih sedikit daripada resepnya adalah cara
+   * paling mudah menyerahkan setengah resep tanpa ada yang sadar.
    */
-  const muatResep = async (r: any) => {
-    const { data, error } = await supabase.rpc('resep_kunjungan', { p_visit: r.visit_id })
+  const muatTagihan = async (r: any) => {
+    const { data, error } = await supabase.rpc('tagihan_kunjungan', { p_visit: r.visit_id })
     if (error) { alert(pesanError(error)); return }
-    const items = ((data as any)?.items || []) as any[]
+    const d = data as any
     const masuk: Item[] = []
     const lewat: string[] = []
-    for (const i of items) {
-      if (!i.product_id) { lewat.push(`${i.nama_obat} (${t('luar katalog', 'off catalogue')})`); continue }
+
+    // Tarif dan tindakan masuk sebagai jasa: ia tidak memotong stok, dan
+    // `apply_transaction` sudah menangani baris jasa sejak kasir apotek.
+    for (const c of (d.biaya || []) as any[]) {
+      masuk.push({
+        id: 'chg-' + c.id, nama_obat: c.nama, harga_jual: Number(c.harga) || 0,
+        jumlah: Number(c.jumlah) || 1, is_jasa: true, kategori: 'jasa', stok_total: 0,
+      })
+    }
+
+    for (const i of (d.obat || []) as any[]) {
       const jumlah = Math.floor(Number(i.jumlah) || 0)
       const stok = Number(i.stok ?? 0)
+      if (!i.product_id) { lewat.push(`${i.nama_obat} (${t('luar katalog', 'off catalogue')})`); continue }
       if (jumlah <= 0) continue
       if (stok <= 0) { lewat.push(`${i.nama_obat} (${t('stok habis', 'out of stock')})`); continue }
       if (jumlah > stok) lewat.push(`${i.nama_obat} (${t('diambil', 'took')} ${stok} ${t('dari', 'of')} ${jumlah})`)
@@ -294,11 +318,17 @@ export default function HalamanKasir() {
         jumlah: Math.min(jumlah, stok), stok_total: stok, kategori: i.kategori,
       })
     }
+
     setKeranjang(masuk)
     setVisitId(r.visit_id)
-    setResepId(r.id)
-    if (r.alergi) setIsResep(true)
-    setPasien(x => ({ ...x, nama_pasien: r.pasien_nama || x.nama_pasien, nomor_resep: r.nomor || x.nomor_resep }))
+    setResepId(d.resep_id || '')
+    const k = d.kunjungan || {}
+    if (k.alergi) setIsResep(true)
+    setPasien(x => ({
+      ...x,
+      nama_pasien: k.pasien_nama || x.nama_pasien,
+      nomor_resep: r.nomor || x.nomor_resep,
+    }))
     if (lewat.length) {
       alert(t(`Tidak semua obat masuk keranjang:\n\n${lewat.join('\n')}\n\nSisanya perlu ditangani di luar aplikasi.`,
               `Not everything went into the cart:\n\n${lewat.join('\n')}\n\nThe rest needs handling outside the app.`))
@@ -498,28 +528,34 @@ export default function HalamanKasir() {
             {klinik && resepMenunggu.length > 0 && (
               <div className="mb-3 p-3 rounded-xl border border-[var(--line)] bg-[var(--surface-2)]">
                 <p className="text-xs font-semibold text-[var(--brand-soft)] mb-1.5">
-                  {t('Resep menunggu diserahkan', 'Prescriptions awaiting dispensing')}
+                  {t('Kunjungan belum dibayar', 'Unpaid visits')}
                 </p>
-                <div className="space-y-1 max-h-44 overflow-y-auto">
+                <div className="space-y-1 max-h-52 overflow-y-auto">
                   {resepMenunggu.map(r => (
-                    <button key={r.id} onClick={() => muatResep(r)}
+                    <button key={r.id} onClick={() => muatTagihan(r)}
                       className={`w-full text-left px-2.5 py-2 rounded-lg border transition ${
-                        resepId === r.id ? 'border-[var(--brand)] bg-[var(--surface)]'
-                                         : 'border-[var(--line)] hover:bg-[var(--surface)]'
+                        visitId === r.visit_id ? 'border-[var(--brand)] bg-[var(--surface)]'
+                                               : 'border-[var(--line)] hover:bg-[var(--surface)]'
                       }`}>
                       <div className="flex items-center gap-2">
                         <span className="num text-xs font-bold text-[var(--brand)] shrink-0">{r.nomor_antre}</span>
                         <span className="text-sm text-[var(--ink)] truncate flex-1">{r.pasien_nama}</span>
                         {r.alergi && <AlertTriangle size={12} className="shrink-0 text-red-600" />}
-                        <span className="num text-[10px] text-[var(--ink-faint)] shrink-0">{r.jumlah_item} {t('obat', 'items')}</span>
+                        {r.nilai_biaya > 0 && (
+                          <span className="num text-[10px] text-[var(--ink-faint)] shrink-0">{rupiah(r.nilai_biaya)}</span>
+                        )}
                       </div>
-                      {r.alergi && <p className="text-[10px] text-red-700 mt-0.5 truncate">{t('Alergi', 'Allergy')}: {r.alergi}</p>}
+                      <p className="text-[10px] text-[var(--ink-faint)] mt-0.5 truncate">
+                        {r.unit_nama ? `${r.unit_nama} · ` : ''}{r.status}
+                        {r.status_resep === 'final' && ` · ${t('resep siap', 'prescription ready')}`}
+                        {r.status_resep === 'draf' && ` · ${t('resep masih draf', 'prescription still draft')}`}
+                      </p>
                     </button>
                   ))}
                 </div>
                 <p className="text-[11px] text-[var(--ink-faint)] mt-1.5 leading-relaxed">
-                  {t('Pilih satu untuk memuat obatnya ke keranjang. Obat luar katalog dan yang stoknya habis tidak ikut, dan itu diberitahukan.',
-                     'Pick one to load its drugs into the cart. Off-catalogue and out-of-stock drugs are left out, and you will be told.')}
+                  {t('Pilih satu untuk memuat tarif, tindakan, dan obatnya sekaligus jadi satu tagihan. Obat luar katalog dan yang stoknya habis tidak ikut, dan itu diberitahukan.',
+                     'Pick one to load its charges, procedures, and drugs as a single bill. Off-catalogue and out-of-stock drugs are left out, and you will be told.')}
                 </p>
               </div>
             )}
