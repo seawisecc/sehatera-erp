@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  AlertTriangle, ArrowLeft, ArrowRight, Check, FileText, Search, Stethoscope,
-  UserPlus, X,
+  AlertTriangle, ArrowLeft, ArrowRight, Check, FileText, Pill, Search,
+  Stethoscope, UserPlus, X,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
@@ -12,6 +12,7 @@ import { pesanError } from '@/lib/session'
 import { tanggal, tanggalJam } from '@/lib/format'
 import FormPasien, { type Pasien } from '@/components/klinik/FormPasien'
 import RekamMedis from '@/components/klinik/RekamMedis'
+import Resep from '@/components/klinik/Resep'
 
 /**
  * Kunjungan: satu layar kerja untuk seluruh hari.
@@ -57,6 +58,7 @@ type Antrean = {
   ada_catatan: boolean
   jumlah_diagnosis: number
   ada_vital: boolean
+  status_resep: string | null
   unit_id: string | null
   unit_nama: string | null
   unit_kode: string | null
@@ -81,6 +83,7 @@ export default function HalamanKunjungan() {
   const [bukaDaftar, setBukaDaftar] = useState(false)
   const [formPasien, setFormPasien] = useState<Pasien | null | undefined>(undefined)
   const [bukaRekam, setBukaRekam] = useState(false)
+  const [bukaResep, setBukaResep] = useState(false)
   const [poli, setPoli] = useState<Poli[]>([])
   const [poliDipilih, setPoliDipilih] = useState<string | null>(null)
   const [dokter, setDokter] = useState<Dokter[]>([])
@@ -418,8 +421,22 @@ export default function HalamanKunjungan() {
                     <Check size={13} className="text-emerald-600" />
                   )}
                 </button>
+                <button onClick={() => setBukaResep(true)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-medium text-[var(--ink)] hover:border-[var(--brand)] transition">
+                  <Pill size={14} className="text-[var(--brand)]" />
+                  {aktif.status_resep
+                    ? t('Buka resep', 'Open prescription')
+                    : t('Tulis resep', 'Write prescription')}
+                  {aktif.status_resep === 'draf' && (
+                    <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800">
+                      {t('DRAF', 'DRAFT')}
+                    </span>
+                  )}
+                  {(aktif.status_resep === 'final' || aktif.status_resep === 'dilayani') && (
+                    <Check size={13} className="text-emerald-600" />
+                  )}
+                </button>
                 {[
-                  t('Tulis resep', 'Write prescription'),
                   t('Serahkan obat', 'Dispense'),
                   t('Bayar', 'Payment'),
                 ].map((x, i) => (
@@ -440,6 +457,17 @@ export default function HalamanKunjungan() {
                   <FileText size={14} className="shrink-0 mt-0.5" />
                   {t('Kunjungan ini belum punya diagnosis, jadi belum bisa ditutup. BPJS dan SatuSehat akan menolaknya tanpa itu.',
                      'This visit has no diagnosis yet, so it cannot be closed. BPJS and SatuSehat will reject it without one.')}
+                </p>
+              )}
+
+              {/* Resep draf tidak muncul di antrean farmasi, dan dokter yang
+                  lupa menekan "Finalkan" tidak akan tahu sampai pasiennya
+                  menunggu di loket tanpa pernah dipanggil. */}
+              {aktif.status_resep === 'draf' && aktif.status !== 'batal' && aktif.status !== 'selesai' && (
+                <p className="mt-3 flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <Pill size={14} className="shrink-0 mt-0.5" />
+                  {t('Resepnya masih draf, jadi belum masuk antrean farmasi. Finalkan dulu supaya obatnya bisa disiapkan.',
+                     'The prescription is still a draft, so it has not entered the pharmacy queue. Finalise it so the drugs can be prepared.')}
                 </p>
               )}
 
@@ -565,6 +593,16 @@ export default function HalamanKunjungan() {
             status_pulang: aktif.status_pulang, jenis_kunjungan: aktif.jenis_kunjungan,
           }}
           onTutup={() => setBukaRekam(false)}
+          onSimpan={muat} />
+      )}
+
+      {bukaResep && aktif && (
+        <Resep
+          visitId={aktif.id}
+          nama={`${aktif.pasien_nama}${aktif.nomor_rm ? ` · ${aktif.nomor_rm}` : ''}`}
+          alergi={aktif.alergi}
+          tertutup={aktif.status === 'selesai' || aktif.status === 'batal'}
+          onTutup={() => setBukaResep(false)}
           onSimpan={muat} />
       )}
 
