@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
-  ArrowDownRight, ArrowRight, ArrowUpRight, CalendarClock,
-  Minus, Package, Receipt, ShoppingCart, Wallet,
+  AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, CalendarClock,
+  Minus, Package, Receipt, ShoppingCart, Stethoscope, UserPlus, UsersRound, Wallet,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
@@ -43,6 +43,8 @@ export default function HalamanBeranda() {
   const app = useApp()
   const scope = app.scope
 
+  const klinik = app.sektor !== 'apotek'
+
   const [rentang, setRentang] = useState<Rentang>('7h')
   const [memuat, setMemuat] = useState(true)
 
@@ -51,6 +53,10 @@ export default function HalamanBeranda() {
   const [kini, setKini] = useState({ omzet: 0, transaksi: 0, item: 0 })
   const [lalu, setLalu] = useState({ omzet: 0, transaksi: 0, item: 0 })
   const [totalProduk, setTotalProduk] = useState(0)
+  const [kunjKini, setKunjKini] = useState({ kunjungan: 0, pasienBaru: 0 })
+  const [kunjLalu, setKunjLalu] = useState({ kunjungan: 0, pasienBaru: 0 })
+  const [antrean, setAntrean] = useState<any[]>([])
+  const [resepMenunggu, setResepMenunggu] = useState<any[]>([])
 
   const [terlaris, setTerlaris] = useState<any[]>([])
   const [stokMinim, setStokMinim] = useState<any[]>([])
@@ -81,7 +87,7 @@ export default function HalamanBeranda() {
         .select('jumlah,transactions(created_at,status)')
     )
 
-    const ember: Record<string, { nilai: number; jumlah: number }> = {}
+    const ember: Record<string, { nilai: number; jumlah: number; kunjungan?: number }> = {}
     let oKini = 0, tKini = 0, oLalu = 0, tLalu = 0
     ;(trx || []).forEach((x: any) => {
       if (x.status === 'dibatalkan' || !x.created_at) return
@@ -113,7 +119,10 @@ export default function HalamanBeranda() {
           : (i % Math.ceil(hari / 6) === 0 || i === hari - 1)
             ? d.toLocaleDateString(loc, { day: 'numeric', month: 'short' })
             : ''
-        return { label, nilai: b.nilai, jumlah: b.jumlah }
+        // Garis di grafik: jumlah kunjungan untuk klinik, jumlah transaksi
+        // untuk apotek. Yang dilihat tiap pagi di klinik adalah berapa orang
+        // datang, bukan berapa struk tercetak.
+        return { label, nilai: b.nilai, jumlah: klinik ? (b.kunjungan || 0) : b.jumlah }
       })
 
     setSeri(buat(mulai))
@@ -121,11 +130,40 @@ export default function HalamanBeranda() {
     setKini({ omzet: oKini, transaksi: tKini, item: iKini })
     setLalu({ omzet: oLalu, transaksi: tLalu, item: iLalu })
 
+    // ── Angka klinik ──
+    // Kunjungan diember menurut kolom `tanggal`, bukan `created_at`. Keduanya
+    // hampir selalu sama, tapi kunjungan yang dibuka menjelang tengah malam
+    // dan ditutup sesudahnya tetap milik hari kliniknya, bukan hari berikutnya.
+    if (klinik) {
+      const [{ data: vis }, { data: pas }] = await Promise.all([
+        scope(supabase.from('visits').select('tanggal,status')
+          .gte('tanggal', kunci(mulaiLalu))),
+        scope(supabase.from('patients').select('created_at')
+          .gte('created_at', mulaiLalu.toISOString())),
+      ])
+      let kKini = 0, kLalu = 0
+      ;(vis || []).forEach((x: any) => {
+        if (x.status === 'batal' || !x.tanggal) return
+        const k = String(x.tanggal)
+        if (!ember[k]) ember[k] = { nilai: 0, jumlah: 0 }
+        ember[k].kunjungan = (ember[k].kunjungan || 0) + 1
+        if (k >= kunci(mulai)) kKini += 1; else kLalu += 1
+      })
+      let pKini = 0, pLalu = 0
+      ;(pas || []).forEach((x: any) => {
+        if (!x.created_at) return
+        if (new Date(x.created_at) >= mulai) pKini += 1; else pLalu += 1
+      })
+      setKunjKini({ kunjungan: kKini, pasienBaru: pKini })
+      setKunjLalu({ kunjungan: kLalu, pasienBaru: pLalu })
+    }
+
     const { count } = await scope(supabase.from('products').select('*', { count: 'exact', head: true }))
     setTotalProduk(count || 0)
     setMemuat(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rentang, lang, app.superViewCompany])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rentang, lang, app.superViewCompany, app.sektor])
 
   const muatDaftar = useCallback(async () => {
     const d30 = new Date(); d30.setDate(d30.getDate() - 30)
@@ -154,12 +192,32 @@ export default function HalamanBeranda() {
 
     setStokMinim((prods || []).filter((p: any) => (p.stok_total ?? 0) <= (p.stok_minimum ?? 0)).slice(0, 6))
     setSegeraExp((batches || []).slice(0, 6))
+    // Antrean dan resep hari ini. Ini bukan ringkasan, ini pekerjaan yang
+    // belum selesai: yang membuka beranda pagi hari ingin tahu siapa yang masih
+    // menunggu, bukan berapa rata-rata bulan lalu.
+    if (klinik) {
+      const [{ data: antre }, { data: resep }] = await Promise.all([
+        scope(supabase.from('v_antrean_hari_ini')
+          .select('id,nomor_antre,pasien_nama,status,unit_nama,alergi,dibuka_pada')
+          .not('status', 'in', '("selesai","batal")')
+          .order('dibuka_pada')),
+        scope(supabase.from('v_resep_menunggu')
+          .select('id,nomor,nomor_antre,pasien_nama,jumlah_item')
+          .order('difinalkan_pada')),
+      ])
+      setAntrean((antre as any[]) || [])
+      setResepMenunggu((resep as any[]) || [])
+    } else {
+      setAntrean([]); setResepMenunggu([])
+    }
+
     setJatuhTempo((fakturs || [])
       .filter((f: any) => f.tanggal_jatuh_tempo)
       .sort((a: any, b: any) => new Date(a.tanggal_jatuh_tempo).getTime() - new Date(b.tanggal_jatuh_tempo).getTime())
       .slice(0, 6))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [app.superViewCompany])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [app.superViewCompany, app.sektor])
 
   useEffect(() => { muatAngka() }, [muatAngka])
   useEffect(() => { muatDaftar() }, [muatDaftar])
@@ -167,7 +225,19 @@ export default function HalamanBeranda() {
   const rata = kini.transaksi ? kini.omzet / kini.transaksi : 0
   const rataLalu = lalu.transaksi ? lalu.omzet / lalu.transaksi : 0
 
-  const kartu = [
+  // Urutan kartu mengikuti apa yang ditanyakan orang lebih dulu. Di apotek itu
+  // omzet; di klinik itu berapa orang datang. Menaruh omzet di depan pada layar
+  // klinik bukan cuma salah urutan, ia memberi kesan aplikasi ini tidak tahu
+  // sedang dipakai di mana.
+  const kartu = klinik ? [
+    { label: t('Kunjungan', 'Visits'),        nilai: angka(kunjKini.kunjungan),  kini: kunjKini.kunjungan,  lalu: kunjLalu.kunjungan,  Icon: Stethoscope },
+    { label: t('Pasien baru', 'New patients'), nilai: angka(kunjKini.pasienBaru), kini: kunjKini.pasienBaru, lalu: kunjLalu.pasienBaru, Icon: UserPlus },
+    { label: t('Omzet', 'Revenue'),           nilai: rupiah(kini.omzet),         kini: kini.omzet,          lalu: lalu.omzet,          Icon: Wallet },
+    { label: t('Rata-rata / kunjungan', 'Average / visit'),
+      nilai: rupiah(kunjKini.kunjungan ? kini.omzet / kunjKini.kunjungan : 0),
+      kini: kunjKini.kunjungan ? kini.omzet / kunjKini.kunjungan : 0,
+      lalu: kunjLalu.kunjungan ? lalu.omzet / kunjLalu.kunjungan : 0, Icon: Receipt },
+  ] : [
     { label: t('Omzet', 'Revenue'),                        nilai: rupiah(kini.omzet),    kini: kini.omzet,     lalu: lalu.omzet,     Icon: Wallet },
     { label: t('Transaksi', 'Transactions'),               nilai: angka(kini.transaksi), kini: kini.transaksi, lalu: lalu.transaksi, Icon: ShoppingCart },
     { label: t('Item terjual', 'Items sold'),              nilai: angka(kini.item),      kini: kini.item,      lalu: lalu.item,      Icon: Package },
@@ -225,13 +295,16 @@ export default function HalamanBeranda() {
         <div className={`${KARTU} lg:col-span-2 p-5`}>
           <div className="flex items-start justify-between mb-4 gap-3 flex-wrap">
             <div>
-              <h2 className="font-semibold text-[var(--ink)]">{t('Penjualan', 'Sales')}</h2>
+              <h2 className="font-semibold text-[var(--ink)]">
+                {klinik ? t('Kunjungan & Penjualan', 'Visits & Sales') : t('Penjualan', 'Sales')}
+              </h2>
               <div className="flex items-center gap-3 mt-1 flex-wrap">
                 <span className="flex items-center gap-1.5 text-xs text-[var(--ink-soft)]">
                   <span className="inline-block w-2.5 h-2.5 rounded-sm bg-[var(--brand-soft)]" />{t('Omzet', 'Revenue')}
                 </span>
                 <span className="flex items-center gap-1.5 text-xs text-[var(--ink-soft)]">
-                  <span className="inline-block w-4 h-0.5 rounded bg-[var(--accent)]" />{t('Transaksi', 'Transactions')}
+                  <span className="inline-block w-4 h-0.5 rounded bg-[var(--accent)]" />
+                  {klinik ? t('Kunjungan', 'Visits') : t('Transaksi', 'Transactions')}
                 </span>
                 <span className="flex items-center gap-1.5 text-xs text-[var(--ink-faint)]">
                   <span className="inline-block w-4 h-0.5 rounded" style={{ background: 'var(--line)' }} />
@@ -272,9 +345,76 @@ export default function HalamanBeranda() {
         </div>
       </div>
 
+      {/* ── Antrean hari ini. Ditaruh SEBELUM "perlu diurus" karena ia bukan
+             peringatan melainkan pekerjaan yang sedang berjalan: ada orang yang
+             benar-benar sedang duduk menunggu saat baris ini dibaca. ── */}
+      {klinik && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-8">
+          <div className={`${KARTU} lg:col-span-2 p-5`}>
+            <div className="flex items-baseline justify-between gap-3 mb-4 flex-wrap">
+              <div className="flex items-baseline gap-2">
+                <h2 className="font-semibold text-[var(--ink)]">{t('Antrean hari ini', 'Today queue')}</h2>
+                <span className={`text-sm ${antrean.length ? 'text-[var(--accent)] font-medium' : 'text-[var(--ink-faint)]'}`}>
+                  {antrean.length
+                    ? `${angka(antrean.length)} ${t('menunggu', 'waiting')}`
+                    : t('kosong', 'empty')}
+                </span>
+              </div>
+              <Link href="/kunjungan"
+                className="text-xs font-medium text-[var(--brand)] hover:underline underline-offset-4 inline-flex items-center gap-1">
+                {t('Buka Kunjungan', 'Open Visits')} <ArrowRight size={13} />
+              </Link>
+            </div>
+            {antrean.length === 0 ? (
+              <p className="py-8 text-center text-sm text-[var(--ink-faint)]">
+                {t('Belum ada yang menunggu. Daftarkan kunjungan lewat menu Kunjungan.',
+                   'Nobody waiting. Register a visit from the Visits screen.')}
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {antrean.slice(0, 8).map((a: any) => (
+                  <Link key={a.id} href="/kunjungan"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[var(--line)] hover:bg-[var(--surface-2)] transition">
+                    <span className="num text-xs font-bold text-[var(--brand)] shrink-0">{a.nomor_antre}</span>
+                    <span className="text-sm text-[var(--ink)] truncate flex-1">{a.pasien_nama}</span>
+                    {a.alergi && <AlertTriangle size={12} className="shrink-0 text-red-600" />}
+                    <span className="text-[10px] text-[var(--ink-faint)] shrink-0">{a.status}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className={`${KARTU} p-5`}>
+            <div className="flex items-baseline justify-between gap-2 mb-4">
+              <h2 className="font-semibold text-[var(--ink)]">{t('Resep menunggu', 'Prescriptions waiting')}</h2>
+              <span className={`text-sm ${resepMenunggu.length ? 'text-[var(--accent)] font-medium' : 'text-[var(--ink-faint)]'}`}>
+                {angka(resepMenunggu.length)}
+              </span>
+            </div>
+            {resepMenunggu.length === 0 ? (
+              <p className="py-8 text-center text-xs text-[var(--ink-faint)]">
+                {t('Tidak ada resep yang menunggu diserahkan.', 'No prescriptions awaiting dispensing.')}
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                {resepMenunggu.slice(0, 6).map((r: any) => (
+                  <Link key={r.id} href="/kasir"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[var(--line)] hover:bg-[var(--surface-2)] transition">
+                    <span className="num text-xs font-bold text-[var(--brand)] shrink-0">{r.nomor_antre}</span>
+                    <span className="text-sm text-[var(--ink)] truncate flex-1">{r.pasien_nama}</span>
+                    <span className="num text-[10px] text-[var(--ink-faint)] shrink-0">{r.jumlah_item}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Yang perlu diurus. Ini bagian yang dilihat orang tiap pagi, jadi
              judulnya menyebut jumlahnya, bukan cuma menamai bagiannya. ── */}
-      <div className="mt-8 mb-3 flex items-baseline gap-2 flex-wrap">
+      <div className={`${klinik ? 'mt-6' : 'mt-8'} mb-3 flex items-baseline gap-2 flex-wrap`}>
         <h2 className="text-lg font-bold text-[var(--ink)]">{t('Perlu diurus', 'Needs attention')}</h2>
         <span className={`text-sm ${perluPerhatian ? 'text-[var(--accent)] font-medium' : 'text-[var(--ink-faint)]'}`}>
           {perluPerhatian
