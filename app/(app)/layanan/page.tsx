@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import PilihICD9 from '@/components/klinik/PilihICD9'
 import { Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
@@ -30,6 +31,7 @@ type Layanan = {
   harga: number | null
   deskripsi: string | null
   status: string
+  kode_icd9: string | null
 }
 
 export default function HalamanLayanan() {
@@ -39,7 +41,7 @@ export default function HalamanLayanan() {
   const [services, setServices] = useState<Layanan[]>([])
   const [memuat, setMemuat] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ nama: '', harga: 0, deskripsi: '' })
+  const [form, setForm] = useState({ nama: '', harga: 0, deskripsi: '', kode_icd9: null as string | null })
   const [edit, setEdit] = useState<Layanan | null>(null)
 
   const muat = async () => {
@@ -59,11 +61,12 @@ export default function HalamanLayanan() {
       nama: form.nama.trim(),
       harga: form.harga || 0,
       deskripsi: form.deskripsi || null,
+      kode_icd9: form.kode_icd9,
       ...app.cid(),
     }])
     if (error) { alert(pesanError(error)); return }
     setShowForm(false)
-    setForm({ nama: '', harga: 0, deskripsi: '' })
+    setForm({ nama: '', harga: 0, deskripsi: '', kode_icd9: null })
     muat()
   }
 
@@ -74,6 +77,7 @@ export default function HalamanLayanan() {
       harga: edit.harga || 0,
       deskripsi: edit.deskripsi,
       status: edit.status,
+      kode_icd9: edit.kode_icd9,
     }).eq('id', edit.id)
     if (error) { alert(pesanError(error)); return }
     setEdit(null)
@@ -98,7 +102,7 @@ export default function HalamanLayanan() {
           </p>
         </div>
         <button
-          onClick={() => { setForm({ nama: '', harga: 0, deskripsi: '' }); setShowForm(true) }}
+          onClick={() => { setForm({ nama: '', harga: 0, deskripsi: '', kode_icd9: null }); setShowForm(true) }}
           className="shrink-0 bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition"
         >
           + {t('Tambah Layanan', 'Add Service')}
@@ -125,7 +129,15 @@ export default function HalamanLayanan() {
               </td></tr>
             ) : services.map(s => (
               <tr key={s.id} className={TR}>
-                <td className="px-4 py-3 font-medium text-[var(--ink)]">{s.nama}</td>
+                <td className="px-4 py-3 font-medium text-[var(--ink)]">
+                  {s.nama}
+                  {app.sektor !== 'apotek' && s.kode_icd9 && (
+                    <span className="num ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--surface-2)] text-[var(--ink-soft)]"
+                      title={t('Kode tindakan ICD-9-CM', 'ICD-9-CM procedure code')}>
+                      {s.kode_icd9}
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-right text-[var(--ink)] num">Rp {(s.harga || 0).toLocaleString('id-ID')}</td>
                 <td className="px-4 py-3 text-[var(--ink-soft)] text-xs max-w-[280px] truncate">{s.deskripsi || '-'}</td>
                 <td className="px-4 py-3 text-center">
@@ -147,6 +159,7 @@ export default function HalamanLayanan() {
 
       {(showForm || edit) && (
         <FormLayanan
+          pakaiICD9={app.sektor !== 'apotek'}
           nilai={edit ?? form}
           isEdit={!!edit}
           ubah={(patch) => edit ? setEdit({ ...edit, ...patch }) : setForm({ ...form, ...patch })}
@@ -159,10 +172,12 @@ export default function HalamanLayanan() {
 }
 
 function FormLayanan({
-  nilai, isEdit, ubah, batal, simpan,
+  nilai, isEdit, ubah, batal, simpan, pakaiICD9,
 }: {
   nilai: any
   isEdit: boolean
+  /** Apotek tidak menagihkan tindakan medis, jadi kolomnya tidak dimunculkan. */
+  pakaiICD9: boolean
   ubah: (patch: any) => void
   batal: () => void
   simpan: () => void
@@ -204,6 +219,9 @@ function FormLayanan({
             <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Deskripsi', 'Description')}</label>
             <textarea value={nilai.deskripsi || ''} onChange={e => ubah({ deskripsi: e.target.value })} rows={2} className={inputCls} />
           </div>
+          {pakaiICD9 && (
+            <PilihICD9 nilai={nilai.kode_icd9 ?? null} ubah={kode => ubah({ kode_icd9: kode })} />
+          )}
           {isEdit && (
             <div>
               <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">Status</label>

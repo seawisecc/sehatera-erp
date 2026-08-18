@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AlertTriangle, Check, Plus, Search, Trash2, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/lib/i18n'
 import { pesanError } from '@/lib/session'
 import { tanggalJam } from '@/lib/format'
-import { BENTUK_ICD10, cariICD, KESADARAN, STATUS_PULANG, type SaranICD } from '@/lib/icd10'
+import { BENTUK_ICD10, cariICD, namaTerbaik, usePencarianICD, KESADARAN, STATUS_PULANG, type SaranICD } from '@/lib/icd10'
 
 /**
  * Rekam medis satu kunjungan: SOAP, tanda vital, dan diagnosis.
@@ -22,7 +22,7 @@ import { BENTUK_ICD10, cariICD, KESADARAN, STATUS_PULANG, type SaranICD } from '
  * data medis bukan pilihan.
  */
 
-type Diagnosis = { kode_icd10: string; nama: string; tipe: string }
+type Diagnosis = { kode_icd10: string; nama: string; tipe: string; terverifikasi?: boolean }
 
 type Isi = {
   soap: { subjektif?: string; objektif?: string; asesmen?: string; plan?: string; dicatat_oleh?: string; diubah_pada?: string } | null
@@ -87,23 +87,27 @@ export default function RekamMedis({
       })
       setDiagnosis((d.diagnosis || []).map((x: any) => ({
         kode_icd10: x.kode_icd10, nama: x.nama, tipe: x.tipe,
+        terverifikasi: x.terverifikasi !== false,
       })))
     })()
     return () => { batal = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visitId])
 
-  const saran = useMemo(() => cariICD(cari), [cari])
+  const { hasil: saran, sibuk: mencari } = usePencarianICD<SaranICD>(cari, cariICD)
   const kodeManual = cari.trim().toUpperCase()
-  const bisaManual = BENTUK_ICD10.test(kodeManual) && !diagnosis.some(d => d.kode_icd10 === kodeManual)
+  const bisaManual = BENTUK_ICD10.test(kodeManual)
+    && !diagnosis.some(d => d.kode_icd10 === kodeManual)
+    && !saran.some(s => s.kode === kodeManual)
 
   const tambah = (d: SaranICD) => {
     if (diagnosis.some(x => x.kode_icd10 === d.kode)) return
     // Yang pertama masuk jadi primer. Bukan tebakan: yang pertama diketik dokter
     // hampir selalu alasan utama pasien datang, dan kalau keliru tinggal ditukar.
     setDiagnosis([...diagnosis, {
-      kode_icd10: d.kode, nama: d.nama,
+      kode_icd10: d.kode, nama: namaTerbaik(d),
       tipe: diagnosis.some(x => x.tipe === 'primer') ? 'sekunder' : 'primer',
+      terverifikasi: d.terverifikasi !== false,
     }])
     setCari('')
   }
@@ -282,6 +286,13 @@ export default function RekamMedis({
                       <div key={d.kode_icd10} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--surface)] border border-[var(--line)]">
                         <span className="num text-xs font-bold text-[var(--brand)] shrink-0">{d.kode_icd10}</span>
                         <span className="text-sm text-[var(--ink)] truncate flex-1">{d.nama}</span>
+                        {d.terverifikasi === false && (
+                          <span title={t('Kode ini tidak ada di daftar e-klaim Kemenkes. Diagnosisnya boleh saja benar, tapi klaim BPJS dengan kode ini berisiko ditolak.',
+                                         'This code is not in the Kemenkes e-claim list. The diagnosis may well be right, but a BPJS claim using it risks rejection.')}
+                            className="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                            <AlertTriangle size={10} /> {t('DI LUAR E-KLAIM', 'OFF-LIST')}
+                          </span>
+                        )}
                         {d.tipe === 'primer' ? (
                           <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--brand)] text-[var(--on-brand)]">
                             {t('PRIMER', 'PRIMARY')}
@@ -308,28 +319,41 @@ export default function RekamMedis({
                     className={`${I} pl-9`} />
                 </div>
 
-                {(saran.length > 0 || bisaManual) && (
+                {(saran.length > 0 || bisaManual || mencari) && (
                   <div className="mt-1 border border-[var(--line)] rounded-lg overflow-hidden bg-[var(--surface)]">
+                    {mencari && saran.length === 0 && (
+                      <p className="px-3 py-2 text-sm text-[var(--ink-faint)]">{t('Mencari…', 'Searching…')}</p>
+                    )}
                     {saran.map(s => (
                       <button key={s.kode} onClick={() => tambah(s)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-2)] flex items-center gap-2">
-                        <span className="num text-xs font-bold text-[var(--brand)] w-14 shrink-0">{s.kode}</span>
-                        <span className="text-[var(--ink)] truncate">{s.nama}</span>
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-2)] flex items-start gap-2">
+                        <span className="num text-xs font-bold text-[var(--brand)] w-14 shrink-0 pt-0.5">{s.kode}</span>
+                        <span className="min-w-0">
+                          <span className="block text-[var(--ink)] truncate">{namaTerbaik(s)}</span>
+                          {/* Nama resmi Kemenkes selalu ikut kelihatan, walau aliasnya
+                              yang dipakai. Alias itu buatan kami; yang dinilai BPJS
+                              nanti baris yang ini. */}
+                          {s.nama_id?.trim() && (
+                            <span className="block text-[11px] text-[var(--ink-faint)] truncate">{s.nama}</span>
+                          )}
+                        </span>
                       </button>
                     ))}
                     {bisaManual && (
-                      <button onClick={() => tambah({ kode: kodeManual, nama: kodeManual })}
+                      <button onClick={() => tambah({ kode: kodeManual, nama: kodeManual, terverifikasi: false })}
                         className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--surface-2)] border-t border-[var(--line)]">
                         <span className="num text-xs font-bold text-[var(--brand)]">{kodeManual}</span>
-                        <span className="text-[var(--ink-soft)] ml-2">{t('pakai kode ini', 'use this code')}</span>
+                        <span className="text-[var(--ink-soft)] ml-2">
+                          {t('pakai kode ini, walau tidak ada di daftar e-klaim', 'use this code, though it is not in the e-claim list')}
+                        </span>
                       </button>
                     )}
                   </div>
                 )}
 
                 <p className="text-[11px] text-[var(--ink-faint)] mt-2 leading-relaxed">
-                  {t('Daftar yang muncul cuma saran cepat, bukan daftar resmi. Kode di luar daftar tetap bisa diketik. Satu kunjungan hanya boleh punya satu diagnosis primer.',
-                     'The suggestions are a shortcut, not the official list. Codes outside it can still be typed. A visit may have only one primary diagnosis.')}
+                  {t('Dicari dari daftar resmi e-klaim Kemenkes, 18.543 kode ICD-10. Bisa dicari dalam bahasa Indonesia atau Inggris, atau langsung diketik kodenya. Kode di luar daftar tetap boleh dipakai, tapi ditandai karena klaim BPJS dengan kode itu berisiko ditolak. Satu kunjungan hanya boleh punya satu diagnosis primer.',
+                     'Searched against the official Kemenkes e-claim list of 18,543 ICD-10 codes, in Indonesian or English, or type the code directly. Codes outside the list may still be used, but are flagged: a BPJS claim carrying one risks rejection. A visit may have only one primary diagnosis.')}
                 </p>
               </section>
 

@@ -62,6 +62,12 @@ memasang lubang keamanan yang sudah ditutup.
 | `0022_jalur_admin_klinik` | `simpan_pasien` & `daftar_kunjungan` menerima `p_company` |
 | `0023_eresep` | `prescriptions`, `prescription_items`, antrean farmasi, penandaan dilayani |
 | `0024_tagihan_kunjungan` | `visit_charges`, biaya administrasi & konsultasi masuk lewat trigger, `tagihan_kunjungan()` |
+| `0025_terminologi_icd` | Tabel `icd10`, `icd9cm`, `icd10_alias`; `cari_icd10()`, `cari_icd9()`; penandaan `terverifikasi`; `services.kode_icd9` |
+| `0026..0028_data_icd10_bagian1..3` | Isi 18.543 kode ICD-10 dari berkas e-klaim Kemenkes |
+| `0029_data_icd9cm_dan_alias` | Isi 4.626 kode ICD-9-CM, dan 49 alias Indonesia |
+| `0030_cari_icd_bahasa_indonesia` | `normalisasi_medis()`, `icd_kata` (162 pasang), `nama_norm`, pencarian dua bahasa |
+| `0031_normalisasi_rh` | `rh` luruh jadi `r`: cirrhosis = sirosis |
+| `0032_glosarium_kunci_ternormalisasi` | Kunci glosarium dibandingkan setelah dinormalkan |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -69,6 +75,18 @@ mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
 **Migrasi yang sudah dijalankan tidak boleh disunting.** Perbaikan selalu jadi
 migrasi baru: file dan database harus tetap sama isinya, dan itulah seluruh
 alasan folder ini ada.
+
+`supabase/uji/` berisi pembuktian migrasi: blok `do $$` yang diakhiri
+`raise exception` supaya seluruh percobaannya dibatalkan. **Bukan migrasi, dan
+tidak pernah mengubah apa pun.** Yang benar cuma satu keluaran: galat terakhir
+berbunyi "SEMUA UJI LULUS". Tempelkan sesudah migrasinya dijalankan.
+
+Migrasi 0026 sampai 0029 isinya data, bukan skema, dan berukuran 214 sampai
+338 KB per berkas. Ukuran itu disengaja: satu tempelan 1 MB membuat SQL Editor
+Supabase tersendat, dan jalur menjalankan SQL di project ini memang lewat sana.
+Isinya satu pernyataan `insert ... select from unnest(string_to_array(...))`
+berpembatas "|", bukan puluhan ribu tuple VALUES, dan `on conflict do update`
+membuatnya aman dijalankan ulang.
 
 **Migrasi harus aman dijalankan di atas database yang sudah berisi data.**
 Bentuknya `create table if not exists` lalu `alter table ... add column if not
@@ -211,15 +229,95 @@ Tiga aturan medis yang ditegakkan database, bukan layar: kunjungan tidak bisa
 ditutup tanpa diagnosis; rekam medis yang sudah ditutup hanya bisa ditambahi
 adendum; resep yang sudah difinalkan hanya bisa dibatalkan lalu ditulis ulang.
 
-`lib/icd10.ts` berisi **saran cepat susunan Claude, BUKAN berkas resmi.** Harus
-dicocokkan dengan daftar 144 diagnosis non-spesialistik BPJS sebelum dipakai
-klaim.
+**Daftar ICD sekarang RESMI dan ada di database, bukan di berkas TypeScript.**
+Sumbernya berkas e-klaim Kemenkes yang diberikan pemilik: 18.543 kode ICD-10
+dan 4.626 kode ICD-9-CM, daftar yang sama persis dipakai INA-CBG menilai klaim.
+`lib/icd10.ts` sekarang hanya pembungkus pencarian, isinya sudah tidak ada di
+sana: 18.543 baris berarti sekitar 1 MB JavaScript untuk menampilkan delapan
+baris hasil.
+
+Tiga hal yang perlu diingat sebelum menyentuhnya lagi:
+
+- **Kode di luar daftar tidak ditolak, cuma ditandai** (`visit_diagnoses.terverifikasi`).
+  Berkasnya berlabel versi 2010 tapi masih dirawat (U07.1 COVID-19 ada di
+  dalamnya), jadi ia bisa tertinggal dari SatuSehat tanpa ada yang memberi
+  tahu. Menolak keras berarti ada dokter yang tidak bisa menutup kunjungannya
+  di depan pasien karena kodenya terlalu baru.
+- **Nama resmi seluruhnya bahasa Inggris**, dan itu ditangani BERLAPIS TIGA
+  (migrasi 0030 sampai 0032), karena masalahnya ternyata dua hal yang berbeda:
+
+  1. **Ejaan** diselesaikan mesin. `normalisasi_medis()` meluruhkan ph->f,
+     ch->k, th->t, rh->r, c->k/s, y->i, x->ks, -tion->-si, dan huruf ganda,
+     lalu dipakai pada nama resmi (kolom `nama_norm`) DAN pada yang diketik.
+     Jadi "faringitis" bertemu "pharyngitis" tanpa ada yang mendaftarkannya.
+  2. **Kosakata** tidak bisa diselesaikan mesin. "demam" bukan salah eja dari
+     "fever". Itu tugas `icd_kata`, 162 pasang kata Indonesia ke Inggris.
+  3. **Frasa utuh** tetap di `icd10_alias`, 49 nama yang dulu jadi seluruh isi
+     `lib/icd10.ts`.
+
+  Antar kata syaratnya DAN, antar padanan satu kata syaratnya ATAU. Itu yang
+  membuat "demam berdarah" tidak mengembalikan semua yang demam, walau di nama
+  resminya urutannya justru terbalik ("dengue haemorrhagic fever").
+
+  **Menambah baris di `icd_kata` itu tempat pertama yang dilihat kalau ada
+  keluhan "kok tidak ketemu"**: satu baris di sana memperbaiki pencarian untuk
+  ribuan kode sekaligus, sedangkan satu alias cuma memperbaiki satu kode.
+
+  **Yang sengaja TIDAK dilakukan: menerjemahkan 18.543 nama dengan mesin.**
+  Terjemahan medis yang setengah benar lebih berbahaya daripada tidak ada,
+  alasannya sama persis dengan kenapa pemeriksaan interaksi obat tidak dibuat.
+
+  **`nama_norm` itu kolom GENERATED STORED.** Mengubah isi `normalisasi_medis()`
+  TIDAK menghitung ulang baris yang sudah tersimpan, dan Postgres tidak
+  mengeluh sedikit pun. Kolomnya harus dibuang lalu dipasang ulang, seperti di
+  migrasi 0031. Ini jenis kesalahan yang tidak akan pernah muncul sebagai galat.
+- **Kode ICD-9-CM tindakan menempel di katalog layanan** (`services.kode_icd9`),
+  bukan diketik ulang tiap kunjungan, lalu ikut sendiri ke `visit_charges`
+  lewat `simpan_biaya_kunjungan`. Kode yang dikirim pemanggil tetap menang.
+
+Yang belum: mencocokkan dengan daftar 144 diagnosis non-spesialistik BPJS
+(untuk menandai mana yang boleh ditangani FKTP), dan penerjemahan nama resmi
+ke bahasa Indonesia di luar 49 alias itu.
 
 **Verifikasi spesifikasi SatuSehat dan BPJS ke dokumentasi resmi yang berlaku
 saat itu, jangan dari ingatan.** Versi FHIR, resource wajib, format tanda tangan
 permintaan, dan syarat sertifikasi berubah cukup sering. Kredensial BPJS
 diberikan per faskes, bukan per vendor: harus disimpan terenkripsi per tenant,
 bukan polos di `settings`.
+
+### Yang sudah diperiksa ke dokumentasi resmi SatuSehat
+
+Dibaca dari `satusehat.kemkes.go.id/platform/docs` pada **18 Agustus 2026**.
+Dua yang pertama diambil dari halaman resource-nya langsung, dan keduanya
+sudah dipakai memutuskan bentuk tabel di migrasi 0025:
+
+- `Condition.code` memakai system **`http://hl7.org/fhir/sid/icd-10`**.
+  **Satu payload `Condition` hanya boleh membawa SATU kode ICD-10**, jadi
+  kunjungan dengan tiga diagnosis berangkat sebagai tiga payload. Ini
+  cocok dengan bentuk `visit_diagnoses` yang sudah satu baris per kode.
+- `Procedure.code` memakai system **`http://hl7.org/fhir/sid/icd-9-cm`**.
+  Wajib: `status`, `code.coding`, `subject`, `encounter`, `performer.actor`.
+  `performer.actor` sempat tidak punya tempat: `visit_charges` cuma mencatat
+  siapa yang MENGETIK biayanya (`dicatat_oleh`), yang di klinik sibuk hampir
+  selalu kasir, bukan yang memegang alatnya. Migrasi 0025 menambah
+  `visit_charges.dikerjakan_oleh`, bawaannya dokter kunjungan itu.
+- Urutannya: daftar faskes, lengkapi profil, ambil kredensial sandbox,
+  kirim prasyarat (Organization, Location, Practitioner, Patient) lebih
+  dulu, baru resource klinis. Patient harus lewat pencocokan MPI, bukan
+  dibuat sendiri.
+
+**Alamat endpoint dan alur OAuth2 di bawah ini BELUM diverifikasi ke
+dokumen resmi**, sumbernya pustaka pihak ketiga dan tulisan orang. Jangan
+dipakai menulis kode sebelum dicocokkan sendiri ke dokumen resmi saat
+kredensialnya sudah ada:
+
+- token: `POST {base}/oauth2/v1/accesstoken?grant_type=client_credentials`
+- FHIR: `{base}/fhir-r4/v1/{Resource}`
+- base produksi `https://api-satusehat.kemkes.go.id`, sandbox
+  `https://api-satusehat-dev.dto.kemkes.go.id`
+
+Yang menahan pekerjaan ini bukan lagi bentuk data, melainkan kredensial
+per faskes dan tempat menyimpannya terenkripsi.
 
 ## Uang kunjungan: satu tagihan, dan dua biaya yang masuk sendiri
 
@@ -264,7 +362,7 @@ menarik:
 | 1 | Satu tagihan per kunjungan | **selesai** (migrasi 0024) |
 | 2 | Hak akses per sub-modul kunjungan | **berikutnya** |
 | 3 | Layar antrean ruang tunggu + panggilan suara | belum |
-| 4 | ICD-10 resmi dan ICD-9-CM untuk tindakan | belum, sebagian menunggu berkas dari pemilik |
+| 4 | ICD-10 resmi dan ICD-9-CM untuk tindakan | **selesai** (migrasi 0025..0029) |
 | 5 | Reservasi | belum, modul baru |
 | 6 | Kirim ke SatuSehat dan BPJS | belum, tertahan kredensial |
 

@@ -1,99 +1,103 @@
 /**
- * Daftar pendek diagnosis ICD-10 yang sering dipakai di layanan primer.
+ * Terminologi diagnosis dan tindakan.
  *
- * PENTING, dan tolong dibaca sebelum dipakai melayani pasien sungguhan:
- * daftar ini SARAN CEPAT supaya dokter tidak mengetik kode dari nol, BUKAN
- * rujukan resmi. Isinya saya susun dari yang lazim ditemui, bukan disalin dari
- * berkas Kemenkes atau BPJS, jadi ejaan dan cakupannya perlu dicocokkan dengan
- * daftar 144 diagnosis non-spesialistik BPJS sebelum dipakai untuk klaim.
+ * Berkas ini dulu MEMUAT daftarnya: 49 diagnosis susunan saya sendiri, dengan
+ * peringatan panjang di header bahwa itu saran cepat dan bukan rujukan resmi.
+ * Peringatan itu sudah tidak berlaku dan daftarnya sudah tidak di sini.
  *
- * Yang menahan salah kode ada di database, bukan di daftar ini: kolom kodenya
- * menolak bentuk yang bukan ICD-10, dan SatuSehat akan menolak kode yang tidak
- * ada. Daftar ini cuma mempercepat yang sudah benar.
+ * Sejak migrasi 0025 sampai 0029, sumbernya berkas e-klaim Kemenkes yang
+ * tersimpan di database: 18.543 kode ICD-10 dan 4.626 kode ICD-9-CM, versi
+ * 2010, daftar yang sama persis dipakai INA-CBG menilai klaim.
  *
- * Kode di luar daftar tetap bisa diketik bebas. Begitu daftar resminya diimpor
- * lewat menu Migrasi, tempat ini tinggal diganti sumbernya.
+ * Pencariannya di DATABASE, bukan di sini, dan itu bukan pilihan gaya: 18.543
+ * baris berarti sekitar 1 MB JavaScript yang harus diunduh tiap orang yang
+ * membuka aplikasi ini, untuk menampilkan delapan baris hasil.
+ *
+ * 49 nama Indonesia yang dulu jadi seluruh isi berkas ini tidak dibuang.
+ * Mereka pindah ke tabel `icd10_alias` sebagai jalan pintas mengetik, karena
+ * berkas Kemenkes seluruhnya bahasa Inggris dan dokter di sini mencari
+ * "demam tifoid", bukan "Typhoid fever".
  */
 
-export type SaranICD = { kode: string; nama: string }
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
-export const SARAN_ICD10: SaranICD[] = [
-  // Saluran napas
-  { kode: 'J00',   nama: 'Nasofaringitis akut (pilek)' },
-  { kode: 'J01.9', nama: 'Sinusitis akut' },
-  { kode: 'J02.9', nama: 'Faringitis akut' },
-  { kode: 'J03.9', nama: 'Tonsilitis akut' },
-  { kode: 'J06.9', nama: 'Infeksi saluran napas atas akut' },
-  { kode: 'J20.9', nama: 'Bronkitis akut' },
-  { kode: 'J45.9', nama: 'Asma' },
-  { kode: 'A15.0', nama: 'Tuberkulosis paru' },
+export type SaranICD = {
+  kode: string
+  nama: string
+  /** Nama Indonesianya, kalau kode ini punya alias. */
+  nama_id?: string | null
+  terverifikasi?: boolean
+}
 
-  // Pencernaan
-  { kode: 'A09',   nama: 'Diare dan gastroenteritis' },
-  { kode: 'A01.0', nama: 'Demam tifoid' },
-  { kode: 'K29.7', nama: 'Gastritis' },
-  { kode: 'K30',   nama: 'Dispepsia' },
-  { kode: 'K59.0', nama: 'Konstipasi' },
-  { kode: 'R11',   nama: 'Mual dan muntah' },
-  { kode: 'B82.9', nama: 'Kecacingan' },
+export type SaranICD9 = { kode: string; nama: string }
 
-  // Demam dan infeksi
-  { kode: 'R50.9', nama: 'Demam tanpa sebab jelas' },
-  { kode: 'A90',   nama: 'Demam dengue' },
-  { kode: 'A91',   nama: 'Demam berdarah dengue' },
-  { kode: 'B34.9', nama: 'Infeksi virus' },
-
-  // Peredaran darah dan metabolik
-  { kode: 'I10',   nama: 'Hipertensi esensial' },
-  { kode: 'E11.9', nama: 'Diabetes melitus tipe 2' },
-  { kode: 'E78.5', nama: 'Hiperlipidemia' },
-  { kode: 'E66.9', nama: 'Obesitas' },
-  { kode: 'D50.9', nama: 'Anemia defisiensi besi' },
-
-  // Saraf dan otot
-  { kode: 'R51',   nama: 'Sakit kepala' },
-  { kode: 'G43.9', nama: 'Migrain' },
-  { kode: 'M54.5', nama: 'Nyeri punggung bawah' },
-  { kode: 'M79.1', nama: 'Mialgia' },
-  { kode: 'M13.9', nama: 'Artritis' },
-  { kode: 'G51.0', nama: 'Bell palsy' },
-
-  // Kulit
-  { kode: 'L23.9', nama: 'Dermatitis kontak alergi' },
-  { kode: 'L30.9', nama: 'Dermatitis' },
-  { kode: 'L50.9', nama: 'Urtikaria' },
-  { kode: 'B35.4', nama: 'Tinea korporis' },
-  { kode: 'B37.9', nama: 'Kandidiasis' },
-  { kode: 'B86',   nama: 'Skabies' },
-  { kode: 'L02.9', nama: 'Abses kulit' },
-
-  // Mata, telinga, gigi
-  { kode: 'H10.9', nama: 'Konjungtivitis' },
-  { kode: 'H52.4', nama: 'Presbiopia' },
-  { kode: 'H60.9', nama: 'Otitis eksterna' },
-  { kode: 'H66.9', nama: 'Otitis media' },
-  { kode: 'K02.9', nama: 'Karies gigi' },
-  { kode: 'K04.7', nama: 'Abses periapikal' },
-
-  // Saluran kemih dan kandungan
-  { kode: 'N39.0', nama: 'Infeksi saluran kemih' },
-  { kode: 'N76.0', nama: 'Vaginitis akut' },
-  { kode: 'Z34.9', nama: 'Pengawasan kehamilan normal' },
-
-  // Lain-lain
-  { kode: 'F41.9', nama: 'Gangguan cemas' },
-  { kode: 'T14.1', nama: 'Luka terbuka' },
-  { kode: 'Z00.0', nama: 'Pemeriksaan kesehatan umum' },
-]
-
+/**
+ * Penyaring BENTUK, bukan penyaring kebenaran. Sama seperti di migrasi 0018:
+ * yang ditangkap di sini salah ketik, bukan kode yang tidak ada.
+ */
 export const BENTUK_ICD10 = /^[A-Z][0-9]{2}(\.[0-9]{1,2})?$/
 
-export function cariICD(q: string, batas = 8): SaranICD[] {
-  const s = q.trim().toLowerCase()
+/**
+ * Tiga angka di belakang titik, bukan dua. Berkas Kemenkes memuat 93.960, dan
+ * kalau batasnya dua angka satu-satunya kode itu tidak akan pernah bisa
+ * dimasukkan.
+ */
+export const BENTUK_ICD9 = /^[0-9]{2}(\.[0-9]{1,3})?$/
+
+/** Nama yang sebaiknya dipakai: Indonesia kalau ada, kalau tidak yang resmi. */
+export function namaTerbaik(s: SaranICD): string {
+  return s.nama_id?.trim() || s.nama
+}
+
+export async function cariICD(q: string, batas = 20): Promise<SaranICD[]> {
+  const s = q.trim()
   if (!s) return []
-  return SARAN_ICD10
-    .filter(d => d.kode.toLowerCase().startsWith(s) || d.nama.toLowerCase().includes(s))
-    .slice(0, batas)
+  const { data, error } = await supabase.rpc('cari_icd10', { p_q: s, p_batas: batas })
+  if (error) return []
+  return (data ?? []) as SaranICD[]
+}
+
+export async function cariICD9(q: string, batas = 20): Promise<SaranICD9[]> {
+  const s = q.trim()
+  if (!s) return []
+  const { data, error } = await supabase.rpc('cari_icd9', { p_q: s, p_batas: batas })
+  if (error) return []
+  return (data ?? []) as SaranICD9[]
+}
+
+/**
+ * Pencarian yang menunggu orangnya berhenti mengetik.
+ *
+ * Tanpa jeda ini, "faringitis" berangkat sepuluh kali ke database dan jawaban
+ * yang datang belakangan belum tentu jawaban untuk ketikan yang terakhir:
+ * kotak hasil bisa berkedip mundur ke hasil huruf sebelumnya. Penghitung
+ * `urutan` di bawah yang menahannya, bukan jedanya.
+ */
+export function usePencarianICD<T>(
+  q: string,
+  cari: (q: string) => Promise<T[]>,
+  jeda = 250,
+): { hasil: T[]; sibuk: boolean } {
+  const [hasil, setHasil] = useState<T[]>([])
+  const [sibuk, setSibuk] = useState(false)
+
+  useEffect(() => {
+    const s = q.trim()
+    if (!s) { setHasil([]); setSibuk(false); return }
+    setSibuk(true)
+    let hidup = true
+    const jam = setTimeout(async () => {
+      const r = await cari(s)
+      if (!hidup) return
+      setHasil(r)
+      setSibuk(false)
+    }, jeda)
+    return () => { hidup = false; clearTimeout(jam) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, jeda])
+
+  return { hasil, sibuk }
 }
 
 export const KESADARAN = [
