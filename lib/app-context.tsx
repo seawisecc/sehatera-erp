@@ -151,9 +151,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (!token) { try { token = localStorage.getItem(KUNCI_UNDANGAN) } catch {} }
 
         if (meta.nama_apotek) {
-          await supabase.rpc('register_apotek', {
-            p_nama_apotek: meta.nama_apotek,
+          // Sektor ikut dari metadata akun. Kalau tidak, orang yang mendaftar
+          // sebagai klinik lalu kembali lewat tautan konfirmasi email akan
+          // mendarat sebagai apotek, dan menu klinik yang ia pilih tidak pernah
+          // muncul. Bawaan 'apotek' hanya untuk akun lama yang metadatanya
+          // memang belum punya kolom ini.
+          await supabase.rpc('register_faskes', {
+            p_nama: meta.nama_apotek,
             p_nama_admin: meta.nama_lengkap || '',
+            p_sektor: meta.sektor === 'klinik' || meta.sektor === 'rumah_sakit' ? meta.sektor : 'apotek',
           })
           ctx = await getSessionContext()
         } else if (token) {

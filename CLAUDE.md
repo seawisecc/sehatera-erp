@@ -2,12 +2,18 @@
 
 # Sehatera
 
-Sistem manajemen apotek berlangganan, multi-tenant. Oleh Seawise Studio.
-Sekeluarga dengan **TokoKu** (`~/Desktop/tokoku-erp`), yang dipakai sebagai
-acuan pola, bukan untuk disalin mentah.
+Sistem manajemen fasilitas kesehatan berlangganan, multi-tenant. Oleh Seawise
+Studio. Sekeluarga dengan **TokoKu** (`~/Desktop/tokoku-erp`), yang dipakai
+sebagai acuan pola, bukan untuk disalin mentah.
 
-Arahnya: apotek hari ini, klinik dan faskes berikutnya. Karena itu namanya
-bukan "Apotek-" apa pun, dan skema datanya tidak mengunci diri ke apotek.
+Tiga bentuk fasilitas, dipilih saat mendaftar dan disimpan di `companies.sektor`:
+`apotek`, `klinik`, `rumah_sakit`. Sektor menentukan menu mana yang ada
+(`MODUL_SEKTOR` di `lib/faskes.ts`) dan istilah apa yang dipakai (`istilah()`).
+Klinik dan rumah sakit mendapat SELURUH modul apotek ditambah pasien, kunjungan,
+rekam medis, dan resep.
+
+Penyaring menu berlapis tiga, urutannya penting: **sektor** (apa yang ada) →
+**hak pengguna** (apa yang boleh dilihat) → **paket** (apa yang sudah dibuka).
 
 ## Perintah
 
@@ -38,6 +44,23 @@ memasang lubang keamanan yang sudah ditutup.
 | `0004_rpc` | `my_context()`, `register_apotek()`, `apply_transaction()` |
 | `0005_guard_allows_admin_paths` | Gerbang kolom komersial melewatkan service_role & koneksi langsung |
 | `0006_public_plans_read` | Paket terbaca tanpa login untuk halaman harga |
+| `0007_tema_terang_saja` | Empat tema jadi terang semua; neon & midnight dibuang |
+| `0008_teks_tanpa_tanda_pisah` | Membuang tanda pisah panjang dari teks yang dilihat pengguna |
+| `0009_pembatalan_transaksi` | `transaction_item_batches`, `cancel_transaction()` yang membalikkan batch persis |
+| `0010_penerimaan_barang` | `receive_purchase_order()` dengan delta relatif dan penggabungan batch |
+| `0011_pemusnahan_dan_retur` | `abaikan_batch()`, `musnahkan_batch()`, `konfirmasi_retur()` |
+| `0012_undangan_dan_audit` | `catat_audit()`, `invitations` (simpan hash saja), undangan tim |
+| `0013_tagihan_langganan` | `billing_invoices`, `webhook_events`, pelunasan idempoten |
+| `0014_jalur_admin_platform` | `boleh_admin_platform()`: super admin, service_role, koneksi langsung |
+| `0015_identitas_faskes` | `companies.sektor`, `register_faskes()`, `my_context()` membawa sektor |
+| `0016_pasien_dan_kunjungan` | `patients`, `visits`, mesin keadaan kunjungan, antrean harian |
+| `0017_kunjungan_jalur_admin` | `ubah_status_kunjungan` memakai `boleh_admin_platform()` |
+| `0018_rekam_medis` | SOAP, tanda vital berkode LOINC, diagnosis ICD-10, adendum, statusHistory |
+| `0019_antrean_dengan_rekam_medis` | Antrean membawa keadaan rekam medisnya |
+| `0020_poli_dan_dokter` | `clinic_units`, `unit_doctors`, deret antrean per poli, peran klinik |
+| `0021_mode_farmasi` | `settings.mode_farmasi`, `transactions.visit_id`, batas instalasi farmasi |
+| `0022_jalur_admin_klinik` | `simpan_pasien` & `daftar_kunjungan` menerima `p_company` |
+| `0023_eresep` | `prescriptions`, `prescription_items`, antrean farmasi, penandaan dilayani |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -113,10 +136,15 @@ Semua warna melewati token di `app/globals.css`. **Jangan pernah menulis hex
 langsung di komponen**: dulu `#1e3a2c` muncul 309 kali dan "ganti tema" jadi
 praktis tidak bisa dilakukan.
 
-Empat tema, dipilih lewat `data-theme` di `<html>`: `sunrise-sorbet` (bawaan,
-terang), `vital-tide` (terang, biru–hijau kesehatan), `neon-pulse` (gelap,
-ramai), `midnight-sage` (gelap, tenang). Dua terang dua gelap, masing-masing
-satu berani satu tenang: tema kelima sebaiknya mengisi kotak yang kosong.
+Empat tema, **semuanya terang**, dipilih lewat `data-theme` di `<html>`:
+`sunrise-sorbet` (bawaan), `vital-tide` (biru kehijauan), `lilac-dawn`, dan
+`clinic-mint`. Tema gelap dibuang di migrasi 0007 atas permintaan pemilik:
+faskes bekerja di ruangan terang dan mencetak di kertas putih.
+
+**Token `--mark-1..3` (gradien logo) hanya dirujuk dari JSX**, jadi pengoptimal
+CSS pernah membuangnya dan logo berubah hitam. Yang menahannya adalah aturan
+`.sw-mark` di `globals.css` yang menyebut ketiganya. Jangan hapus aturan itu
+meski terlihat tidak berguna: itu satu-satunya rujukan yang terlihat alat.
 
 Menambah tema: satu blok `[data-theme="..."]` di `globals.css` + satu entri di
 `THEMES` (`lib/theme.tsx`). **Jangan menulis daftar id tema di tempat kedua** -
@@ -138,32 +166,92 @@ Kertas tidak punya tema gelap.
 
 ## Bentuk kode
 
-`app/dashboard/page.tsx` masih satu file ~5.000 baris berisi seluruh aplikasi.
-Itu diketahui dan belum dibereskan. Memecahnya berarti membagi ~90 `useState`
-yang saling bergantung, dan tanpa tes otomatis salah pindah satu state akan
-tampak normal sampai ada kasir yang kehilangan keranjangnya.
+Monolit `app/dashboard/page.tsx` sudah dibongkar: sekarang 15 baris berisi
+`redirect('/beranda')`. Seluruh modul punya rutenya sendiri di `app/(app)/`.
+Keadaan yang dipakai bersama ada di `AppProvider` (`lib/app-context.tsx`);
+`app.scope()` menyaring kueri ke fasilitas yang sedang aktif, termasuk saat
+super admin sedang melihat klien.
 
-**Sampai itu dibereskan: jangan menambah state atau modul baru ke file itu.**
-Yang baru ditaruh di `lib/` atau komponen tersendiri, seperti `lib/cetak.ts`,
-`lib/plan.ts`, `lib/subscription.ts`, dan `lib/session.ts` yang sudah dipisah.
+Modul klinik ada di `components/klinik/`: `FormPasien`, `RekamMedis`, `Resep`,
+`PengaturanPoli`. Semuanya dibuka DARI kunjungan, bukan dari menunya sendiri.
 
 Bahasa: **antarmuka dan komentar dalam bahasa Indonesia.** Ada dwibahasa ID/EN
 lewat `lib/i18n.tsx`: helper `t('teks id', 'english text')`. TokoKu tidak
 punya ini; di sini dipertahankan.
 
+**Jangan pakai tanda pisah panjang (em dash) di mana pun** yang dilihat
+pengguna: teks antarmuka, pesan galat, judul tab, commit, dokumen. Pemilik
+memintanya sendiri. Untuk judul tab peramban pakai `|`.
+
+Angka diformat lewat `lib/format.ts` (`rupiah`, `angka`, `tanggal`,
+`tanggalJam`), bukan `toLocaleString` yang ditulis ulang di tiap berkas.
+
+## Bentuk data medis ditentukan SatuSehat dan BPJS, bukan selera
+
+Pengirimannya belum dibangun, tapi bentuk tabelnya sudah menuruti keduanya.
+Alasannya: menambah kolom kosong belakangan itu murah, sedangkan data yang
+terlanjur terkumpul setahun dalam bentuk yang tidak bisa dikirim tidak bisa
+diperbaiki tanpa mengetik ulang. **Pertahankan aturan ini pada tabel medis baru
+mana pun.**
+
+- Tanda vital = kolom berjenis, tiap kolom membawa kode LOINC-nya di komentar.
+  Bukan satu kotak catatan: "TD 120/80" tidak bisa dipetakan ke Observation
+  tanpa menebak.
+- Diagnosis = baris berkode ICD-10, satu diagnosis primer per kunjungan.
+- Aturan pakai resep dipecah jadi dosis, frekuensi, rute. "3x1 sesudah makan"
+  tidak bisa dibelah kembali.
+- Riwayat keadaan kunjungan dicatat lewat TRIGGER, bukan dari dalam fungsinya,
+  supaya perubahan lewat jalur lain juga tertangkap. Encounter mewajibkan
+  statusHistory.
+- Kolom IHS sudah ada di `patients`, `app_users`, `settings`, `visits`,
+  `prescriptions`.
+
+Tiga aturan medis yang ditegakkan database, bukan layar: kunjungan tidak bisa
+ditutup tanpa diagnosis; rekam medis yang sudah ditutup hanya bisa ditambahi
+adendum; resep yang sudah difinalkan hanya bisa dibatalkan lalu ditulis ulang.
+
+`lib/icd10.ts` berisi **saran cepat susunan Claude, BUKAN berkas resmi.** Harus
+dicocokkan dengan daftar 144 diagnosis non-spesialistik BPJS sebelum dipakai
+klaim.
+
+**Verifikasi spesifikasi SatuSehat dan BPJS ke dokumentasi resmi yang berlaku
+saat itu, jangan dari ingatan.** Versi FHIR, resource wajib, format tanda tangan
+permintaan, dan syarat sertifikasi berubah cukup sering. Kredensial BPJS
+diberikan per faskes, bukan per vendor: harus disimpan terenkripsi per tenant,
+bukan polos di `settings`.
+
+## Farmasi klinik: dua bentuk, beda hukum
+
+`settings.mode_farmasi` = `apotek` (izin sendiri, boleh melayani umum) atau
+`instalasi` (menempel izin klinik, hanya pasien sendiri). Dalam mode instalasi,
+penjualan tanpa `visit_id` **ditolak trigger**, bukan ditolak layar, supaya
+batasnya sudah menunggu di jalur mana pun yang ditulis nanti.
+
+Penyerahan obat dari resep TIDAK punya jalur stok sendiri: ia mengisi keranjang
+kasir lalu keluar lewat `apply_transaction`. Jalur kedua berarti dua tempat yang
+harus benar, dan yang kedua akan ketinggalan pada perbaikan berikutnya.
+
 ## Yang belum ada
 
-Undangan tim lewat tautan, impersonation berbanner, penulisan `audit_logs`
-(tabelnya sudah ada), halaman harga publik, dan lapisan billing. Payment
-gateway belum tersambung sama sekali: pergantian paket masih manual lewat
-Super Admin, sama seperti TokoKu.
+Pengiriman ke SatuSehat dan BPJS (bentuk datanya sudah siap, kredensialnya
+belum), pemetaan obat ke kode KFA, penyimpanan kredensial terenkripsi per
+tenant, dan antrean kirim ulang yang idempoten (pola `webhook_events`).
 
-Paket **Klinik** sudah ada di database tapi `is_public = false`: harganya
-(Rp 1.490.000/bln) masih usulan dan belum diketok pemilik. Jangan menampilkannya
-di halaman harga sampai angkanya benar.
+Pemeriksaan interaksi obat **sengaja tidak dibuat**: butuh basis data interaksi
+terpelihara, dan yang setengah benar lebih berbahaya daripada tidak ada karena
+orang mulai memercayainya. Ini dikatakan di layar resep, bukan didiamkan.
 
-Untuk SatuSehat dan BPJS nanti: **verifikasi spesifikasinya ke dokumentasi
-resmi yang berlaku saat itu, jangan dari ingatan.** Versi FHIR, resource yang
-wajib, format tanda tangan permintaan, dan syarat sertifikasi berubah cukup
-sering. Kredensial BPJS diberikan per faskes, bukan per vendor: harus
-disimpan terenkripsi per tenant, bukan polos di `settings`.
+Payment gateway belum tersambung: pergantian paket masih manual lewat Super
+Admin. SMTP undangan tim belum disetel, tautannya dikirim tangan.
+
+Paket **Klinik** ada di database tapi `is_public = false`: harganya
+(Rp 1.490.000/bln) sudah disetujui pemilik, tapi baru boleh ditampilkan setelah
+modulnya benar-benar siap dijual. Rumah sakit tidak ditawarkan di pendaftaran
+mandiri: harganya per implementasi.
+
+## Lembar progres
+
+`~/.claude/projects/-Users-agusyulyastrawan-Desktop-sehatera-erp/progres-sehatera.html`,
+diterbitkan sebagai artifact. **Buka tiap sesi** dan perbarui saat satu tahap
+selesai. Repo GitHub ini publik, jadi dokumen bisnis dan URL artifact tidak
+boleh masuk ke dalamnya.

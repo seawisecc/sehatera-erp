@@ -27,6 +27,7 @@ export default function Auth() {
 
   // Signup
   const [namaApotek, setNamaApotek] = useState('')
+  const [sektor, setSektor] = useState<'apotek' | 'klinik'>('apotek')
   const [namaLengkap, setNamaLengkap] = useState('')
   const [sEmail, setSEmail] = useState('')
   const [sPassword, setSPassword] = useState('')
@@ -56,7 +57,7 @@ export default function Auth() {
 
   const handleRegister = async () => {
     setSError(''); setSSukses('')
-    if (!namaApotek || !sEmail || !sPassword) return setSError(t('Nama apotek, email, dan password wajib diisi', 'Pharmacy name, email, and password are required'))
+    if (!namaApotek || !sEmail || !sPassword) return setSError(t('Nama faskes, email, dan password wajib diisi', 'Facility name, email, and password are required'))
     if (sPassword.length < 6) return setSError(t('Password minimal 6 karakter', 'Password must be at least 6 characters'))
     if (sPassword !== konfirmasi) return setSError(t('Konfirmasi password tidak cocok', 'Password confirmation does not match'))
     setSLoading(true)
@@ -66,7 +67,11 @@ export default function Auth() {
     // sudah lama hilang. Metadata yang membawanya sampai ke pendaftaran apotek.
     const { data, error } = await supabase.auth.signUp({
       email: sEmail.trim().toLowerCase(), password: sPassword,
-      options: { data: { nama_apotek: namaApotek.trim(), nama_lengkap: namaLengkap.trim() } },
+      options: { data: {
+        nama_apotek: namaApotek.trim(),
+        nama_lengkap: namaLengkap.trim(),
+        sektor,
+      } },
     })
     if (error) { setSLoading(false); setSError(error.message); return }
 
@@ -74,9 +79,10 @@ export default function Auth() {
     // `companies` dari browser: penulisan langsung itu berarti tabel klien harus
     // terbuka untuk siapa saja, dan itulah lubang yang ditutup di migrasi 0002.
     if (data.session) {
-      const { error: rpcError } = await supabase.rpc('register_apotek', {
-        p_nama_apotek: namaApotek.trim(),
+      const { error: rpcError } = await supabase.rpc('register_faskes', {
+        p_nama: namaApotek.trim(),
         p_nama_admin: namaLengkap.trim(),
+        p_sektor: sektor,
       })
       setSLoading(false)
       if (rpcError) { setSError(rpcError.message); return }
@@ -88,8 +94,8 @@ export default function Auth() {
     // saat login pertama (lihat app/dashboard/page.tsx).
     setSLoading(false)
     setSSukses(t(
-      'Pendaftaran berhasil! Cek email Anda untuk konfirmasi, lalu masuk. Apotek Anda langsung aktif dengan masa coba 14 hari.',
-      'Registration successful! Check your email to confirm, then sign in. Your pharmacy starts with a 14-day free trial.',
+      'Pendaftaran berhasil! Cek email Anda untuk konfirmasi, lalu masuk. Fasilitas Anda langsung aktif dengan masa coba 14 hari.',
+      'Registration successful! Check your email to confirm, then sign in. Your facility starts with a 14-day free trial.',
     ))
   }
 
@@ -222,10 +228,40 @@ export default function Auth() {
                 {sSukses && <div className="mb-4 px-3.5 py-3 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm leading-relaxed">{sSukses}</div>}
 
                 <div className="space-y-3.5">
+                  {/* Jenis fasilitas ditanya PALING AWAL, sebelum namanya.
+                      Ia menentukan menu apa yang muncul, istilah apa yang
+                      dipakai, dan modul mana yang aktif sejak hari pertama.
+                      Menanyakannya belakangan berarti orang sudah terlanjur
+                      membayangkan aplikasi yang salah. */}
+                  <div>
+                    <label className={label}>{t('Jenis fasilitas', 'Facility type')}</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([
+                        ['apotek', t('Apotek', 'Pharmacy'), t('Obat, stok, kasir, SIPNAP', 'Drugs, stock, counter, SIPNAP')],
+                        ['klinik', t('Klinik', 'Clinic'), t('Ditambah pasien, kunjungan, rekam medis, resep', 'Plus patients, visits, records, prescriptions')],
+                      ] as const).map(([nilai, judul, ket]) => (
+                        <button key={nilai} type="button" onClick={() => setSektor(nilai)}
+                          className={`text-left px-3 py-2.5 rounded-xl border transition ${
+                            sektor === nilai
+                              ? 'border-[var(--brand)] bg-[var(--brand)]/8'
+                              : 'border-[var(--line)] hover:border-[var(--brand)]/50'
+                          }`}>
+                          <span className="block text-sm font-semibold text-[var(--ink)]">{judul}</span>
+                          <span className="block text-[11px] text-[var(--ink-faint)] leading-snug mt-0.5">{ket}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-[var(--ink-faint)] mt-1.5 leading-relaxed">
+                      {t('Bisa diubah nanti, dan modul apotek tetap ada di klinik. Rumah sakit disiapkan tersendiri, hubungi kami.',
+                         'Changeable later, and the pharmacy module stays available in a clinic. Hospitals are arranged separately, contact us.')}
+                    </p>
+                  </div>
                   <div>
                     <label className={label}>{t('Nama faskes', 'Facility name')}</label>
                     <input value={namaApotek} onChange={e => setNamaApotek(e.target.value)}
-                      placeholder={t('Apotek Sehat Sentosa', 'Sehat Sentosa Pharmacy')} className={inputCls} />
+                      placeholder={sektor === 'klinik'
+                        ? t('Klinik Sehat Sentosa', 'Sehat Sentosa Clinic')
+                        : t('Apotek Sehat Sentosa', 'Sehat Sentosa Pharmacy')} className={inputCls} />
                   </div>
                   <div>
                     <label className={label}>{t('Nama lengkap', 'Full name')}</label>
