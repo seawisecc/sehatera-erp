@@ -78,6 +78,8 @@ memasang lubang keamanan yang sudah ditutup.
 | `0040_rel_kunjungan_ikut_resep` | Rel bergeser sendiri mengikuti resep, dan boleh dilompati kalau tanpa obat |
 | `0041_layar_antrean` | `panggil_antrean()`, token layar, `layar_antrean()` yang dipanggil tanpa login |
 | `0042_antrean_bawa_panggilan` | `dipanggil_pada` & `jumlah_panggil` masuk ke `v_antrean_hari_ini` |
+| `0043_token_tanpa_pgcrypto` | Token dibuat dari `gen_random_uuid()`, bukan pgcrypto |
+| `0044_samaran_nama_bali` | `samarkan_nama()` mengerti penanda I, Ni, Ida, Sri |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -382,6 +384,20 @@ nama penuh kalau kliniknya memang memanggil begitu.
 **Menambah kolom ke `layar_antrean()` berarti menambahkannya ke papan
 pengumuman ruang tunggu.** Ujinya menolak `nomor_rm`, `nik`, `keluhan`,
 `diagnosis`, `telepon`, dan `alergi` secara eksplisit.
+
+Penyamarannya lewat `samarkan_nama()`, dan ia **mengerti penanda nama**: kata
+pertama yang tiga huruf atau kurang (I, Ni, Ida, Sri) dianggap penanda, jadi
+kata kedua ikut utuh. Versi pertama menghasilkan "I W." untuk I Wayan Sudiarta
+dan itu tidak memanggil siapa pun di ruang tunggu yang isinya belasan orang
+bernama I dan Ni. Ujinya lulus waktu itu karena nama contohnya kebetulan
+"Nyoman Rai Sudiartha".
+
+**Jangan memakai pgcrypto di fungsi ber-`search_path` terkunci.** Supabase
+memasang pgcrypto di skema `extensions`, sedangkan fungsi `security definer`
+mengunci `search_path = public, pg_temp` (dan memang harus). `gen_random_bytes`
+jadi 42883 di aplikasi sementara berkas uji lulus, karena blok `do $$` di SQL
+Editor berjalan dengan search_path yang lebih luas. `gen_random_uuid()` ada di
+inti PostgreSQL dan selalu terlihat.
 
 Suaranya dibangkitkan `speechSynthesis` peramban, bukan berkas rekaman, jadi
 nomor apa pun bisa diucapkan tanpa menyiapkan ratusan potongan audio. Muatan

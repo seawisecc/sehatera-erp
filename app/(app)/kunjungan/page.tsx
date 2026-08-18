@@ -75,6 +75,15 @@ type Dokter = { email: string; nama: string | null }
 
 const LANGKAH = ['terdaftar', 'diperiksa', 'resep', 'obat', 'selesai'] as const
 
+/**
+ * Keadaan yang masih masuk akal dipanggil lewat pengeras suara.
+ *
+ * `diperiksa` tidak: pasiennya sudah di dalam ruangan. Yang lain iya, dan
+ * `resep`/`obat` bukan sisa: farmasi memanggil orang ke loketnya sendiri.
+ */
+const bolehPanggil = (status: string) =>
+  status === 'terdaftar' || status === 'resep' || status === 'obat'
+
 export default function HalamanKunjungan() {
   const { t, lang } = useLang()
   const app = useApp()
@@ -179,10 +188,9 @@ export default function HalamanKunjungan() {
   }
 
   /** Memanggil ulang nomor yang sama itu wajar: pasien sering tidak di tempat. */
-  const panggil = async () => {
-    if (!aktif) return
+  const panggil = async (id: string) => {
     setSibuk(true)
-    const { error } = await supabase.rpc('panggil_antrean', { p_visit: aktif.id })
+    const { error } = await supabase.rpc('panggil_antrean', { p_visit: id })
     setSibuk(false)
     if (error) { alert(pesanError(error)); return }
     muat()
@@ -283,11 +291,12 @@ export default function HalamanKunjungan() {
                 const on = aktif?.id === a.id
                 const tutup = a.status === 'selesai' || a.status === 'batal'
                 return (
-                  <button key={a.id} onClick={() => setPilih(a.id)}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl border transition ${
+                  <div key={a.id}
+                    className={`rounded-xl border transition ${
                       on ? 'border-[var(--brand)] bg-[var(--surface-2)]'
                          : 'border-transparent hover:bg-[var(--surface-2)]'
                     } ${tutup ? 'opacity-55' : ''}`}>
+                  <button onClick={() => setPilih(a.id)} className="w-full text-left px-3 pt-2.5 pb-1.5">
                     <div className="flex items-center gap-2">
                       <span className="num text-xs font-bold text-[var(--brand)] shrink-0">{a.nomor_antre}</span>
                       <span className="text-sm font-medium text-[var(--ink)] truncate">{a.pasien_nama}</span>
@@ -307,6 +316,27 @@ export default function HalamanKunjungan() {
                       </span>
                     </div>
                   </button>
+
+                  {/* Panggil menempel pada PASIENNYA, bukan pada panel di
+                      sebelah, supaya yang memegang pengeras suara melihat
+                      urutannya dan memanggil yang berikutnya tanpa membuka
+                      satu per satu.
+
+                      Mati saat `diperiksa`: pasiennya sudah di dalam ruangan.
+                      Tapi HIDUP LAGI di `resep` dan `obat`, karena farmasi
+                      juga memanggil orang ke loketnya. */}
+                  {bolehPanggil(a.status) && (
+                    <div className="px-3 pb-2.5">
+                      <button onClick={e => { e.stopPropagation(); panggil(a.id) }} disabled={sibuk}
+                        className="w-full inline-flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg border border-[var(--line)] text-[11px] font-semibold text-[var(--brand)] hover:bg-[var(--surface)] transition disabled:opacity-50">
+                        <Volume2 size={12} />
+                        {a.jumlah_panggil > 0
+                          ? t(`Panggil lagi · ${a.jumlah_panggil}x`, `Call again · ${a.jumlah_panggil}x`)
+                          : t('Panggil', 'Call')}
+                      </button>
+                    </div>
+                  )}
+                  </div>
                 )
               })}
             </div>
@@ -431,16 +461,6 @@ export default function HalamanKunjungan() {
                   tetap ditampilkan supaya bentuk kerjanya terbaca sekarang dan
                   tidak berubah begitu modulnya datang. */}
               <div className="mt-5 flex flex-wrap items-center gap-2">
-                {/* Panggil ada di depan dan tidak dijaga peran: memanggil nomor
-                    antrean tidak membuka data medis apa pun, dan yang memegang
-                    pengeras suara di poli sering bukan dokternya. */}
-                <button onClick={panggil} disabled={sibuk}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand)] text-xs font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                  <Volume2 size={14} />
-                  {aktif.jumlah_panggil > 0
-                    ? t(`Panggil lagi (${aktif.jumlah_panggil}x)`, `Call again (${aktif.jumlah_panggil}x)`)
-                    : t('Panggil', 'Call')}
-                </button>
                 {/* Disembunyikan untuk peran yang pasti ditolak database
                     (migrasi 0039). Yang menahan tetap di sana, bukan di sini:
                     ini cuma supaya petugas pendaftaran tidak menekan tombol
