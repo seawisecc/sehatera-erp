@@ -375,11 +375,28 @@ export default function HalamanKasir() {
     setAsuransiTrx(k.asuransi_id || '')
     const totalTagihan = masuk.reduce((a, b) => a + b.harga_jual * b.jumlah, 0)
     setDitagihkan(pen === 'umum' ? 0 : totalTagihan)
-    if (k.alergi) setIsResep(true)
+    /**
+     * Nomor resepnya datang dari RESEPNYA, bukan dari nomor kunjungan.
+     *
+     * Sampai sekarang kotak "No. Resep" diisi `r.nomor`, yang adalah nomor
+     * KUNJUNGAN: satu-satunya nomor yang sampai ke layar ini. Untuk obat
+     * golongan narkotika dan psikotropika kotak itu adalah catatan yang wajib
+     * benar dan ikut ke laporan SIPNAP, dan nomor kunjungan di sana tidak
+     * menunjuk resep mana pun. Yang memeriksanya nanti tidak menemukan apa-apa.
+     *
+     * Resepnya sudah bernomor sendiri sejak migrasi 0023; yang kurang cuma
+     * jalan pulangnya ke layar, dan itu ditambal migrasi 0064.
+     *
+     * Begitu kunjungannya PUNYA resep, penanda "transaksi berupa resep" ikut
+     * menyala sendiri: kasir tidak perlu diminta mencentang sesuatu yang sudah
+     * pasti benar, dan yang diminta mencentang cepat atau lambat lupa.
+     */
+    const noResep = d.resep_nomor || ''
+    if (k.alergi || noResep) setIsResep(true)
     setPasien(x => ({
       ...x,
       nama_pasien: k.pasien_nama || x.nama_pasien,
-      nomor_resep: r.nomor || x.nomor_resep,
+      nomor_resep: noResep || x.nomor_resep,
     }))
     if (lewat.length) {
       kabar(t(`Tidak semua obat masuk keranjang:\n\n${lewat.join('\n')}\n\nSisanya perlu ditangani di luar aplikasi.`,
@@ -707,8 +724,23 @@ export default function HalamanKasir() {
                          'Contains narcotics, psychotropics, or precursors. Patient and prescription data are required.')
                     : t('Data Pasien dan Resep', 'Patient and Prescription Data')}
                 </p>
-                <input value={pasien.nomor_resep} onChange={e => setPasien({ ...pasien, nomor_resep: e.target.value })}
-                  placeholder={t('No. Resep *', 'Prescription No. *')} className={inputCls + ' num'} />
+                {/* Terkunci kalau nomornya datang dari resep yang ditulis
+                    dokter. Nomor yang dibuat database lalu boleh ditimpa
+                    tangan berhenti menjadi nomor: dua transaksi bisa membawa
+                    nomor yang sama, dan tidak ada satu pun yang mengeluh. */}
+                <div>
+                  <input value={pasien.nomor_resep}
+                    onChange={e => setPasien({ ...pasien, nomor_resep: e.target.value })}
+                    readOnly={!!resepId}
+                    placeholder={t('No. Resep *', 'Prescription No. *')}
+                    className={`${inputCls} num ${resepId ? 'bg-[var(--surface-2)] text-[var(--ink-soft)] cursor-not-allowed' : ''}`} />
+                  {resepId && (
+                    <p className="text-[11px] text-[var(--ink-faint)] mt-1">
+                      {t('Nomor dibuat sendiri saat dokter menulis resepnya.',
+                         'Generated when the doctor wrote the prescription.')}
+                    </p>
+                  )}
+                </div>
                 <input value={pasien.nama_pasien} onChange={e => setPasien({ ...pasien, nama_pasien: e.target.value })}
                   placeholder={t('Nama Pasien *', 'Patient Name *')} className={inputCls} />
                 <div className="grid grid-cols-2 gap-2">
