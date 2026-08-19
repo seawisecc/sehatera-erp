@@ -112,6 +112,8 @@ export default function HalamanKunjungan() {
   const [bukaRujuk, setBukaRujuk] = useState(false)
   const [poli, setPoli] = useState<Poli[]>([])
   const [poliDipilih, setPoliDipilih] = useState<string | null>(null)
+  /** Penyaring antrean per poli. null = semua poli. `undefined` = belum disetel otomatis. */
+  const [saringPoli, setSaringPoli] = useState<string | null | undefined>(undefined)
   const [dokter, setDokter] = useState<Dokter[]>([])
   const [tugas, setTugas] = useState<Record<string, string[]>>({})
   const [asuransi, setAsuransi] = useState<{ id: string; nama: string }[]>([])
@@ -205,6 +207,32 @@ export default function HalamanKunjungan() {
         peta[r.unit_id] = [...(peta[r.unit_id] || []), (r.email || '').toLowerCase()]
       }
       setTugas(peta)
+
+      /**
+       * Antreannya menyaring SENDIRI ke poli tempat orangnya praktik.
+       *
+       * Permintaan pemilik, dan alasannya jelas begitu dibayangkan: dokter
+       * poli gigi yang membuka layar ini melihat seluruh pasien klinik, lalu
+       * harus mencari yang miliknya di antara tiga poli lain. Yang dicari tiap
+       * kali adalah tempat orang memilih baris yang salah.
+       *
+       * Yang TIDAK dikunci: penyaringnya tetap bisa dilebarkan ke "Semua
+       * poli". Dokter yang menggantikan rekannya sore itu bukan kejadian
+       * langka, dan layar yang mengunci akan diakali dengan meminjam akun
+       * orang lain. Yang dikunci adalah tampilan awalnya, bukan pilihannya.
+       *
+       * Perawat, pendaftaran, pemilik, dan admin membuka SEMUA poli: nurse
+       * station melakukan skrining awal dan mengisi tanda vital untuk siapa
+       * pun yang datang, jadi menyaringnya per poli justru menyembunyikan
+       * pekerjaan mereka sendiri.
+       */
+      const saya = (app.session?.email || '').toLowerCase()
+      const milikSaya = Object.keys(peta).filter(unit => peta[unit].includes(saya))
+      setSaringPoli(prev => {
+        if (prev !== undefined) return prev
+        if (app.currentRole === 'dokter' && milikSaya.length === 1) return milikSaya[0]
+        return null
+      })
     })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app.superViewCompany])
@@ -212,10 +240,25 @@ export default function HalamanKunjungan() {
   // Pasien yang sedang terbuka. Kalau tidak ada yang dipilih, yang pertama
   // belum selesai dibuka sendiri: yang paling sering dilakukan orang saat
   // membuka layar ini adalah melanjutkan antrean, bukan memilih.
+  /**
+   * Antrean yang benar-benar ditampilkan, sesudah penyaring poli.
+   *
+   * Kunjungan TANPA poli tetap ikut, apa pun saringannya. Ia biasanya lahir
+   * dari pendaftaran yang belum sempat memilih poli, dan yang tidak muncul di
+   * saringan mana pun adalah pasien yang tidak dilayani siapa pun.
+   */
+  const antreanTampil = useMemo(
+    () => (saringPoli ? antrean.filter(a => a.unit_id === saringPoli || !a.unit_id) : antrean),
+    [antrean, saringPoli])
+
   const aktif = useMemo(() => {
+    // Yang DIPILIH tetap dicari di seluruh antrean, bukan cuma yang tersaring.
+    // Kalau tidak, mengganti saringan akan menutup pasien yang sedang dibuka
+    // di tengah pemeriksaan, dan yang hilang dari layar terbaca sebagai data
+    // yang hilang.
     if (pilih) return antrean.find(a => a.id === pilih) || null
-    return antrean.find(a => a.status !== 'selesai' && a.status !== 'batal') || null
-  }, [antrean, pilih])
+    return antreanTampil.find(a => a.status !== 'selesai' && a.status !== 'batal') || null
+  }, [antrean, antreanTampil, pilih])
 
   useEffect(() => {
     if (!bukaDaftar) return
@@ -324,8 +367,8 @@ export default function HalamanKunjungan() {
     return true
   }
 
-  const belum = antrean.filter(a => a.status !== 'selesai' && a.status !== 'batal')
-  const kelar = antrean.filter(a => a.status === 'selesai')
+  const belum = antreanTampil.filter(a => a.status !== 'selesai' && a.status !== 'batal')
+  const kelar = antreanTampil.filter(a => a.status === 'selesai')
 
   /**
    * Yang sudah tutup pindah ke BAWAH, bukan dibuang.
@@ -340,7 +383,7 @@ export default function HalamanKunjungan() {
    * menambah adendum rekam medis, mencetak ulang, memeriksa tagihan. Di dalam
    * masing-masing kelompok urutannya tetap urutan datang.
    */
-  const tertutup = antrean.filter(a => a.status === 'selesai' || a.status === 'batal')
+  const tertutup = antreanTampil.filter(a => a.status === 'selesai' || a.status === 'batal')
   const urutAntrean = [...belum, ...tertutup]
 
   const iKini = aktif ? LANGKAH.indexOf(aktif.status as typeof LANGKAH[number]) : -1
@@ -502,12 +545,46 @@ export default function HalamanKunjungan() {
           <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--ink-faint)]">
             {t('Antrean hari ini', 'Today queue')}
           </p>
+
+          {/* Penyaring poli. Muncul hanya kalau polinya memang lebih dari satu:
+              di klinik satu poli ia cuma baris yang tidak pernah ditekan. */}
+          {poli.length > 1 && (
+            <div className="px-1 pb-2 flex flex-wrap gap-1">
+              <button onClick={() => setSaringPoli(null)}
+                className={`px-2 py-1 rounded-lg text-[11px] font-semibold border transition ${
+                  saringPoli === null ? 'border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand)]'
+                                      : 'border-[var(--line)] text-[var(--ink-soft)] hover:bg-[var(--surface-2)]'
+                }`}>
+                {t('Semua poli', 'All units')}
+              </button>
+              {poli.map(u => {
+                const jml = antrean.filter(a => a.unit_id === u.id
+                  && a.status !== 'selesai' && a.status !== 'batal').length
+                return (
+                  <button key={u.id} onClick={() => setSaringPoli(u.id)}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-semibold border transition ${
+                      saringPoli === u.id ? 'border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand)]'
+                                          : 'border-[var(--line)] text-[var(--ink-soft)] hover:bg-[var(--surface-2)]'
+                    }`}>
+                    {u.nama}
+                    {/* Hitungan yang MENUNGGU, bukan total. Angka yang tidak
+                        berkurang saat pekerjaannya selesai berhenti dibaca. */}
+                    {jml > 0 && <span className="num ml-1 opacity-75">{jml}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
           {memuat ? (
             <p className="px-2 py-8 text-center text-sm text-[var(--ink-faint)]">{t('Memuat…', 'Loading…')}</p>
-          ) : antrean.length === 0 ? (
+          ) : antreanTampil.length === 0 ? (
             <p className="px-3 py-10 text-center text-sm text-[var(--ink-faint)] leading-relaxed">
-              {t('Belum ada kunjungan hari ini. Daftarkan yang pertama lewat tombol di atas.',
-                 'No visits today yet. Register the first one with the button above.')}
+              {antrean.length === 0
+                ? t('Belum ada kunjungan hari ini. Daftarkan yang pertama lewat tombol di atas.',
+                    'No visits today yet. Register the first one with the button above.')
+                : t('Tidak ada pasien di poli ini hari ini. Tekan "Semua poli" untuk melihat yang lain.',
+                    'No patients in this unit today. Press "All units" to see the rest.')}
             </p>
           ) : (
             <div className="space-y-1">

@@ -104,6 +104,8 @@ memasang lubang keamanan yang sudah ditutup.
 | `0066_klaim_penjamin` | `claims`, `transactions.claim_id`, `buat_klaim()`, rel keadaan klaim |
 | `0067_klaim_jalur_admin` | Ketiga fungsi klaim menerima `p_company`, seperti 0053 |
 | `0068_siap_tagih` | `visits.siap_tagih_pada`, `siapkan_tagihan()`, lencana kasir punya isi |
+| `0069_barcode_dan_rak` | `products.barcode` (unik per faskes) & `rak`, `produk_by_barcode()` |
+| `0070_perizinan_tenaga_kesehatan` | STR & SIP di `app_users`, `tenaga_kesehatan()`, `resep_untuk_cetak()` |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -967,6 +969,107 @@ harus terbaca sebelum ditekan.
 Penghalang yang sudah kelihatan dari daftar (diagnosis kosong, resep draf)
 disebutkan di layar LEBIH DULU, sebelum ada yang mengetik alasan yang lalu
 dibuang. Yang menahan tetap database.
+
+## Perizinan tenaga kesehatan: menempel di orangnya, bukan di faskesnya
+
+Migrasi 0070. Sebelumnya identitas penanggung jawab cuma DUA kotak teks di
+`settings`: `nama_apoteker` dan `nomor_sipa`. Cukup untuk mencetak nama di
+purchase order, tidak cukup untuk apa pun yang lain.
+
+- **Klinik punya lebih dari satu dokter**, dan resep yang dicetak harus membawa
+  nomor izin DOKTER YANG MENULISNYA. Resep bernomor izin orang lain bukan
+  dokumen yang kurang rapi, ia dokumen yang salah.
+- **Izin praktik ADA MASA BERLAKUNYA.** SIP yang habis berarti prakteknya tidak
+  sah hari itu juga. Tanggal yang tidak disimpan tidak bisa diingatkan.
+- STR tidak pernah punya tempat, padahal SIP diterbitkan DI ATAS STR dan
+  keduanya diminta saat kredensialing BPJS maupun SatuSehat.
+
+Kolomnya menempel di **`app_users`, bukan tabel baru**: dokter sudah di sana,
+`unit_doctors` sudah menautkannya ke poli lewat email, dan `visits.dokter_email`
+menunjuk ke sana juga. Tabel kedua berarti dua daftar nama yang harus tetap
+sama, dan yang kedua akan ketinggalan.
+
+**Menyuntingnya lewat `simpan_perizinan()`, bukan `update app_users` langsung.**
+RLS menyaring BARIS bukan KOLOM: layar yang boleh menyunting nomor SIP otomatis
+boleh menyunting `role` juga, dan `role` adalah seluruh hak akses orang itu.
+
+**`sisa_hari` dihitung di database.** Kalau dihitung di peramban ia memakai jam
+komputer klinik, dan komputer klinik yang jamnya meleset dua bulan benar-benar
+terjadi. Nilai negatif tidak dibulatkan jadi nol: selisihnya adalah berapa lama
+praktik berjalan tanpa izin yang sah.
+
+Tiga tingkat di layar, bukan dua, alasan yang sama dengan kadaluarsa batch:
+"sudah lewat" menuntut berhenti praktik, "60 hari lagi" menuntut mengurus
+perpanjangan. Warna yang sama untuk keduanya membuat dua-duanya diabaikan.
+
+`resep_untuk_cetak()` mengumpulkan seluruh isi kertas resep dalam SATU panggilan
+termasuk identitas dokternya, alasan yang sama dengan `tagihan_kunjungan` di
+0024. Kalau dokternya belum mengisi izinnya, kolomnya kosong dan layarnya
+mengatakan itu; mengisinya dengan nomor orang lain jauh lebih buruk.
+
+## Penamaan Pengaturan mengikuti sektor
+
+"Profil Apotek" salah di klinik dan salah di rumah sakit, dan yang membaca layar
+berjudul Apotek di kliniknya menyimpulkan aplikasinya memang bukan untuk dia.
+`app.kata('faskes')` sudah tahu jawabannya per sektor sejak `lib/faskes.ts` ada;
+yang kurang cuma dipakai. **Judul baru mana pun di menu Pengaturan harus lewat
+`app.kata()`, bukan menulis "Apotek" secara harfiah.**
+
+**Biaya administrasi PINDAH dari Pengaturan ke Layanan Jasa** atas permintaan
+pemilik, dan ia benar: itu TARIF, bukan pengaturan sistem. Orang yang mencari
+harga administrasi membuka daftar tarif, dan tarif yang tersembunyi di
+Pengaturan adalah tarif yang tidak pernah diperbarui saat harganya naik.
+Bentuknya kartu terpisah, bukan baris di tabel: ia tidak dipilih kasir, tidak
+bisa dihapus, dan masuk sendiri lewat trigger. Baris biasa membuat orang
+mencoba menghapusnya.
+
+## Antrean kunjungan menyaring diri ke poli orangnya
+
+Dokter yang membuka layar Kunjungan melihat antrean POLINYA lebih dulu, bukan
+seluruh pasien klinik. Yang dicari tiap kali adalah tempat orang memilih baris
+yang salah.
+
+**Yang dikunci tampilan awalnya, BUKAN pilihannya.** Penyaringnya tetap bisa
+dilebarkan ke "Semua poli": dokter yang menggantikan rekannya sore itu bukan
+kejadian langka, dan layar yang mengunci akan diakali dengan meminjam akun orang
+lain. Bawaannya menyaring hanya kalau perannya `dokter` dan ia terdaftar di
+TEPAT SATU poli; yang mengampu dua poli tidak ditebak.
+
+Perawat, pendaftaran, pemilik, dan admin membuka semua poli. Nurse station
+melakukan skrining awal dan mengisi tanda vital untuk siapa pun yang datang,
+jadi menyaringnya per poli justru menyembunyikan pekerjaan mereka sendiri.
+
+**Kunjungan tanpa poli ikut di saringan mana pun.** Ia lahir dari pendaftaran
+yang belum sempat memilih poli, dan yang tidak muncul di saringan mana pun
+adalah pasien yang tidak dilayani siapa pun.
+
+## Barcode: menemukan obat, bukan mencetak stiker
+
+Migrasi 0069. Yang paling berguna BUKAN mencetak label sendiri, melainkan
+menyimpan barcode yang sudah tercetak di dus pabriknya supaya kasir tinggal
+memindainya.
+
+- **Barcode unik per faskes** lewat indeks parsial. Dua produk berbarcode sama
+  membuat pemindaian ambigu, dan yang dipilih saat ambigu adalah yang kebetulan
+  lebih dulu. Kosong tidak dihitung kembar.
+- **Di kasir, cocokan barcode PERSIS didahulukan** dan selalu menang atas hasil
+  teratas pencarian teks. Pemindai mengetik angkanya lalu menekan Enter sendiri;
+  kalau angkanya ikut pencarian kemiripan, satu digit yang beririsan cukup untuk
+  memasukkan obat yang salah.
+
+`lib/barcode.ts` membangkitkan CODE 128 tanpa pustaka luar: dokumen cetak di
+sini dibuka sebagai HTML lepas tanpa bundler dan tanpa jaringan, jadi apa pun
+yang menuntut `<script src>` gagal diam-diam di komputer yang internetnya putus.
+
+**Tabel polanya diperiksa STRUKTURAL saat modul dimuat**: tiap pola wajib 11
+modul, enam elemen, dan berbeda satu sama lain. Satu digit salah ketik hampir
+selalu merusak salah satunya. `npx tsx lib/barcode.uji.mts` membongkarnya
+kembali jadi teks sambil memeriksa check digit sendiri.
+
+**Yang TIDAK dibuktikan: bahwa tabelnya cocok dengan ISO/IEC 15417**, karena
+pembongkarnya memakai tabel yang sama. Itu cuma bisa dibuktikan dengan memindai
+hasil cetaknya. Karena itu label selalu membawa angkanya dalam huruf di bawah
+bar, dan lembar pertama harus dipindai sungguhan sebelum dipercaya.
 
 ## Etiket obat: warna itu pengaman, bukan hiasan
 

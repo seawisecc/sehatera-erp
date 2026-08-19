@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import {
+import { BadgeCheck,
   ArrowLeft, Building2, Check, ChevronRight, CreditCard, Database, KeyRound,
   LayoutGrid, Pencil, Pill, ScrollText, Send, ShieldCheck, Stethoscope, Trash2,
   Upload, UserPlus, Users,
@@ -19,6 +19,7 @@ import JejakAudit from '@/components/JejakAudit'
 import PengaturanPoli from '@/components/klinik/PengaturanPoli'
 import JadwalPraktik from '@/components/klinik/JadwalPraktik'
 import SistemNasional from '@/components/klinik/SistemNasional'
+import Perizinan from '@/components/klinik/Perizinan'
 import OutletCabang from '@/components/OutletCabang'
 import AksesOutletPengguna from '@/components/AksesOutletPengguna'
 import TombolIkon from '@/components/TombolIkon'
@@ -42,7 +43,7 @@ import TombolIkon from '@/components/TombolIkon'
  */
 
 // Pengguna yang sedang diatur akses outletnya.
-const TAB_SAH = ['profil', 'outlet', 'pengguna', 'poli', 'apoteker', 'nasional', 'tampilan', 'langganan', 'jejak'] as const
+const TAB_SAH = ['profil', 'outlet', 'pengguna', 'poli', 'perizinan', 'apoteker', 'nasional', 'tampilan', 'langganan', 'jejak'] as const
 type Tab = typeof TAB_SAH[number]
 
 export default function HalamanPengaturan() {
@@ -254,13 +255,28 @@ export default function HalamanPengaturan() {
   // menawarkan sesuatu yang tidak akan pernah dipakai, dan tiap menu mati
   // membuat menu yang hidup lebih sulit ditemukan.
   const klinik = app.sektor !== 'apotek'
+  /**
+   * Penamaannya mengikuti SEKTOR, bukan warisan nama lama.
+   *
+   * "Profil Apotek" salah di klinik dan salah di rumah sakit, dan yang membaca
+   * layar berjudul Apotek di kliniknya menyimpulkan aplikasinya memang bukan
+   * untuk dia. `app.kata('faskes')` sudah tahu jawabannya per sektor sejak
+   * `lib/faskes.ts` ada; yang kurang cuma dipakai di sini.
+   *
+   * Urutannya juga disusun ulang jadi tiga kelompok yang terasa: identitas
+   * faskes, lalu orang dan perizinannya, lalu urusan sistem. Sebelumnya
+   * langganan dan jejak audit terselip di antara data apoteker.
+   */
   const settingsMenu = [
-    { id: 'profil',    label: t('Profil Apotek', 'Pharmacy Profile'),   desc: t('Nama, alamat, logo', 'Name, address, logo'),                Icon: Building2 },
+    { id: 'profil',    label: t(`Profil ${app.kata('faskes')}`, 'Facility Profile'),
+      desc: t('Nama, alamat, izin operasional, logo', 'Name, address, operating licence, logo'), Icon: Building2 },
     { id: 'outlet',    label: t('Outlet & Cabang', 'Outlets & Branches'), desc: t('Cabang, dan rekap lintas outlet', 'Branches, and cross-outlet summary'), Icon: Building2 },
-    { id: 'pengguna',  label: t('Manajemen Pengguna', 'User Management'), desc: t('Akses pengguna, anggota tim', 'User access, team members'), Icon: Users },
-    ...(klinik ? [{ id: 'poli', label: t('Poli & Dokter', 'Units & Doctors'), desc: t('Ruang periksa, deret antrean', 'Exam rooms, queue series'), Icon: Stethoscope }] : []),
-    { id: 'apoteker',  label: klinik ? t('Farmasi & Penanggung Jawab', 'Pharmacy & Person in Charge') : t('Data Apoteker', 'Pharmacist Data'),
-      desc: klinik ? t('Bentuk farmasi, SIPA', 'Pharmacy form, SIPA') : t('SIA, SIPA, penanggung jawab', 'SIA, SIPA, responsible person'), Icon: ShieldCheck },
+    { id: 'pengguna',  label: t('Pengguna & Hak Akses', 'Users & Access'), desc: t('Anggota tim, peran, akses outlet', 'Team members, roles, outlet access'), Icon: Users },
+    ...(klinik ? [{ id: 'poli', label: t('Poli & Dokter', 'Units & Doctors'), desc: t('Ruang periksa, tarif konsultasi, deret antrean', 'Exam rooms, consultation fees, queue series'), Icon: Stethoscope }] : []),
+    ...(klinik ? [{ id: 'perizinan', label: t('Perizinan Tenaga Kesehatan', 'Practitioner Licences'),
+      desc: t('STR, SIP, dan masa berlakunya', 'Registration, practice licence, and validity'), Icon: BadgeCheck }] : []),
+    { id: 'apoteker',  label: klinik ? t('Instalasi Farmasi', 'Pharmacy Unit') : t('Perizinan & Apoteker', 'Licences & Pharmacist'),
+      desc: klinik ? t('Bentuk layanan farmasi klinik', 'How the clinic pharmacy operates') : t('SIA, SIPA, penanggung jawab', 'SIA, SIPA, responsible person'), Icon: ShieldCheck },
     // Cuma klinik dan rumah sakit. Apotek tidak mengirim Encounter ke
     // SatuSehat, jadi menawarkan kotak kredensialnya berarti menawarkan
     // sesuatu yang tidak akan pernah dipakai.
@@ -274,7 +290,7 @@ export default function HalamanPengaturan() {
     <div>
       <h1 className="text-3xl font-bold text-[var(--ink)] mb-1">{t('Pengaturan', 'Settings')}</h1>
       <p className="text-[var(--ink-soft)] text-sm mb-6">
-        {t('Kelola profil apotek, pengguna, dan data penanggung jawab.', 'Manage the pharmacy profile, users, and responsible pharmacist data.')}
+        {t(`Kelola profil ${app.kata('faskes').toLowerCase()}, pengguna, perizinan, dan sistem.`, 'Manage the facility profile, users, licences, and system settings.')}
       </p>
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
         <div className="space-y-2">
@@ -571,6 +587,7 @@ export default function HalamanPengaturan() {
                   )}
 
                   {tab === 'nasional' && <SistemNasional />}
+                  {tab === 'perizinan' && <Perizinan />}
 
                   {tab === 'apoteker' && (
                     <div className="max-w-md">
@@ -618,37 +635,12 @@ export default function HalamanPengaturan() {
                         </div>
                       )}
 
-                      {/* Biaya administrasi. Disetel sekali di sini, lalu masuk
-                          sendiri ke tiap kunjungan yang dibuka. Bawaannya nol:
-                          memunculkan biaya yang tidak diminta lebih buruk
-                          daripada melupakannya. */}
-                      {klinik && (
-                        <div className="mb-8">
-                          <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Biaya administrasi', 'Administration fee')}</h2>
-                          <p className="text-sm text-[var(--ink-soft)] mb-3 leading-relaxed">
-                            {t('Ditambahkan sendiri ke tiap kunjungan yang dibuka. Kosongkan atau isi nol kalau kliniknya tidak menagih ini.',
-                               'Added automatically to every visit opened. Leave it at zero if the clinic does not charge this.')}
-                          </p>
-                          <div className="flex gap-3 items-end">
-                            <div className="flex-1 max-w-[220px]">
-                              <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">{t('Rupiah per kunjungan', 'Rupiah per visit')}</label>
-                              <input inputMode="numeric" value={app.settingsData.biaya_administrasi ?? 0}
-                                onChange={e => app.setSettingsData({ ...app.settingsData, biaya_administrasi: e.target.value.replace(/[^0-9]/g, '') })}
-                                className={inputCls + ' num'} />
-                            </div>
-                            <button onClick={saveSettings} disabled={sibuk}
-                              className="bg-[var(--brand)] text-[var(--on-brand)] px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                              {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
-                            </button>
-                          </div>
-                          <p className="text-xs text-[var(--ink-faint)] mt-2">
-                            {t('Tarif konsultasi disetel per poli di Poli & Dokter, bukan di sini, karena tiap poli bisa berbeda.',
-                               'Consultation fees are set per unit under Units & Doctors, since each unit can differ.')}
-                          </p>
-                          <hr className="my-8 border-[var(--line-soft)]" />
-                        </div>
-                      )}
-
+                      {/* Biaya administrasi PINDAH ke Layanan Jasa (permintaan
+                          pemilik, dan ia benar). Ia adalah TARIF, bukan
+                          pengaturan sistem: orang yang mencari harga
+                          administrasi akan membuka daftar tarif, bukan menu
+                          Pengaturan, dan tarif yang tersembunyi di Pengaturan
+                          adalah tarif yang tidak pernah diperbarui. */}
                       <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Penanggung jawab', 'Person in charge')}</h2>
                       <p className="text-sm text-[var(--ink-soft)] mb-6">
                         {app.kata('penanggungJawab')}. {t('Namanya tertera di purchase order dan berita acara pemusnahan.',

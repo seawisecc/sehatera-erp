@@ -57,6 +57,27 @@ export default function HalamanLayanan() {
   useEffect(() => { muat() // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app.superViewCompany])
 
+  const [sibukAdmin, setSibukAdmin] = useState(false)
+
+  /**
+   * Menyimpan HANYA biaya administrasi.
+   *
+   * Daftar kolomnya eksplisit dan pendek, bukan menembakkan seluruh
+   * `settingsData`: halaman ini tidak memuat kolom `settings` yang lain, jadi
+   * mengirim seluruh objeknya berisiko menimpa kolom yang kebetulan kosong di
+   * memori dengan kosong di database. Itu jenis kehilangan data yang tidak
+   * meninggalkan galat apa pun.
+   */
+  const simpanAdmin = async () => {
+    setSibukAdmin(true)
+    const nilai = Number(app.settingsData?.biaya_administrasi) || 0
+    const { error } = await app.scope(
+      supabase.from('settings').update({ biaya_administrasi: nilai }).select('id'))
+    setSibukAdmin(false)
+    if (error) { kabar(pesanError(error), 'galat'); return }
+    kabar(t('Biaya administrasi tersimpan.', 'Administration fee saved.'), 'ok')
+  }
+
   const simpanBaru = async () => {
     if (!form.nama.trim()) { kabar(t('Nama layanan wajib diisi', 'Service name is required')); return }
     const { error } = await supabase.from('services').insert([{
@@ -116,6 +137,48 @@ export default function HalamanLayanan() {
           + {t('Tambah Layanan', 'Add Service')}
         </button>
       </div>
+
+      {/* Biaya administrasi, PINDAH dari menu Pengaturan.
+          Ia adalah tarif, bukan pengaturan sistem: orang yang mencari harga
+          administrasi membuka daftar tarif, bukan menu Pengaturan, dan tarif
+          yang tersembunyi di Pengaturan adalah tarif yang tidak pernah
+          diperbarui saat harganya naik.
+
+          Bentuknya sengaja kartu terpisah dan bukan satu baris di tabel:
+          ia tidak dipilih kasir, tidak bisa dihapus, dan masuk sendiri ke tiap
+          kunjungan lewat trigger database. Menaruhnya sebagai baris biasa
+          membuat orang mencoba menghapusnya. */}
+      {app.sektor !== 'apotek' && (
+        <div className="mb-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)]/80 backdrop-blur-sm p-4">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-[var(--ink)]">{t('Biaya administrasi', 'Administration fee')}</h2>
+              <p className="text-xs text-[var(--ink-soft)] mt-1 max-w-xl leading-relaxed">
+                {t('Masuk sendiri ke tiap kunjungan yang dibuka, tanpa perlu dipilih kasir. Isi nol kalau kliniknya tidak menagih ini.',
+                   'Added automatically to every visit opened, without the cashier selecting it. Set it to zero if the clinic does not charge this.')}
+              </p>
+            </div>
+            <div className="flex items-end gap-2">
+              <div>
+                <label className="text-[11px] font-medium text-[var(--ink-soft)] mb-1 block uppercase tracking-wide">
+                  {t('Rupiah per kunjungan', 'Rupiah per visit')}
+                </label>
+                <input inputMode="numeric" value={app.settingsData?.biaya_administrasi ?? 0}
+                  onChange={e => app.setSettingsData({ ...app.settingsData, biaya_administrasi: e.target.value.replace(/[^0-9]/g, '') })}
+                  className="w-[150px] border border-[var(--line)] bg-[var(--surface)] rounded-lg px-3 py-2 text-sm num text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
+              </div>
+              <button onClick={simpanAdmin} disabled={sibukAdmin}
+                className="bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
+                {sibukAdmin ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
+              </button>
+            </div>
+          </div>
+          <p className="text-[11px] text-[var(--ink-faint)] mt-2">
+            {t('Tarif konsultasi disetel per poli di Pengaturan > Poli & Dokter, karena tiap poli bisa berbeda.',
+               'Consultation fees are set per unit under Settings > Units & Doctors, since each unit can differ.')}
+          </p>
+        </div>
+      )}
 
       <div className={TBL_WRAP}>
         <table className={TBL}>
