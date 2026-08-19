@@ -8,7 +8,7 @@ import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { boleh } from '@/lib/hak'
-import { tanggal } from '@/lib/format'
+import { tanggal, tanggalLokal } from '@/lib/format'
 
 /**
  * Reservasi: janji datang, bukan rekam medis.
@@ -41,7 +41,7 @@ type Sesi = {
   terpakai: number
 }
 
-const hariIni = () => new Date().toISOString().slice(0, 10)
+const hariIni = () => tanggalLokal()
 
 const jamPendek = (j: string) => (j || '').slice(0, 5)
 

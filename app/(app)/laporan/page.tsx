@@ -10,6 +10,7 @@ import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD } from '@/lib/ui'
 import { rupiah, angka, tanggalJam } from '@/lib/format'
 import { bukaCetak, laporanSipnap, type BarisSipnap } from '@/lib/cetak'
+import Klaim from '@/components/klinik/Klaim'
 
 /**
  * Laporan: penjualan, rekap metode bayar, dan SIPNAP.
@@ -36,7 +37,7 @@ export default function HalamanLaporan() {
   const { kabar, konfirmasi } = useUmpan()
   const app = useApp()
 
-  const [tab, setTab] = useState<'penjualan' | 'metode' | 'penjamin' | 'sipnap'>('penjualan')
+  const [tab, setTab] = useState<'penjualan' | 'metode' | 'penjamin' | 'klaim' | 'sipnap'>('penjualan')
   const [penjamin, setPenjamin] = useState<any[]>([])
   const [muatPenjamin, setMuatPenjamin] = useState(false)
   const [riwayat, setRiwayat] = useState<any[]>([])
@@ -233,7 +234,10 @@ export default function HalamanLaporan() {
         {([
           { id: 'penjualan', label: t('Penjualan', 'Sales') },
           { id: 'metode', label: t('Metode Bayar', 'Payment Methods') },
-          ...(app.sektor !== 'apotek' ? [{ id: 'penjamin' as const, label: t('Penjamin', 'Payers') }] : []),
+          ...(app.sektor !== 'apotek' ? [
+            { id: 'penjamin' as const, label: t('Penjamin', 'Payers') },
+            { id: 'klaim' as const, label: t('Klaim', 'Claims') },
+          ] : []),
           { id: 'sipnap', label: 'SIPNAP' },
         ] as const).map(x => (
           <button key={x.id} onClick={() => setTab(x.id)}
@@ -341,6 +345,8 @@ export default function HalamanLaporan() {
           </p>
         </div>
       )}
+
+      {tab === 'klaim' && <Klaim />}
 
       {tab === 'metode' && (
         <div>

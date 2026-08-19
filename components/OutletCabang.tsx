@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { useLang } from '@/lib/i18n'
 import { pesanError } from '@/lib/session'
 import { useUmpan } from '@/components/Umpan'
-import { rupiah, tanggal } from '@/lib/format'
+import { rupiah, tanggal, tanggalLokal, awalBulanIni } from '@/lib/format'
 
 /**
  * Daftar outlet, penambahan, dan rekap lintas outlet.
@@ -42,8 +42,8 @@ export default function OutletCabang() {
   const [form, setForm] = useState({ nama: '', kota: '', sektor: '' })
 
   const kini = new Date()
-  const [dari, setDari] = useState(new Date(kini.getFullYear(), kini.getMonth(), 1).toISOString().slice(0, 10))
-  const [sampai, setSampai] = useState(kini.toISOString().slice(0, 10))
+  const [dari, setDari] = useState(awalBulanIni(kini))
+  const [sampai, setSampai] = useState(tanggalLokal(kini))
 
   const muat = useCallback(async () => {
     setMemuat(true)

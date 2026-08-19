@@ -101,6 +101,8 @@ memasang lubang keamanan yang sudah ditutup.
 | `0063_tarif_penunjang` | `services.jenis_penunjang`, `service_lab_params`, cetakan ikut ke permintaan |
 | `0064_nomor_resep_ke_kasir` | `tagihan_kunjungan()` membawa nomor & status resepnya |
 | `0065_hak_outlet_pengguna` | `outlet_pengguna()`, `atur_outlet_pengguna()`: satu orang, beberapa outlet |
+| `0066_klaim_penjamin` | `claims`, `transactions.claim_id`, `buat_klaim()`, rel keadaan klaim |
+| `0067_klaim_jalur_admin` | Ketiga fungsi klaim menerima `p_company`, seperti 0053 |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -735,9 +737,19 @@ yang sama supaya pemilih outlet benar-benar muncul. Isinya 4 poli, 7 tenaga kese
 kunjungan hari ini yang tersebar di semua keadaan. Skrip pengisinya idempoten
 dan tidak menyentuh fasilitas lain: `supabase/seed_demo_klinik.sql` (data
 induk: asuransi, jadwal praktik, tarif lab & radiologi beserta cetakan
-parameternya, outlet kedua) lalu `supabase/seed_demo_klinik2.sql` (pasien
+parameternya, outlet kedua), `supabase/seed_demo_klinik2.sql` (pasien
 beridentitas lengkap, reservasi besok, kunjungan hari ini termasuk satu yang
-dirujuk antar poli dan satu hasil lab bertanda kritis).
+dirujuk antar poli dan satu hasil lab bertanda kritis), lalu
+`supabase/seed_demo_klinik3.sql` (enam kunjungan BPJS dan asuransi yang SUDAH
+dibayar, tersebar sepanjang bulan).
+
+Bagian 3 lahir belakangan karena seluruh data contoh sebelumnya berpenjamin
+`umum`, jadi layar Penjamin dan layar Klaim benar-benar kosong saat dibuka.
+**Layar yang kosong tidak bisa dinilai**, dan yang tidak pernah dilihat berisi
+adalah yang rusaknya baru ketahuan di klinik orang lain. Dua barisnya sengaja
+tidak enak: satu asuransi dengan selisih bayar pasien, dan satu kunjungan tanpa
+diagnosis primer, yang justru harus terlihat sebagai peringatan di pratinjau
+klaim.
 
 **Data uji sengaja menyebar ke keadaan yang tidak menyenangkan** juga: cito
 yang belum dikerjakan, trombosit kritis, resep draf. Data uji yang semuanya
@@ -842,6 +854,56 @@ pengirimannya sudah jalan. Layarnya mengatakan ini apa adanya.
 'antre'`), yang juga benar untuk baris yang sudah ada. Jawabannya ada di `found`
 sesudah `INSERT ... ON CONFLICT DO NOTHING`, tapi ia harus ditangkap ke variabel
 sebelum SELECT berikutnya menimpanya. Ditemukan uji, bukan saat membacanya.
+
+## Klaim penjamin: baris, bukan tombol cetak
+
+Migrasi 0066 dan 0067. Sampai 0051 pemilik tahu berapa yang DITAGIHKAN, tapi
+tidak ada dokumen yang benar-benar dikirim ke BPJS atau asuransi, dan tidak ada
+cara tahu mana yang sudah dibayar.
+
+**Klaim adalah BARIS, bukan tombol cetak.** Faktur yang cuma dicetak tanpa
+meninggalkan catatan berarti klinik tidak bisa menjawab tiga pertanyaan yang
+pasti ditanyakan: klaim mana yang sudah dikirim, berapa yang belum dibayar, dan
+transaksi ini sudah masuk klaim yang mana. Yang tidak tercatat akan ditagihkan
+dua kali, dan menagih penjamin dua kali untuk pelayanan yang sama adalah cara
+tercepat kehilangan kerja sama.
+
+**Rinciannya CUPLIKAN, bukan tautan hidup** (`claims.rincian`). Alasannya sama
+seperti payload antrean kirim di 0056 dan `transaction_item_batches` di 0009:
+klaim yang sudah ada di tangan verifikator tidak boleh berubah isinya karena
+satu transaksi dibatalkan minggu depan. Yang berubah harus TERLIHAT sebagai
+selisih, dan `daftar_klaim()` menghitungnya sebagai `selisih_dibatalkan`.
+
+**Penanda `transactions.claim_id` dipasang SESUDAH klaimnya ada**, bukan
+sebelum: kegagalan di tengah meninggalkan transaksi bertanda klaim yang tidak
+pernah ada. **Membatalkan klaim MELEPAS penanda itu**, kalau tidak satu klaim
+yang salah rentang mengunci pelayanan sebulan penuh dari penagihan dan uangnya
+hilang tanpa ada yang menyadarinya.
+
+Rel keadaannya: `draf` -> `dikirim` -> `dibayar` / `ditolak`, dan `batal` dari
+mana saja kecuali yang sudah dibayar. Yang sudah dibayar terkunci; selisihnya
+diurus lewat klaim berikutnya, bukan dengan menyunting yang lama.
+`p_dibayar` WAJIB lebih dari nol: klaim dibayar nol tidak bisa dibedakan dari
+klaim yang ditolak.
+
+Layarnya di Laporan > Klaim (`components/klinik/Klaim.tsx`), cetakannya
+`fakturPenjamin()` di `lib/cetak.ts`. Fakturnya membawa nomor kartu penjamin
+dan diagnosis primer per baris karena itu yang diperiksa verifikator satu per
+satu; faktur yang cuma berisi nama dan nominal akan dikembalikan dengan
+permintaan lampiran, dan lampiran yang disusun tangan sesudahnya tidak pernah
+cocok persis dengan fakturnya.
+
+Pratinjau di dialog "Buat Klaim" memanggil `tagihan_belum_diklaim()`, fungsi
+yang SAMA dengan yang dipakai `buat_klaim()` mengisi rinciannya. Dua kueri yang
+seharusnya memberi jawaban sama akan berbeda pada hari salah satunya
+diperbaiki, dan yang berbeda di sini berarti klaim yang isinya bukan yang
+dilihat orangnya saat menekan Buat.
+
+**`toISOString()` menggeser tanggal ke kemarin di Indonesia.** Nilai bawaan
+"awal bulan sampai hari ini" di dialog klaim tertulis 31 Juli, dan tidak ada
+yang gagal: angkanya cuma kurang satu hari. Sekarang lewat `tanggalLokal()` dan
+`awalBulanIni()` di `lib/format.ts`, yang membaca jam DINDING. Jangan menulis
+`new Date().toISOString().slice(0, 10)` lagi di mana pun.
 
 ## Etiket obat: warna itu pengaman, bukan hiasan
 

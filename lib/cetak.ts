@@ -618,3 +618,136 @@ export function etiketObat(p: ProfilApotek, d: DataEtiket, items: BarisEtiket[])
   <div class="lembar">${kartu}</div>
 </body></html>`
 }
+
+export type BarisKlaim = {
+  nomor?: string | null
+  tanggal?: string | null
+  pasien?: string | null
+  nomor_rm?: string | null
+  nomor_penjamin?: string | null
+  kunjungan?: string | null
+  diagnosis?: string | null
+  diagnosis_nama?: string | null
+  total?: number | null
+  ditagihkan?: number | null
+}
+
+export type DataKlaim = {
+  nomor?: string | null
+  penjamin?: string | null
+  asuransi?: string | null
+  dari?: string | null
+  sampai?: string | null
+  jumlah_transaksi?: number | null
+  total_pelayanan?: number | null
+  total_ditagihkan?: number | null
+  status?: string | null
+  catatan?: string | null
+  created_at?: string | null
+}
+
+/**
+ * Faktur tagihan ke penjamin: satu berkas, satu rentang tanggal.
+ *
+ * Yang dicetak adalah CUPLIKAN yang tersimpan di klaimnya, bukan hasil
+ * menghitung ulang saat tombol ditekan. Kalau dihitung ulang, faktur yang
+ * dicetak ulang bulan depan untuk menjawab pertanyaan verifikator akan
+ * berbeda dari yang sudah dikirim, dan yang berbeda dianggap diubah.
+ *
+ * Nomor kartu penjamin dan diagnosis primer ikut per baris karena itu yang
+ * diperiksa verifikator satu per satu. Faktur yang cuma berisi nama dan nominal
+ * akan dikembalikan dengan permintaan lampiran, dan lampiran yang disusun
+ * tangan sesudahnya tidak pernah cocok persis dengan fakturnya.
+ */
+export function fakturPenjamin(p: ProfilApotek, d: DataKlaim, items: BarisKlaim[]): string {
+  const kepada = d.penjamin === 'bpjs'
+    ? 'BPJS Kesehatan'
+    : (d.asuransi || 'Penjamin')
+
+  const baris = items
+    .map((it, i) => `<tr>
+      <td>${i + 1}</td>
+      <td>${tanggalPanjang(it.tanggal)}</td>
+      <td>${teks(it.pasien)}<div class="sub">${teks(it.nomor_rm, 'tanpa no. RM')}</div></td>
+      <td>${teks(it.nomor_penjamin)}</td>
+      <td>${teks(it.diagnosis, '')}${it.diagnosis_nama ? `<div class="sub">${teks(it.diagnosis_nama, '')}</div>` : ''}</td>
+      <td class="num">${rupiah(it.total)}</td>
+      <td class="num">${rupiah(it.ditagihkan)}</td>
+    </tr>`)
+    .join('')
+
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8">
+<title>Klaim ${teks(d.nomor, '')}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,sans-serif;font-size:11px;padding:28px;color:#000;background:#fff;}
+.header{display:flex;justify-content:space-between;margin-bottom:20px;}
+h1{font-size:17px;font-weight:bold;margin-bottom:4px;}
+.divider{border-top:2px solid #333;margin:10px 0;}
+table{width:100%;border-collapse:collapse;margin:14px 0;}
+th{background:#333;color:#fff;padding:7px;text-align:left;font-size:10px;}
+td{padding:7px;border-bottom:1px solid #eee;font-size:10px;vertical-align:top;}
+.sub{color:#666;font-size:9px;margin-top:2px;}
+.num{text-align:right;white-space:nowrap;}
+.total-row td{font-weight:bold;border-top:2px solid #333;border-bottom:none;font-size:11px;}
+.kotak{border:1px solid #999;padding:10px 12px;margin:10px 0;}
+.ttd{margin-top:40px;display:flex;justify-content:space-between;}
+.ttd-box{text-align:center;}
+.ttd-line{border-top:1px solid #000;width:200px;margin:46px auto 4px;}
+.kaki{margin-top:28px;font-size:9px;color:#555;}
+@media print{ body{padding:12mm;} tr{break-inside:avoid;} thead{display:table-header-group;} }
+</style></head><body>
+<div class="header">
+  <div>
+    <h1>${teks(p.nama_faskes ?? p.nama_apotek, 'Fasilitas')}</h1>
+    <p>${teks(p.alamat, '')}</p>
+    <p>Izin: ${teks(p.nomor_ijin)} | Telp: ${teks(p.nomor_telepon)}</p>
+  </div>
+  <div style="text-align:right;">
+    <h1>FAKTUR TAGIHAN PENJAMIN</h1>
+    <p><b>No. Klaim:</b> ${teks(d.nomor)}</p>
+    <p><b>Dibuat:</b> ${tanggalPanjang(d.created_at)}</p>
+    <p><b>Status:</b> ${teks(d.status, '-').toUpperCase()}</p>
+  </div>
+</div>
+<div class="divider"></div>
+<div class="kotak">
+  <p><b>Kepada Yth:</b> ${teks(kepada)}</p>
+  <p><b>Periode pelayanan:</b> ${tanggalPanjang(d.dari)} sampai ${tanggalPanjang(d.sampai)}</p>
+  <p><b>Jumlah pelayanan:</b> ${teks(d.jumlah_transaksi, '0')} transaksi</p>
+</div>
+<table>
+  <thead><tr>
+    <th>No</th><th>Tanggal</th><th>Pasien</th><th>No. Kartu</th>
+    <th>Diagnosis</th><th class="num">Total Pelayanan</th><th class="num">Ditagihkan</th>
+  </tr></thead>
+  <tbody>
+    ${baris}
+    <tr class="total-row">
+      <td colspan="5">TOTAL DITAGIHKAN</td>
+      <td class="num">${rupiah(d.total_pelayanan)}</td>
+      <td class="num">${rupiah(d.total_ditagihkan)}</td>
+    </tr>
+  </tbody>
+</table>
+${d.catatan ? `<p><b>Catatan:</b> ${teks(d.catatan)}</p>` : ''}
+<div class="ttd">
+  <div class="ttd-box">
+    <p>${teks(p.kota, 'Hormat kami')}, ${tanggalPanjang(d.created_at, '')}</p>
+    <div class="ttd-line"></div>
+    <p><b>${teks(p.nama_apoteker, 'Penanggung Jawab')}</b></p>
+    <p>${teks(p.nomor_sipa, '')}</p>
+  </div>
+  <div class="ttd-box">
+    <p>Diterima oleh,</p>
+    <div class="ttd-line"></div>
+    <p><b>${teks(kepada)}</b></p>
+  </div>
+</div>
+<p class="kaki">
+  Rincian di atas adalah cuplikan yang tersimpan saat klaim dibuat. Perubahan pada
+  transaksi sesudah tanggal itu tidak mengubah isi faktur ini, dan diurus lewat
+  klaim berikutnya.
+</p>
+</body></html>`
+}
