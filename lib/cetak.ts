@@ -13,6 +13,8 @@
  * Kertas tidak punya tema gelap.
  */
 
+import { barcodeHtml, GAYA_BARCODE } from './barcode'
+
 export type ProfilApotek = {
   /** Nama fasilitas. `nama_apotek` masih diterima demi data lama. */
   nama_faskes?: string | null
@@ -749,5 +751,100 @@ ${d.catatan ? `<p><b>Catatan:</b> ${teks(d.catatan)}</p>` : ''}
   transaksi sesudah tanggal itu tidak mengubah isi faktur ini, dan diurus lewat
   klaim berikutnya.
 </p>
+</body></html>`
+}
+
+export type BarisLabel = {
+  nama_obat?: string | null
+  nama_generik?: string | null
+  kandungan?: string | null
+  satuan?: string | null
+  harga_jual?: number | null
+  kode?: string | null
+  barcode?: string | null
+  rak?: string | null
+  kategori?: string | null
+}
+
+/**
+ * Label rak: menemukan obat di ruangan, dan menempel di RAK, bukan di dusnya.
+ *
+ * Bentuknya sengaja berbeda dari etiket obat. Etiket dibaca pasien di rumah
+ * dari jarak 30 cm; label rak dibaca petugas sambil berjalan di lorong, jadi
+ * nama obatnya besar dan harganya besar, sedangkan sisanya kecil.
+ *
+ * **Harga dicetak di sini dan itu keputusan yang ada biayanya.** Label berharga
+ * harus dicetak ulang tiap harga naik, dan harga yang tertinggal di rak adalah
+ * harga yang akan ditagihkan kasir kepada pembeli yang menunjuk ke labelnya.
+ * Karena itu tanggal cetaknya ikut, kecil, di pojok: label tanpa tanggal tidak
+ * bisa dibedakan mana yang sudah basi.
+ *
+ * Barcode-nya memakai `barcode` kalau ada (yang tercetak di dus pabrik), dan
+ * jatuh ke `kode` internal kalau tidak. Dua-duanya bisa dipindai kasir, dan
+ * yang penting keduanya menunjuk ke baris produk yang sama.
+ */
+export function labelRak(p: ProfilApotek, items: BarisLabel[], opsi: { hargaTampil?: boolean } = {}): string {
+  const { hargaTampil = true } = opsi
+  const dicetak = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+
+  const kartu = items.map(it => {
+    const kode = (it.barcode || it.kode || '').trim()
+    let bar = ''
+    if (kode) {
+      try {
+        bar = barcodeHtml(kode, { tinggiMm: 8, modulMm: 0.26 })
+      } catch {
+        // Barcode yang tidak bisa dibangkitkan TIDAK membatalkan labelnya.
+        // Label tanpa bar masih berguna untuk menemukan raknya; label yang
+        // gagal seluruhnya membuat satu baris hilang dari lembar tanpa ada
+        // yang menyadarinya sampai ada rak yang kosong labelnya.
+        bar = `<span class="gagal">${teks(kode)}</span>`
+      }
+    }
+    return `<div class="label">
+  <div class="atas">
+    <div class="nama">${teks(it.nama_obat, 'Tanpa nama')}</div>
+    ${it.kandungan || it.nama_generik
+      ? `<div class="generik">${teks(it.kandungan || it.nama_generik, '')}</div>` : ''}
+  </div>
+  <div class="tengah">
+    ${hargaTampil ? `<div class="harga">${rupiah(it.harga_jual)}</div>` : ''}
+    <div class="satuan">per ${teks(it.satuan, 'satuan')}</div>
+  </div>
+  <div class="bawah">
+    ${bar || '<span class="kosong">tanpa barcode</span>'}
+    <div class="kaki">
+      <span class="rak">${it.rak ? teks(it.rak) : ''}</span>
+      <span class="tgl">${dicetak}</span>
+    </div>
+  </div>
+</div>`
+  }).join('')
+
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8">
+<title>Label Rak</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,sans-serif;color:#000;background:#fff;padding:8mm;}
+.lembar{display:flex;flex-wrap:wrap;gap:3mm;}
+.label{width:60mm;height:38mm;border:0.3mm dashed #bbb;border-radius:1mm;padding:2mm;
+  display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;}
+.nama{font-size:11pt;font-weight:bold;line-height:1.15;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.generik{font-size:7pt;color:#444;margin-top:.4mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tengah{display:flex;align-items:baseline;gap:1.5mm;}
+.harga{font-size:13pt;font-weight:bold;letter-spacing:-.02em;}
+.satuan{font-size:7pt;color:#555;}
+.bawah{text-align:center;}
+.kaki{display:flex;justify-content:space-between;font-size:6.5pt;color:#666;margin-top:.4mm;}
+.rak{font-weight:bold;color:#000;font-size:8pt;letter-spacing:.05em;}
+.kosong,.gagal{display:block;font-family:"Courier New",monospace;font-size:7pt;color:#888;padding:3mm 0;}
+${GAYA_BARCODE}
+@media print{
+  body{padding:5mm;}
+  .label{break-inside:avoid;border-color:#ddd;}
+}
+</style></head><body>
+<div class="lembar">${kartu}</div>
 </body></html>`
 }

@@ -115,11 +115,22 @@ export default function HalamanKasir() {
 
   const hasil = useMemo(() => {
     const q = cari.trim().toLowerCase()
-    if (!q) return { obat: [] as any[], jasa: [] as any[] }
+    if (!q) return { obat: [] as any[], jasa: [] as any[], pindai: null as any }
     const cocok = (v: any) => (v || '').toString().toLowerCase().includes(q)
+
+    /* Barcode dicocokkan PERSIS dan didahulukan, bukan ikut pencarian teks.
+       Pemindai genggam berlaku seperti papan ketik: ia mengetik seluruh
+       angkanya lalu menekan Enter sendiri. Kalau angkanya ikut pencarian
+       kemiripan, Enter bisa memasukkan baris teratas yang kebetulan mirip,
+       dan memasukkan obat yang salah karena satu digit beririsan bukan
+       kesalahan administratif. */
+    const pindai = produk.find(p => (p.barcode || '').toString().trim() === cari.trim()) || null
+
     return {
-      obat: produk.filter(p => cocok(p.nama_obat) || cocok(p.nama_generik) || cocok(p.kandungan) || cocok(p.kode)).slice(0, 25),
+      obat: produk.filter(p => cocok(p.nama_obat) || cocok(p.nama_generik) || cocok(p.kandungan)
+                            || cocok(p.kode) || cocok(p.barcode)).slice(0, 25),
       jasa: layanan.filter(s => cocok(s.nama)).slice(0, 10),
+      pindai,
     }
   }, [cari, produk, layanan])
 
@@ -483,12 +494,14 @@ export default function HalamanKasir() {
                 onChange={e => setCari(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
-                    if (hasil.obat[0]) tambahObat(hasil.obat[0])
+                    // Cocokan barcode persis SELALU menang atas hasil teratas.
+                    if (hasil.pindai) { tambahObat(hasil.pindai); setCari('') }
+                    else if (hasil.obat[0]) tambahObat(hasil.obat[0])
                     else if (hasil.jasa[0]) tambahJasa(hasil.jasa[0])
                   }
                   if (e.key === 'Escape') setCari('')
                 }}
-                placeholder={t('Cari obat atau layanan, lalu tekan Enter…', 'Search a medicine or service, then press Enter…')}
+                placeholder={t('Pindai barcode, atau cari obat dan layanan lalu tekan Enter…', 'Scan a barcode, or search a medicine or service then press Enter…')}
                 className={inputCls + ' pl-9 py-2.5'}
               />
             </div>

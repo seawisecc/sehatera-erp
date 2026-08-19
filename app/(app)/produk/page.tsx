@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, Search, Eye, Pencil } from 'lucide-react'
+import { AlertTriangle, Search, Eye, Pencil, Printer, Tag } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -11,6 +11,7 @@ import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD, KATEGORI_BADGE } from '@/lib/ui'
 import { rupiah, angka } from '@/lib/format'
 import DetailProduk from '@/components/produk/DetailProduk'
+import { bukaCetak, labelRak } from '@/lib/cetak'
 import TombolIkon from '@/components/TombolIkon'
 
 /**
@@ -41,11 +42,12 @@ const FORM_KOSONG = {
   nama_obat: '', nama_generik: '', kandungan: '',
   kategori: 'bebas', satuan: 'Tablet', isi_kemasan: 1,
   harga_beli: 0, harga_jual: 0, stok_total: 0, stok_minimum: 10,
+  barcode: '', rak: '',
 }
 
 export default function HalamanProduk() {
   const { t } = useLang()
-  const { kabar } = useUmpan()
+  const { kabar, konfirmasi } = useUmpan()
   const app = useApp()
   const scope = app.scope
 
@@ -90,7 +92,10 @@ export default function HalamanProduk() {
   const tersaring = useMemo(() => {
     const q = cari.trim().toLowerCase()
     return produk.filter(p => {
-      if (q && ![p.nama_obat, p.nama_generik, p.kandungan, p.kode]
+      // Barcode ikut dicari. Pemindai genggam mengetik angkanya ke kotak yang
+      // sedang fokus lalu menekan Enter, jadi kotak cari yang tidak mengenal
+      // barcode membuat pemindai di meja gudang tidak berguna sama sekali.
+      if (q && ![p.nama_obat, p.nama_generik, p.kandungan, p.kode, p.barcode, p.rak]
         .some((v: string) => (v || '').toLowerCase().includes(q))) return false
       if (fKategori && p.kategori !== fKategori) return false
       if (fStatus && (p.status || 'aktif') !== fStatus) return false
@@ -107,7 +112,12 @@ export default function HalamanProduk() {
   const simpanBaru = async () => {
     if (!form.nama_obat.trim()) { kabar(t('Nama obat wajib diisi.', 'Drug name is required.')); return }
     setSibuk(true)
-    const { error } = await supabase.from('products').insert([{ ...form, ...app.cid() }])
+    const { error } = await supabase.from('products').insert([{
+      ...form,
+      barcode: form.barcode.trim() || null,
+      rak: form.rak.trim() || null,
+      ...app.cid(),
+    }])
     setSibuk(false)
     if (error) { kabar(pesanError(error), 'galat'); return }
     setFormBuka(false)
@@ -148,12 +158,47 @@ export default function HalamanProduk() {
       kandungan: edit.kandungan, harga_beli: edit.harga_beli,
       harga_jual: edit.harga_jual, stok_total: edit.stok_total,
       stok_minimum: edit.stok_minimum,
+      // Kosong disimpan sebagai null, bukan string kosong: indeks unik
+      // barcode melewatkan null, dan dua produk berbarcode "" akan bertabrakan
+      // padahal dua-duanya sebenarnya belum diisi.
+      barcode: String(edit.barcode || '').trim() || null,
+      rak: String(edit.rak || '').trim() || null,
     }).eq('id', edit.id)
     setSibuk(false)
     if (error) { kabar(pesanError(error), 'galat'); return }
     setEdit(null); setEditSuppliers([]); setCariSupplier('')
     muat()
     if (detail && detail.id === edit.id) setDetail({ ...detail, ...edit })
+  }
+
+  /**
+   * Label rak untuk produk yang SEDANG TERSARING, bukan seluruh katalog.
+   *
+   * Itu yang membuatnya berguna: saring per rak lalu cetak, atau saring "stok
+   * habis" sesudah barang datang lalu cetak yang itu saja. Tombol yang selalu
+   * mencetak 800 item adalah tombol yang tidak pernah ditekan dua kali.
+   */
+  const cetakLabel = async (daftar: any[]) => {
+    if (daftar.length === 0) {
+      kabar(t('Tidak ada produk yang cocok dengan saringan ini.', 'No products match this filter.'), 'galat')
+      return
+    }
+    // Ambang 40 kira-kira dua lembar A4. Di atas itu orang biasanya belum
+    // menyaring, dan kertas yang terlanjur keluar tidak bisa ditarik kembali.
+    if (daftar.length > 40 && !await konfirmasi({
+      judul: t(`Cetak ${daftar.length} label?`, `Print ${daftar.length} labels?`),
+      pesan: t('Kira-kira sebanyak itu dibagi delapan label per lembar A4. Kalau yang kamu butuhkan cuma satu rak, saring dulu lewat kotak cari.',
+               'That is roughly that many divided by eight labels per A4 sheet. If you only need one shelf, filter first using the search box.'),
+      tombol: t('Cetak semua', 'Print all'),
+    })) return
+
+    const ok = bukaCetak(labelRak(app.settingsData || {}, daftar.map(x => ({
+      nama_obat: x.nama_obat, nama_generik: x.nama_generik, kandungan: x.kandungan,
+      satuan: x.satuan, harga_jual: x.harga_jual, kode: x.kode,
+      barcode: x.barcode, rak: x.rak, kategori: x.kategori,
+    }))), 1000, 800)
+    if (!ok) kabar(t('Jendela cetak diblokir peramban. Izinkan popup untuk situs ini.',
+                     'The print window was blocked. Allow popups for this site.'), 'galat')
   }
 
   const inputCls = 'w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]'
@@ -169,10 +214,17 @@ export default function HalamanProduk() {
             {' '}<span className="num">{angka(produk.length)}</span> {t('item terdaftar.', 'items registered.')}
           </p>
         </div>
-        <button onClick={() => { setForm(FORM_KOSONG); setFormBuka(true) }}
-          className="shrink-0 bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">
-          + {t('Tambah Produk', 'Add Product')}
-        </button>
+        <div className="shrink-0 flex items-center gap-2">
+          <button onClick={() => cetakLabel(tersaring)}
+            className="inline-flex items-center gap-2 border border-[var(--line)] text-[var(--ink-soft)] px-3 py-2 rounded-lg text-sm hover:bg-[var(--surface-2)] transition">
+            <Printer size={15} /> {t('Cetak label', 'Print labels')}
+            <span className="num text-xs text-[var(--ink-faint)]">({angka(tersaring.length)})</span>
+          </button>
+          <button onClick={() => { setForm(FORM_KOSONG); setFormBuka(true) }}
+            className="bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">
+            + {t('Tambah Produk', 'Add Product')}
+          </button>
+        </div>
       </div>
 
       {batchAlert > 0 && (
@@ -280,6 +332,10 @@ export default function HalamanProduk() {
                         onClick={() => setDetail(p)}>
                         <Eye size={14} />
                       </TombolIkon>
+                      <TombolIkon label={t('Cetak label rak', 'Print shelf label')}
+                        onClick={e => { e.stopPropagation(); cetakLabel([p]) }}>
+                        <Tag size={14} />
+                      </TombolIkon>
                       <TombolIkon label={t('Ubah data produk', 'Edit product')}
                         onClick={() => bukaEdit(p)}>
                         <Pencil size={14} />
@@ -312,6 +368,21 @@ export default function HalamanProduk() {
               <div>
                 <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Kandungan / Komposisi', 'Ingredient / Composition')}</label>
                 <input value={form.kandungan} onChange={e => setForm({ ...form, kandungan: e.target.value })} className={inputCls} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">Barcode</label>
+                  {/* Diisi dengan MEMINDAI dusnya, bukan diketik. Pemindai
+                      genggam berlaku seperti papan ketik: ia mengetik angkanya
+                      lalu menekan Enter, jadi kotak ini cukup difokuskan. */}
+                  <input value={form.barcode} onChange={e => setForm({ ...form, barcode: e.target.value })}
+                    placeholder={t('Pindai dus obatnya', 'Scan the box')} className={inputCls + ' num'} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Rak', 'Shelf')}</label>
+                  <input value={form.rak} onChange={e => setForm({ ...form, rak: e.target.value })}
+                    placeholder={t('mis. A3-2', 'e.g. A3-2')} className={inputCls} />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -383,6 +454,18 @@ export default function HalamanProduk() {
               <div>
                 <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Kandungan', 'Ingredient')}</label>
                 <input value={edit.kandungan || ''} onChange={e => setEdit({ ...edit, kandungan: e.target.value })} className={inputCls} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">Barcode</label>
+                  <input value={edit.barcode || ''} onChange={e => setEdit({ ...edit, barcode: e.target.value })}
+                    placeholder={t('Pindai dus obatnya', 'Scan the box')} className={inputCls + ' num'} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Rak', 'Shelf')}</label>
+                  <input value={edit.rak || ''} onChange={e => setEdit({ ...edit, rak: e.target.value })}
+                    placeholder={t('mis. A3-2', 'e.g. A3-2')} className={inputCls} />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
