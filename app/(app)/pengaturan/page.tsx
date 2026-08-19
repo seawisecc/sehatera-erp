@@ -539,6 +539,7 @@ export default function HalamanPengaturan() {
                   {tab === 'poli' && (
                     <div className="space-y-6">
                       <PengaturanPoli />
+                      <DaftarAsuransi />
                       <LayarAntrean />
                     </div>
                   )}
@@ -962,6 +963,100 @@ function LayarAntrean() {
             className="text-xs text-[var(--ink-faint)] hover:text-red-600 underline underline-offset-2 disabled:opacity-50">
             {t('Putar token', 'Rotate token')}
           </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Asuransi rekanan faskes ini.
+ *
+ * Dipisah dari nilai `penjamin` dengan sengaja (migrasi 0048): tiap klinik
+ * punya rekanan berbeda dan daftarnya berubah tiap kontrak diperbarui. Kalau
+ * jadi nilai status, klinik yang menambah rekanan harus menunggu migrasi baru
+ * dan pengembangnya. Di sini pemilik menambahnya sendiri.
+ *
+ * Dinonaktifkan, bukan dihapus: kunjungan lama menunjuk ke barisnya, dan
+ * menghapusnya berarti tagihan tahun lalu kehilangan nama penjaminnya.
+ */
+function DaftarAsuransi() {
+  const { t } = useLang()
+  const app = useApp()
+  const [daftar, setDaftar] = useState<any[]>([])
+  const [nama, setNama] = useState('')
+  const [sibuk, setSibuk] = useState(false)
+
+  const muat = useCallback(async () => {
+    const { data } = await app.scope(
+      supabase.from('insurers').select('id,nama,aktif').order('nama'))
+    setDaftar((data as any[]) || [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [app.superViewCompany])
+
+  useEffect(() => { muat() }, [muat])
+
+  const tambah = async () => {
+    const n = nama.trim()
+    if (!n) return
+    setSibuk(true)
+    const { error } = await supabase.from('insurers').insert([{ nama: n }])
+    setSibuk(false)
+    if (error) { alert(pesanError(error)); return }
+    setNama(''); muat()
+  }
+
+  const ubahAktif = async (a: any) => {
+    setSibuk(true)
+    const { error } = await supabase.from('insurers').update({ aktif: !a.aktif }).eq('id', a.id)
+    setSibuk(false)
+    if (error) { alert(pesanError(error)); return }
+    muat()
+  }
+
+  return (
+    <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5">
+      <h3 className="text-base font-bold text-[var(--ink)] mb-1">
+        {t('Asuransi rekanan', 'Partner insurers')}
+      </h3>
+      <p className="text-sm text-[var(--ink-soft)] mb-4 max-w-prose">
+        {t('Allianz, Prudential, Mandiri Inhealth, dan seterusnya. Yang ada di sini muncul sebagai pilihan saat mendaftarkan pasien berpenjamin asuransi, dan nanti memisahkan laporan tagihan per penjamin.',
+           'Allianz, Prudential, Mandiri Inhealth, and so on. These appear when registering an insured patient, and later split the billing report per payer.')}
+      </p>
+
+      <div className="flex gap-2 mb-3">
+        <input value={nama} onChange={e => setNama(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') tambah() }}
+          placeholder={t('mis. Allianz', 'e.g. Allianz')}
+          className="flex-1 border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
+        <button onClick={tambah} disabled={sibuk || !nama.trim()}
+          className="bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
+          {t('Tambah', 'Add')}
+        </button>
+      </div>
+
+      {daftar.length === 0 ? (
+        <p className="text-sm text-[var(--ink-faint)]">
+          {t('Belum ada asuransi rekanan.', 'No partner insurers yet.')}
+        </p>
+      ) : (
+        <div className="space-y-1">
+          {daftar.map(a => (
+            <div key={a.id}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--line)] ${a.aktif ? '' : 'opacity-55'}`}>
+              <span className="text-sm text-[var(--ink)] flex-1 truncate">{a.nama}</span>
+              {!a.aktif && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--surface-2)] text-[var(--ink-faint)]">
+                  {t('NONAKTIF', 'INACTIVE')}
+                </span>
+              )}
+              {/* Dinonaktifkan, bukan dihapus: kunjungan lama menunjuk ke sini. */}
+              <button onClick={() => ubahAktif(a)} disabled={sibuk}
+                className="text-xs text-[var(--ink-faint)] hover:text-[var(--brand)] underline underline-offset-2 disabled:opacity-50">
+                {a.aktif ? t('Nonaktifkan', 'Deactivate') : t('Aktifkan', 'Activate')}
+              </button>
+            </div>
+          ))}
         </div>
       )}
     </div>

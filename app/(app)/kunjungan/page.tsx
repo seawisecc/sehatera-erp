@@ -104,6 +104,16 @@ export default function HalamanKunjungan() {
   const [poliDipilih, setPoliDipilih] = useState<string | null>(null)
   const [dokter, setDokter] = useState<Dokter[]>([])
   const [tugas, setTugas] = useState<Record<string, string[]>>({})
+  const [asuransi, setAsuransi] = useState<{ id: string; nama: string }[]>([])
+
+  // Pilihan pendaftaran. Bawaan penjamin sengaja "ikut profil pasien", bukan
+  // "umum": pasien BPJS yang didaftarkan terburu-buru sebagai umum akan
+  // ditagih penuh di depan orangnya, dan itu keliru yang paling mahal
+  // diperbaiki karena uangnya sudah diterima.
+  const [dokterDipilih, setDokterDipilih] = useState('')
+  const [penjaminDipilih, setPenjaminDipilih] = useState('')
+  const [asuransiDipilih, setAsuransiDipilih] = useState('')
+  const [nomorPolis, setNomorPolis] = useState('')
 
   const namaLangkah: Record<string, string> = {
     terdaftar: t('Terdaftar', 'Registered'),
@@ -136,6 +146,9 @@ export default function HalamanKunjungan() {
         app.scope(supabase.from('app_users').select('nama,email,role').eq('role', 'dokter').order('nama')),
         app.scope(supabase.from('unit_doctors').select('unit_id,email')),
       ])
+      const { data: ins } = await app.scope(
+        supabase.from('insurers').select('id,nama').eq('aktif', true).order('nama'))
+      setAsuransi((ins as any[]) || [])
       const daftarPoli = (u.data as Poli[]) || []
       setPoli(daftarPoli)
       setPoliDipilih(p => p ?? daftarPoli[0]?.id ?? null)
@@ -176,13 +189,19 @@ export default function HalamanKunjungan() {
   const daftarkan = async (p: Pasien) => {
     setSibuk(true)
     const { data, error } = await supabase.rpc('daftar_kunjungan', {
-      p_patient: p.id, p_keluhan: null, p_penjamin: p.penjamin,
-      p_unit: poliDipilih, p_dokter: null,
+      p_patient: p.id, p_keluhan: null,
+      // Kosong berarti IKUT PROFIL PASIEN, dan itu ditangani database.
+      p_penjamin: penjaminDipilih || null,
+      p_unit: poliDipilih,
+      p_dokter: dokterDipilih || null,
       p_company: (app.isSuper && app.superViewCompany) || null,
+      p_asuransi: penjaminDipilih === 'asuransi' ? (asuransiDipilih || null) : null,
+      p_nomor_penjamin: nomorPolis.trim() || null,
     })
     setSibuk(false)
     if (error) { alert(pesanError(error)); return }
     setBukaDaftar(false); setCariPasien(''); setHasilPasien([])
+    setDokterDipilih(''); setPenjaminDipilih(''); setAsuransiDipilih(''); setNomorPolis('')
     setPilih((data as any)?.id ?? null)
     muat()
   }
@@ -574,7 +593,7 @@ export default function HalamanKunjungan() {
       {/* ── Daftarkan kunjungan ── */}
       {bukaDaftar && (
         <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 pt-[10vh]" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl">
+          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[85vh] overflow-y-auto">
             <h2 className="text-lg font-bold text-[var(--brand)] mb-1">{t('Daftarkan Kunjungan', 'Register a Visit')}</h2>
             <p className="text-xs text-[var(--ink-soft)] mb-4">
               {t('Cari pasien yang sudah pernah datang. Kalau belum ada, daftarkan sebagai pasien baru.',
@@ -603,9 +622,87 @@ export default function HalamanKunjungan() {
               </div>
             )}
 
+            {/* Dokter tujuan. Disaring ke poli yang dipilih, karena di poli
+                spesialis satu poli bisa punya beberapa dokter dan pasien
+                datang untuk dokter TERTENTU, bukan untuk polinya. */}
+            {poliDipilih && (tugas[poliDipilih] || []).length > 0 && (
+              <div className="mb-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-faint)] mb-1.5">
+                  {t('Dokter tujuan', 'Doctor')}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <button onClick={() => setDokterDipilih('')}
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition ${
+                      dokterDipilih === '' ? 'border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand)]'
+                                           : 'border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--brand)]'
+                    }`}>
+                    {t('Belum ditentukan', 'Not assigned')}
+                  </button>
+                  {dokter.filter(d => (tugas[poliDipilih] || []).includes(d.email)).map(d => (
+                    <button key={d.email} onClick={() => setDokterDipilih(d.email)}
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition ${
+                        dokterDipilih === d.email ? 'border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand)]'
+                                                  : 'border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--brand)]'
+                      }`}>
+                      {d.nama || d.email}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Penjamin. Bawaannya IKUT PROFIL PASIEN, bukan Umum: pasien BPJS
+                yang terburu-buru didaftarkan sebagai umum akan ditagih penuh
+                di depan orangnya. */}
+            <div className="mb-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-faint)] mb-1.5">
+                {t('Penjamin', 'Payer')}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {([
+                  ['',         t('Ikut profil pasien', 'From patient profile')],
+                  ['umum',     t('Umum', 'Self-pay')],
+                  ['bpjs',     'BPJS'],
+                  ['asuransi', t('Asuransi', 'Insurance')],
+                ] as const).map(([nilai, label]) => (
+                  <button key={nilai || 'auto'} onClick={() => { setPenjaminDipilih(nilai); if (nilai !== 'asuransi') setAsuransiDipilih('') }}
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition ${
+                      penjaminDipilih === nilai ? 'border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand)]'
+                                                : 'border-[var(--line)] text-[var(--ink-soft)] hover:border-[var(--brand)]'
+                    }`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {penjaminDipilih === 'asuransi' && (
+                <div className="mt-2">
+                  {asuransi.length === 0 ? (
+                    <p className="text-xs text-amber-700">
+                      {t('Belum ada asuransi rekanan. Tambahkan dulu di Pengaturan > Poli & Dokter.',
+                         'No partner insurers yet. Add them in Settings > Units & Doctors first.')}
+                    </p>
+                  ) : (
+                    <select value={asuransiDipilih} onChange={e => setAsuransiDipilih(e.target.value)}
+                      className="w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]">
+                      <option value="">{t('Pilih asuransi…', 'Choose insurer…')}</option>
+                      {asuransi.map(a => <option key={a.id} value={a.id}>{a.nama}</option>)}
+                    </select>
+                  )}
+                </div>
+              )}
+
+              {(penjaminDipilih === 'asuransi' || penjaminDipilih === 'bpjs') && (
+                <input value={nomorPolis} onChange={e => setNomorPolis(e.target.value)}
+                  placeholder={t('Nomor kartu/polis (kosongkan kalau ikut profil pasien)',
+                                 'Card/policy number (leave empty to use the patient profile)')}
+                  className="mt-2 w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
+              )}
+            </div>
+
             <div className="relative">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]" />
-              <input autoFocus value={cariPasien} onChange={e => setCariPasien(e.target.value)}
+              <input value={cariPasien} onChange={e => setCariPasien(e.target.value)}
                 placeholder={t('Nama, NIK, atau no. rekam medis…', 'Name, ID number, or medical record no.…')}
                 className="w-full border border-[var(--line)] rounded-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]" />
             </div>
