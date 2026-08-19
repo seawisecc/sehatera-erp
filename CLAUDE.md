@@ -89,6 +89,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0051_pelunasan_per_penjamin` | `transactions.penjamin`, `diterima_tunai` vs `ditagihkan_penjamin`, `laporan_penjamin()` |
 | `0052_apply_transaction_jalur_admin` | Gerbang `apply_transaction` pindah ke `boleh_admin_platform()` supaya pembayaran bisa diuji |
 | `0053_laporan_penjamin_jalur_admin` | `laporan_penjamin()` menerima faskes: super admin melihat angka klien, bukan angka sendiri |
+| `0054_reservasi` | `doctor_schedules`, `reservations`, kuota per sesi, `hadirkan_reservasi()` |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -407,6 +408,57 @@ Kasir menekan Proses dengan bayar nol dan seluruhnya ditagihkan. Itu keputusan
 pemilik: satu pintu keluar berarti satu tempat yang harus benar, dan seluruh
 kunjungan muncul di laporan dengan penjaminnya.
 
+## Reservasi: janji datang, bukan rekam medis
+
+Modul baru di migrasi 0054, berdiri di atas poli dan dokter dari 0020. Tiga
+keputusan bentuk yang perlu dibaca sebelum menyentuhnya lagi.
+
+**Yang memesan BOLEH belum jadi pasien.** `reservations.patient_id` nullable,
+`nama` wajib. Yang menelepon sore ini untuk besok pagi belum tentu pernah
+datang, dan memaksa nomor RM lebih dulu berarti klinik mengumpulkan rekam
+medis untuk orang yang mungkin tidak jadi datang. Pencocokan ke pasien terjadi
+saat orangnya tiba, lewat `hadirkan_reservasi(p_id, p_patient)`.
+
+**Jadwal praktik berbentuk SESI, bukan slot janji per lima belas menit.**
+Klinik pratama tidak bekerja begitu: pasien datang di rentang jam praktik dan
+dilayani berurutan. Memaksa jam pasti berarti membuat janji yang tidak pernah
+ditepati, dan yang datang tepat waktu tetap menunggu di belakang tiga orang.
+Yang bisa dijanjikan adalah sesi dan urutan di dalamnya.
+
+**Kuota ditegakkan database, dengan mengunci baris jadwalnya lebih dulu**
+(`select ... for update` pada `doctor_schedules`, bukan pada hitungan
+reservasinya). Dua petugas yang menekan Simpan bersamaan berbaris di kunci yang
+sama, jadi yang kedua menghitung SESUDAH yang pertama menyimpan. Tanpa itu
+keduanya membaca "sisa 1" dan keduanya berhasil. Kuota `0` berarti TANPA BATAS,
+bukan tertutup, pola yang sama dengan `lib/plan.ts`.
+
+`hadirkan_reservasi()` melahirkan kunjungan lewat `daftar_kunjungan()`, bukan
+dengan menulis ke `visits` sendiri. Nomor antrean, biaya administrasi, dan
+riwayat keadaan semuanya menempel pada jalur itu, dan jalur kedua ke tabel yang
+sama berarti dua tempat yang harus benar. Ujinya memeriksa nomor antrean dan
+`visit_charges` justru untuk membuktikan jalurnya masih yang itu.
+
+Reservasi kemarin yang tidak pernah hadir dihanguskan saat layarnya dibuka
+(`hanguskan_reservasi_lewat`), bukan lewat penjadwal: project ini belum punya
+penjadwal, dan yang menggantung di keadaan `menunggu` selamanya membuat
+hitungan hari berikutnya salah.
+
+## Dialog harus dirender ke `document.body`
+
+`position: fixed` diukur dari viewport, KECUALI kalau ada leluhur yang memasang
+`transform`, `filter`, atau `backdrop-filter`. Yang begitu jadi containing block
+baru, dan `fixed inset-0` mendadak berarti "sebesar kartu itu", bukan "sebesar
+layar".
+
+Kartu di halaman Pengaturan memakai `backdrop-blur-sm`, jadi tiap dialog di
+dalamnya ikut tergeser mengikuti gulungan halaman: bagian atasnya, tempat
+tombol tutup dan kotak pertama berada, bisa berada di luar layar tergantung
+posisi gulungan saat dibuka. Tidak ada yang gagal, tidak ada galat, dan
+`npm run build` lolos. Ketahuannya cuma dengan membuka dialognya sungguhan.
+
+`components/Portal.tsx` menyelesaikannya. **Dialog baru di dalam kartu mana pun
+harus dibungkus `<Portal>`**, bukan mengandalkan `fixed` saja.
+
 ## Layar ruang tunggu: tanpa login, dan itu keputusan keamanan
 
 `/antrean?t=<token>` dibuka di televisi ruang tunggu. **Tidak memakai sesi
@@ -609,8 +661,8 @@ menarik:
 | 2 | Hak akses per sub-modul kunjungan | **selesai** (migrasi 0039) |
 | 3 | Layar antrean ruang tunggu + panggilan suara | **selesai** (migrasi 0041..0044) |
 | 4 | ICD-10 resmi dan ICD-9-CM untuk tindakan | **selesai** (migrasi 0025..0029) |
-| 5 | Reservasi | **berikutnya**, modul baru |
-| 6 | Kirim ke SatuSehat dan BPJS | belum, tertahan kredensial |
+| 5 | Reservasi | **selesai** (migrasi 0054) |
+| 6 | Kirim ke SatuSehat dan BPJS | **berikutnya**, tertahan kredensial |
 
 ### Hak akses per sub-modul: SELESAI (migrasi 0039)
 

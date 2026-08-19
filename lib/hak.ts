@@ -23,6 +23,8 @@ export type Kapabilitas =
   | 'resep.baca'
   | 'resep.tulis'
   | 'resep.layani'
+  | 'reservasi.baca'
+  | 'reservasi.tulis'
 
 const MATRIKS: Record<Kapabilitas, string[]> = {
   'rekam_medis.baca':  ['pemilik', 'admin', 'dokter', 'perawat'],
@@ -31,6 +33,8 @@ const MATRIKS: Record<Kapabilitas, string[]> = {
   'resep.baca':        ['pemilik', 'admin', 'dokter', 'perawat', 'apoteker', 'asisten_apoteker'],
   'resep.tulis':       ['pemilik', 'admin', 'dokter'],
   'resep.layani':      ['pemilik', 'admin', 'apoteker', 'asisten_apoteker'],
+  'reservasi.baca':    ['pemilik', 'admin', 'pendaftaran', 'dokter', 'perawat', 'kasir'],
+  'reservasi.tulis':   ['pemilik', 'admin', 'pendaftaran'],
 }
 
 /**

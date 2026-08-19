@@ -16,6 +16,7 @@ import { menuItems, ROLE_PAGES } from '@/lib/navigation'
 import { tanggal, rupiah } from '@/lib/format'
 import JejakAudit from '@/components/JejakAudit'
 import PengaturanPoli from '@/components/klinik/PengaturanPoli'
+import JadwalPraktik from '@/components/klinik/JadwalPraktik'
 
 /**
  * Pengaturan: profil apotek, pengguna, data apoteker, tampilan, langganan.
@@ -539,6 +540,7 @@ export default function HalamanPengaturan() {
                   {tab === 'poli' && (
                     <div className="space-y-6">
                       <PengaturanPoli />
+                      <JadwalPraktik />
                       <DaftarAsuransi />
                       <LayarAntrean />
                     </div>

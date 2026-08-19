@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Check, Pencil, Plus, Stethoscope, UserRound, X } from 'lucide-react'
+import Portal from '@/components/Portal'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -197,6 +198,7 @@ export default function PengaturanPoli() {
       )}
 
       {form && (
+        <Portal>
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
           <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md shadow-xl">
             <div className="flex items-center justify-between mb-4">
@@ -251,6 +253,7 @@ export default function PengaturanPoli() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )
