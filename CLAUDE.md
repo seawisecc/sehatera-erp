@@ -86,6 +86,8 @@ memasang lubang keamanan yang sudah ditutup.
 | `0048_daftar_asuransi` | Tabel `insurers` per faskes, `visits.asuransi_id`, pendaftaran bawa dokter & penjamin |
 | `0049_rel_baru_kunjungan` | Keadaan `resep` dibuang; kasir & farmasi yang menutup kunjungan |
 | `0050_buang_daftar_kunjungan_lama` | Membuang `daftar_kunjungan` 6 argumen yang jadi ambigu |
+| `0051_pelunasan_per_penjamin` | `transactions.penjamin`, `diterima_tunai` vs `ditagihkan_penjamin`, `laporan_penjamin()` |
+| `0052_apply_transaction_jalur_admin` | Gerbang `apply_transaction` pindah ke `boleh_admin_platform()` supaya pembayaran bisa diuji |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -391,6 +393,19 @@ kurang satu baris baru ketahuan saat pasien sudah pulang.
 
 Tagihan terkunci begitu kunjungan berstatus `selesai` atau `batal`.
 
+**Yang ditagihkan ke penjamin BUKAN uang yang diterima.** `transactions` punya
+`diterima_tunai` dan `ditagihkan_penjamin`, dijaga constraint supaya jumlah
+keduanya selalu sama dengan `total`. Kalau piutang BPJS ikut terhitung sebagai
+uang masuk, laci kasir tidak akan pernah cocok saat tutup buku, dan selisihnya
+baru ketahuan berminggu-minggu kemudian. `laporan_penjamin()` membaca dua kolom
+itu, jadi pemilik melihat berapa yang benar-benar diterima dan berapa yang
+masih ditagihkan, per penjamin.
+
+Yang menutup transaksi tetap KASIR, termasuk untuk pasien BPJS dan asuransi.
+Kasir menekan Proses dengan bayar nol dan seluruhnya ditagihkan. Itu keputusan
+pemilik: satu pintu keluar berarti satu tempat yang harus benar, dan seluruh
+kunjungan muncul di laporan dengan penjaminnya.
+
 ## Layar ruang tunggu: tanpa login, dan itu keputusan keamanan
 
 `/antrean?t=<token>` dibuka di televisi ruang tunggu. **Tidak memakai sesi
@@ -585,9 +600,9 @@ menarik:
 | --- | --- | --- |
 | 1 | Satu tagihan per kunjungan | **selesai** (migrasi 0024) |
 | 2 | Hak akses per sub-modul kunjungan | **selesai** (migrasi 0039) |
-| 3 | Layar antrean ruang tunggu + panggilan suara | belum |
+| 3 | Layar antrean ruang tunggu + panggilan suara | **selesai** (migrasi 0041..0044) |
 | 4 | ICD-10 resmi dan ICD-9-CM untuk tindakan | **selesai** (migrasi 0025..0029) |
-| 5 | Reservasi | belum, modul baru |
+| 5 | Reservasi | **berikutnya**, modul baru |
 | 6 | Kirim ke SatuSehat dan BPJS | belum, tertahan kredensial |
 
 ### Hak akses per sub-modul: SELESAI (migrasi 0039)

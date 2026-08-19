@@ -60,6 +60,19 @@ export default function HalamanKasir() {
   const [visitId, setVisitId] = useState('')
   const [resepMenunggu, setResepMenunggu] = useState<any[]>([])
   const [resepId, setResepId] = useState('')
+
+  /**
+   * Pelunasan. `penjamin` menentukan siapa yang membayar, `ditagihkan` berapa
+   * yang jadi piutang ke penjamin itu. Sisanya yang harus diterima tunai.
+   *
+   * Dipisah dari `bayar` dengan sengaja: yang ditagihkan ke BPJS bukan uang
+   * yang masuk laci, dan kalau digabung, laci kasir tidak akan pernah cocok
+   * saat tutup buku.
+   */
+  const [penjamin, setPenjamin] = useState<'umum' | 'bpjs' | 'asuransi'>('umum')
+  const [asuransiTrx, setAsuransiTrx] = useState('')
+  const [ditagihkan, setDitagihkan] = useState(0)
+  const [daftarAsuransi, setDaftarAsuransi] = useState<{ id: string; nama: string }[]>([])
   const [sibuk, setSibuk] = useState(false)
 
   const [struk, setStruk] = useState<any>(null)
@@ -72,12 +85,14 @@ export default function HalamanKasir() {
   const terkunciLangganan = app.langganan.terkunci
 
   const muat = useCallback(async () => {
-    const [{ data: p }, { data: s }] = await Promise.all([
+    const [{ data: p }, { data: s }, { data: ins }] = await Promise.all([
       scope(supabase.from('products').select('*').order('nama_obat')),
       scope(supabase.from('services').select('*').eq('status', 'aktif').order('nama')),
+      scope(supabase.from('insurers').select('id,nama').eq('aktif', true).order('nama')),
     ])
     setProduk(p || [])
     setLayanan(s || [])
+    setDaftarAsuransi((ins as any[]) || [])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app.superViewCompany])
 
@@ -140,6 +155,7 @@ export default function HalamanKasir() {
   const kosongkan = () => {
     setKeranjang([]); setBayar(0); setMetode('Tunai'); setIsResep(false)
     setPasien({ nama_pasien: '', alamat_pasien: '', kontak_pasien: '', nomor_resep: '' })
+    setPenjamin('umum'); setAsuransiTrx(''); setDitagihkan(0)
     setVisitId('')
     setResepId('')
   }
@@ -167,7 +183,17 @@ export default function HalamanKasir() {
       alert(t(`Stok ${lebih.nama_obat} tidak cukup: tersedia ${lebih.stok_total}, diminta ${lebih.jumlah}.`,
               `Insufficient stock for ${lebih.nama_obat}: ${lebih.stok_total} available, ${lebih.jumlah} requested.`)); return
     }
-    if (bayar < total) { alert(t('Pembayaran kurang dari total belanja.', 'Payment is less than the total.')); return }
+    // Yang harus ditutup tunai cuma sisanya sesudah dikurangi tagihan
+    // penjamin. Pasien BPJS yang seluruh tagihannya ditanggung membayar nol,
+    // dan itu sah.
+    const harusTunai = Math.max(total - (penjamin === 'umum' ? 0 : ditagihkan), 0)
+    if (bayar < harusTunai) {
+      alert(t(`Pembayaran kurang. Pasien harus membayar ${rupiah(harusTunai)}.`,
+              `Payment is short. The patient must pay ${rupiah(harusTunai)}.`)); return
+    }
+    if (penjamin === 'asuransi' && !asuransiTrx) {
+      alert(t('Pilih dulu asuransinya.', 'Choose the insurer first.')); return
+    }
     if (perluResep && (!pasien.nama_pasien.trim() || !pasien.nomor_resep.trim())) {
       alert(adaGolongan
         ? t('Obat golongan Narkotika, Psikotropika, atau Prekursor wajib mencatat nama pasien dan nomor resep.',
@@ -194,6 +220,9 @@ export default function HalamanKasir() {
       })),
       p_bayar: bayar,
       p_metode_bayar: metode,
+      p_penjamin: penjamin,
+      p_asuransi: penjamin === 'asuransi' ? (asuransiTrx || null) : null,
+      p_ditagihkan: penjamin === 'umum' ? 0 : ditagihkan,
       p_pasien: {
         ...(perluResep ? {
           nama_pasien: pasien.nama_pasien.trim(),
@@ -327,6 +356,14 @@ export default function HalamanKasir() {
     setVisitId(r.visit_id)
     setResepId(d.resep_id || '')
     const k = d.kunjungan || {}
+    // Penjamin kunjungan ikut ke kasir. Kalau kasir harus memilihnya ulang,
+    // pasien BPJS yang lupa dipilih akan ditagih tunai penuh di depan
+    // orangnya, dan itu keliru yang paling mahal diperbaiki.
+    const pen = (k.penjamin || 'umum') as 'umum' | 'bpjs' | 'asuransi'
+    setPenjamin(pen)
+    setAsuransiTrx(k.asuransi_id || '')
+    const totalTagihan = masuk.reduce((a, b) => a + b.harga_jual * b.jumlah, 0)
+    setDitagihkan(pen === 'umum' ? 0 : totalTagihan)
     if (k.alergi) setIsResep(true)
     setPasien(x => ({
       ...x,
@@ -623,6 +660,57 @@ export default function HalamanKasir() {
                   <input value={pasien.alamat_pasien} onChange={e => setPasien({ ...pasien, alamat_pasien: e.target.value })}
                     placeholder={t('Alamat', 'Address')} className={inputCls} />
                 </div>
+              </div>
+            )}
+
+            {/* Pelunasan. Hanya di klinik: apotek tidak menagih ke penjamin. */}
+            {klinik && (
+              <div className="mb-3 p-3 rounded-xl border border-[var(--line)] bg-[var(--surface-2)]">
+                <label className="text-xs font-medium text-[var(--ink-soft)] mb-1.5 block">
+                  {t('Dilunasi oleh', 'Settled by')}
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {([['umum', t('Umum', 'Self-pay')], ['bpjs', 'BPJS'], ['asuransi', t('Asuransi', 'Insurance')]] as const).map(([nilai, label]) => (
+                    <button key={nilai}
+                      onClick={() => {
+                        setPenjamin(nilai)
+                        // Bawaannya SELURUH tagihan ditagihkan ke penjamin.
+                        // Kasir tinggal menurunkannya kalau ada selisih bayar.
+                        setDitagihkan(nilai === 'umum' ? 0 : total)
+                        if (nilai !== 'asuransi') setAsuransiTrx('')
+                      }}
+                      className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition ${
+                        penjamin === nilai ? 'bg-[var(--brand)] text-[var(--on-brand)] border-[var(--brand)]'
+                                           : 'border-[var(--line)] text-[var(--ink-soft)] hover:bg-[var(--surface)]'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {penjamin === 'asuransi' && (
+                  <select value={asuransiTrx} onChange={e => setAsuransiTrx(e.target.value)}
+                    className={`${inputCls} mt-2`}>
+                    <option value="">{t('Pilih asuransi…', 'Choose insurer…')}</option>
+                    {daftarAsuransi.map(a => <option key={a.id} value={a.id}>{a.nama}</option>)}
+                  </select>
+                )}
+
+                {penjamin !== 'umum' && (
+                  <div className="mt-2">
+                    <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">
+                      {t('Ditagihkan ke penjamin (Rp)', 'Billed to payer (Rp)')}
+                    </label>
+                    <input type="text" inputMode="numeric"
+                      value={ditagihkan ? angka(ditagihkan) : ''}
+                      onChange={e => setDitagihkan(Math.min(+e.target.value.replace(/\D/g, '') || 0, total))}
+                      className={`${inputCls} num`} />
+                    {/* Angka yang dipakai mencocokkan laci sore hari. */}
+                    <p className="text-[11px] text-[var(--ink-faint)] mt-1 leading-relaxed">
+                      {t(`Pasien membayar tunai ${rupiah(Math.max(total - ditagihkan, 0))}. Sisanya jadi piutang ke penjamin dan TIDAK masuk laci kasir.`,
+                         `The patient pays ${rupiah(Math.max(total - ditagihkan, 0))} in cash. The rest becomes a receivable and does NOT enter the till.`)}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
