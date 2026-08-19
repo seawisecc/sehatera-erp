@@ -139,7 +139,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             logo dan menu ia jelas milik sidebar, dan garis pemisahnya sekalian
             memisahkan identitas dari navigasi.
           */}
-          <div className={`hidden md:flex ${sidebarCollapsed ? 'px-2 justify-center' : 'px-4 justify-end'} pb-2 border-b border-[var(--on-brand)]/15 mb-2`}>
+          <div className={`hidden md:flex items-center ${sidebarCollapsed ? 'px-2 justify-center' : 'px-4 justify-between'} pb-2 border-b border-[var(--on-brand)]/15 mb-2`}>
+            {/* Pita jenis fasilitas. Sebelumnya baris ini cuma berisi tombol
+                lipat di ujung kanan, jadi ruang di bawah nama klinik terbaca
+                sebagai kekosongan yang tidak disengaja. Sekarang ia menyebut
+                bentuk fasilitas dan kotanya: dua hal yang memang perlu terlihat
+                terus begitu satu pemilik punya lebih dari satu outlet, karena
+                yang paling mahal adalah menulis resep di outlet yang salah. */}
+            {!sidebarCollapsed && (
+              <span className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[9px] font-bold uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-[var(--on-brand)]/15 text-[var(--on-brand)]">
+                  {app.sektor === 'apotek' ? t('Apotek', 'Pharmacy')
+                    : app.sektor === 'klinik' ? t('Klinik', 'Clinic')
+                    : t('Rumah Sakit', 'Hospital')}
+                </span>
+                {app.settingsData?.kota && (
+                  <span className="text-[10px] text-[var(--on-brand-soft)] truncate">{app.settingsData.kota}</span>
+                )}
+              </span>
+            )}
             <button
               onClick={lipat}
               title={sidebarCollapsed ? t('Perlebar sidebar', 'Expand sidebar') : t('Perkecil sidebar', 'Collapse sidebar')}
