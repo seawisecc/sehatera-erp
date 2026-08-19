@@ -20,6 +20,8 @@ import PengaturanPoli from '@/components/klinik/PengaturanPoli'
 import JadwalPraktik from '@/components/klinik/JadwalPraktik'
 import SistemNasional from '@/components/klinik/SistemNasional'
 import OutletCabang from '@/components/OutletCabang'
+import AksesOutletPengguna from '@/components/AksesOutletPengguna'
+import TombolIkon from '@/components/TombolIkon'
 
 /**
  * Pengaturan: profil apotek, pengguna, data apoteker, tampilan, langganan.
@@ -39,6 +41,7 @@ import OutletCabang from '@/components/OutletCabang'
  * 3. Nonaktifkan dan hapus pengguna tidak pernah melaporkan kegagalan.
  */
 
+// Pengguna yang sedang diatur akses outletnya.
 const TAB_SAH = ['profil', 'outlet', 'pengguna', 'poli', 'apoteker', 'nasional', 'tampilan', 'langganan', 'jejak'] as const
 type Tab = typeof TAB_SAH[number]
 
@@ -58,6 +61,7 @@ export default function HalamanPengaturan() {
   const [showUserForm, setShowUserForm] = useState(false)
   const [userForm, setUserForm] = useState({ nama: '', email: '', password: '', role: 'kasir', modules: ROLE_PAGES['kasir'] as string[] })
   const [editUser, setEditUser] = useState<any>(null)
+  const [aksesOutlet, setAksesOutlet] = useState<any>(null)
   const [savingUser, setSavingUser] = useState(false)
   const [kuota, setKuota] = useState<any>(null)
   const [tagihan, setTagihan] = useState<any[]>([])
@@ -558,6 +562,14 @@ export default function HalamanPengaturan() {
 
                   {tab === 'outlet' && <OutletCabang />}
 
+                  {aksesOutlet && (
+                    <AksesOutletPengguna
+                      email={aksesOutlet.email}
+                      nama={aksesOutlet.nama}
+                      onTutup={() => setAksesOutlet(null)}
+                    />
+                  )}
+
                   {tab === 'nasional' && <SistemNasional />}
 
                   {tab === 'apoteker' && (
@@ -907,9 +919,23 @@ export default function HalamanPengaturan() {
                                     </button>
                                   </td>
                                   <td className="px-4 py-3">
-                                    <div className="flex items-center justify-center gap-1">
-                                      <button onClick={() => setEditUser({ ...u, modules: Array.isArray(u.modules) ? u.modules : [] })} title="Edit" className="p-1.5 rounded-lg text-[var(--brand)] hover:bg-[var(--surface-2)] transition"><Pencil size={14} /></button>
-                                      <button onClick={() => handleDeleteUser(u)} title="Hapus" className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition"><Trash2 size={14} /></button>
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <TombolIkon label={t('Ubah pengguna', 'Edit user')}
+                                        onClick={() => setEditUser({ ...u, modules: Array.isArray(u.modules) ? u.modules : [] })}>
+                                        <Pencil size={14} />
+                                      </TombolIkon>
+                                      {/* Akses outlet berdiri sendiri, bukan di dalam formulir
+                                          ubah pengguna: yang diubah bukan data ORANGNYA
+                                          melainkan tempat ia boleh masuk, dan perannya bisa
+                                          berbeda di tiap outlet. */}
+                                      <TombolIkon label={t('Atur akses outlet', 'Outlet access')}
+                                        onClick={() => setAksesOutlet(u)}>
+                                        <Building2 size={14} />
+                                      </TombolIkon>
+                                      <TombolIkon label={t('Hapus pengguna', 'Remove user')} warna="bahaya"
+                                        onClick={() => handleDeleteUser(u)}>
+                                        <Trash2 size={14} />
+                                      </TombolIkon>
                                     </div>
                                   </td>
                                 </tr>

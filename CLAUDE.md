@@ -99,6 +99,8 @@ memasang lubang keamanan yang sudah ditutup.
 | `0061_penunjang` | Lab & radiologi: `visit_penunjang`, `lab_results`, peran `analis` |
 | `0062_multi_outlet` | `company_groups`, `outlet_aktif`, `auth_company_id()` berurut & berpindah outlet |
 | `0063_tarif_penunjang` | `services.jenis_penunjang`, `service_lab_params`, cetakan ikut ke permintaan |
+| `0064_nomor_resep_ke_kasir` | `tagihan_kunjungan()` membawa nomor & status resepnya |
+| `0065_hak_outlet_pengguna` | `outlet_pengguna()`, `atur_outlet_pengguna()`: satu orang, beberapa outlet |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -898,6 +900,46 @@ Rekam medis dibuat lebih menonjol karena itu pintu utama dokter.
 selama Rexco 88 sendirian ia tidak pernah terlihat dan pemiliknya mengira
 fiturnya belum ada. Pintunya tetap **Pengaturan > Outlet & Cabang**, dan itu
 yang harus disebut kalau ada yang bertanya di mana menu gantinya.
+
+## Yang dijanjikan halaman harga, dan yang benar-benar ada
+
+Diperiksa satu per satu pada 19 Agustus 2026. Ini catatan komersial, bukan
+teknis, dan harus dibaca sebelum paket berikutnya dijual.
+
+| Dijanjikan | Kenyataan |
+| --- | --- |
+| Kuota produk, pengguna, outlet | **Ditegakkan** trigger database (0003, 0062) |
+| Multi outlet | **Ada** sejak 0062, kuotanya lewat `max_outlets` |
+| Pembelian basic vs full | **Sebagian**: hanya menu `faktur` yang dikunci |
+| Laporan basic vs full (30 vs 90 hari) | **TIDAK**: `RENTANG_LAPORAN_HARI` tidak pernah dipanggil |
+| CRM basic vs full | **TIDAK** dipakai di mana pun |
+| Modul klinik | **TIDAK**: `f.klinik` dihitung tapi tidak menggerbangi apa pun |
+| API | **TIDAK ADA sama sekali**: tidak ada satu pun endpoint publik |
+| Dukungan email/WA/dedicated | Janji layanan, bukan perangkat lunak |
+
+**`lockedModules()` hanya mengunci satu menu.** Itu satu-satunya tempat paket
+benar-benar menutup sesuatu. Sisanya nilai yang dihitung lalu tidak dipakai.
+
+Jangan menambah baris fitur baru di halaman harga sebelum penegakannya ada:
+yang dijual tanpa barang bukan kelalaian teknis, ia janji yang tidak ditepati.
+
+## Satu pengguna, beberapa outlet
+
+Migrasi 0065. `app_users` berpasangan (company_id, email) tanpa indeks unik
+pada email, jadi satu email memang sudah boleh muncul di beberapa faskes sejak
+awal. Yang kurang cuma cara mengaturnya dan penjaganya.
+
+- **Perannya boleh BERBEDA tiap outlet.** Memaksanya satu peran membuat pemilik
+  memberi peran lebih tinggi daripada yang dibutuhkan "supaya bisa dua-duanya",
+  dan hak akses yang dinaikkan demi kenyamanan tidak pernah diturunkan lagi.
+- **Satu outlet per panggilan**, bukan seluruh daftar sekaligus: panggilan yang
+  membawa seluruh daftar menghapus akses yang tidak disebut, dan layar yang
+  daftarnya sedikit tertinggal akan mencabut akses orang tanpa disuruh.
+- Mencabut akses juga **membersihkan `outlet_aktif`**. Kalau tidak, orangnya
+  tetap menunjuk ke outlet yang aksesnya baru dicabut dan `auth_company_id()`
+  melemparnya ke outlet lain tanpa penjelasan.
+- Akses pemilik ke outletnya sendiri tidak bisa dicabut: yang mengunci dirinya
+  sendiri di luar faskesnya tidak punya jalan masuk untuk membatalkannya.
 
 ## Multi outlet: tiap outlet tetap faskes tersendiri
 
