@@ -103,6 +103,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0065_hak_outlet_pengguna` | `outlet_pengguna()`, `atur_outlet_pengguna()`: satu orang, beberapa outlet |
 | `0066_klaim_penjamin` | `claims`, `transactions.claim_id`, `buat_klaim()`, rel keadaan klaim |
 | `0067_klaim_jalur_admin` | Ketiga fungsi klaim menerima `p_company`, seperti 0053 |
+| `0068_siap_tagih` | `visits.siap_tagih_pada`, `siapkan_tagihan()`, lencana kasir punya isi |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -904,6 +905,68 @@ dilihat orangnya saat menekan Buat.
 yang gagal: angkanya cuma kurang satu hari. Sekarang lewat `tanggalLokal()` dan
 `awalBulanIni()` di `lib/format.ts`, yang membaca jam DINDING. Jangan menulis
 `new Date().toISOString().slice(0, 10)` lagi di mana pun.
+
+## Siap ditagih: dokter yang menyatakannya, bukan layar yang menebak
+
+Migrasi 0068. Layar Kasir sudah memasang lencana "SIAP DITAGIH" sejak 0047,
+tapi tidak ada apa pun di database yang berarti itu. **Lencananya HIJAU SECARA
+BAWAAN**: yang tidak sedang menunggu farmasi dan tidak punya resep draf
+dianggap siap, jadi pasien yang dokternya masih mengetik SOAP tampil sama
+persis dengan pasien yang pemeriksaannya sudah tuntas.
+
+Akibatnya satu arah, dan arahnya mahal: kasir menagih SEBELUM tindakan
+dimasukkan, lalu tarif tindakan itu tidak pernah tertagih. Ini lubang yang sama
+dengan yang ditutup 0024, cuma dari sisi yang berbeda, dan kehilangan yang
+tidak disadari tidak akan pernah dilaporkan sebagai keluhan.
+
+**Resep yang difinalkan BUKAN pernyataan siap ditagih.** Ia berarti "farmasi
+boleh mulai menyiapkan". Tindakan bisa saja belum dimasukkan sama sekali.
+Menyatukan keduanya adalah kesalahan yang sama bentuknya dengan menyatukan uang
+dan penyerahan sebelum 0035.
+
+Yang ditambahkan **penanda di `visits`, BUKAN nilai `status` baru**. Menambah
+nilai status berarti memeriksa tiap tempat yang menyebut nilai lama, dan pola
+itu sudah menggigit empat kali. Penanda tidak menggigit siapa pun yang tidak
+membacanya.
+
+Tiga penghalang, dan cuma satu yang punya pintu:
+
+| Penghalang | Pintu | Kenapa |
+| --- | --- | --- |
+| Resep masih `draf` | tidak ada | Pintunya yang benar ada di sebelahnya: finalkan, atau batalkan (0058) |
+| Belum ada diagnosis | tidak ada | Kunjungannya memang tidak bisa ditutup (0018). Ditolak di sini berarti DOKTERNYA yang mendengar, bukan kasir di depan pasien |
+| Penunjang belum keluar hasilnya | `p_paksa` + alasan | Rontgen dikerjakan besok, pasien membayar hari ini. Itu kejadian nyata |
+
+Pintu darurat menuntut alasan dan alasannya masuk jejak audit, pola yang sama
+dengan `p_tanpa_bayar` (0035) dan `identitas_belum_lengkap` (0059): **palang
+yang tidak bisa dilewati akan diakali dengan cara yang tidak meninggalkan jejak
+sama sekali.**
+
+**Biaya yang berubah MENCABUT pernyataannya**, lewat trigger pada
+`visit_charges`, bukan dari dalam fungsi yang menambah biaya. Alasannya sama
+seperti pencatat riwayat keadaan di 0018: biaya masuk lewat beberapa pintu
+(tindakan, penunjang, tarif konsultasi poli tujuan saat dirujuk), dan pintu yang
+ditulis bulan depan tidak akan ingat memanggil pencabutnya. **Arahnya cuma
+satu: mencabut, tidak pernah memasang.** Yang menyatakan siap harus tetap
+manusia.
+
+Kasir sengaja TIDAK diberi `kunjungan.siap_tagih`. Kasir yang bisa menyatakan
+sendiri bahwa tagihannya lengkap sedang menandatangani pekerjaan orang lain,
+dan pernyataan yang bisa dibuat oleh yang berkepentingan berhenti jadi
+pernyataan.
+
+Di layar Kunjungan ada DUA pintu ke sana, dan keduanya perlu: tombol besar di
+panel pasien, dan **ikon pintas di tiap baris antrean**. Pintasnya yang penting
+untuk kunjungan tanpa obat: membuka layar Resep cuma untuk mengatakan "tidak
+ada resep" adalah tiga klik untuk satu kalimat, dan yang tiga klik akan
+dilewati sampai kasirnya menelepon. Kalimat konfirmasinya MENYEBUTKAN apa yang
+sedang dinyatakan ("Tanpa resep. Tidak ada pemeriksaan penunjang yang ditunggu.
+Tagihannya Rp 145.000."), bukan cuma bertanya "yakin?": yang ditandatangani
+harus terbaca sebelum ditekan.
+
+Penghalang yang sudah kelihatan dari daftar (diagnosis kosong, resep draf)
+disebutkan di layar LEBIH DULU, sebelum ada yang mengetik alasan yang lalu
+dibuang. Yang menahan tetap database.
 
 ## Etiket obat: warna itu pengaman, bukan hiasan
 

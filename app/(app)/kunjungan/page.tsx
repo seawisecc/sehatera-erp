@@ -2,8 +2,8 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  AlertTriangle, ArrowLeft, ArrowRight, Check, FileText, Pill, Receipt, Search,
-  FlaskRound, Share2, Stethoscope, UserPlus, Volume2, X,
+  AlertTriangle, ArrowLeft, ArrowRight, Check, CheckCircle2, FileText, Pill, Receipt,
+  RotateCcw, Search, Send, FlaskRound, Share2, Stethoscope, UserPlus, Volume2, X,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
@@ -71,6 +71,10 @@ type Antrean = {
   unit_kode: string | null
   dipanggil_pada: string | null
   jumlah_panggil: number
+  /** Kosong berarti BELUM dinyatakan siap, bukan berarti siap (migrasi 0068). */
+  siap_tagih_pada: string | null
+  siap_tagih_catatan: string | null
+  penunjang_menggantung: number
 }
 
 type Poli = { id: string; nama: string; kode: string }
@@ -89,7 +93,7 @@ const bolehPanggil = (status: string) =>
 
 export default function HalamanKunjungan() {
   const { t, lang } = useLang()
-  const { kabar, tanya } = useUmpan()
+  const { kabar, konfirmasi, tanya } = useUmpan()
   const app = useApp()
 
   const [antrean, setAntrean] = useState<Antrean[]>([])
@@ -364,6 +368,104 @@ export default function HalamanKunjungan() {
   // final, dan menariknya kembali di layar tidak membatalkan resep itu.
   const sebelum = aktif?.status === 'diperiksa' ? 'terdaftar' as const : null
 
+  const bolehSiapTagih = boleh(app.currentRole, 'kunjungan.siap_tagih', app.isSuper)
+
+  /**
+   * Menyatakan sisi klinis tuntas, dan itulah satu-satunya hal yang membuat
+   * lencana "SIAP DITAGIH" di layar Kasir berarti sesuatu.
+   *
+   * Sebelum migrasi 0068 lencana itu hijau secara bawaan, jadi pasien yang
+   * dokternya masih mengetik tampil sama persis dengan yang pemeriksaannya
+   * sudah selesai. Kasir yang menagih duluan tidak menagih tindakannya, dan
+   * kehilangan yang tidak disadari tidak pernah dilaporkan sebagai keluhan.
+   *
+   * Kalimat konfirmasinya MENYEBUTKAN apa yang sedang dinyatakan, bukan cuma
+   * bertanya "yakin?". Yang ditandatangani harus terbaca sebelum ditekan;
+   * kalau tidak, tombolnya cuma jadi satu klik lagi yang ditekan tanpa dibaca.
+   */
+  const siapkanTagihan = async (a: Antrean) => {
+    const menggantung = a.penunjang_menggantung || 0
+    const adaResep = ['final', 'disiapkan', 'siap', 'dilayani'].includes(a.status_resep || '')
+    let catatan: string | null = null
+    let paksa = false
+
+    /* Dua penghalang yang sudah kelihatan dari daftar ini disebutkan LEBIH
+       DULU, sebelum ada yang mengetik apa pun. Database tetap yang menahan
+       (migrasi 0068); ini cuma supaya alasan penolakannya tidak terdengar
+       sesudah orangnya mengarang kalimat yang lalu dibuang. */
+    if (a.jumlah_diagnosis === 0) {
+      kabar(t('Kunjungan ini belum punya diagnosis, jadi belum bisa dikirim ke kasir. Isi dulu lewat Rekam medis.',
+              'This visit has no diagnosis yet, so it cannot go to the cashier. Fill it in under Medical record first.'), 'galat')
+      setPilih(a.id)
+      return
+    }
+    if (a.status_resep === 'draf') {
+      kabar(t('Resepnya masih draf, jadi belum sampai ke farmasi. Finalkan dulu, atau batalkan kalau memang tidak jadi diberi obat.',
+              'The prescription is still a draft. Finalise it, or cancel it if no drugs will be given.'), 'galat')
+      setPilih(a.id)
+      return
+    }
+
+    if (menggantung > 0) {
+      // Pintu darurat, dan ia menuntut alasan. Palang yang tidak bisa
+      // dilewati akan diakali dengan cara yang tidak meninggalkan jejak.
+      const jawab = await tanya({
+        judul: t('Masih ada pemeriksaan yang belum keluar', 'Some tests are still pending'),
+        label: t(`${menggantung} pemeriksaan penunjang belum selesai. Kalau pasiennya memang membayar sekarang dan hasilnya diambil belakangan, tuliskan alasannya. Alasan ini tercatat.`,
+                 `${menggantung} tests are not finished. If the patient really is paying now and will collect the result later, write the reason. It is recorded.`),
+        wajib: true,
+      })
+      if (jawab === null) return
+      catatan = String(jawab)
+      paksa = true
+    } else {
+      const rincian = [
+        adaResep
+          ? t('Resepnya sudah sampai ke farmasi.', 'The prescription has reached the pharmacy.')
+          : t('Tanpa resep.', 'No prescription.'),
+        t('Tidak ada pemeriksaan penunjang yang ditunggu.', 'No pending tests.'),
+        a.nilai_biaya > 0
+          ? t(`Tagihannya ${rupiah(a.nilai_biaya)}.`, `The bill is ${rupiah(a.nilai_biaya)}.`)
+          : t('Belum ada tarif atau tindakan yang dimasukkan.', 'No charges entered yet.'),
+      ].join(' ')
+      if (!await konfirmasi({
+        judul: t(`Kirim ${a.pasien_nama} ke kasir?`, `Send ${a.pasien_nama} to the cashier?`),
+        pesan: t(`${rincian} Sesudah ini kasir melihatnya sebagai siap ditagih. Menambah tindakan setelahnya otomatis menariknya kembali.`,
+                 `${rincian} After this the cashier sees it as ready to bill. Adding a charge afterwards pulls it back automatically.`),
+        tombol: t('Kirim ke kasir', 'Send to cashier'),
+      })) return
+    }
+
+    setSibuk(true)
+    const { error } = await supabase.rpc('siapkan_tagihan', {
+      p_visit: a.id, p_catatan: catatan, p_paksa: paksa,
+    })
+    setSibuk(false)
+    if (error) { kabar(pesanError(error), 'galat'); return }
+    kabar(t(`${a.pasien_nama} sudah masuk daftar siap ditagih di kasir.`,
+            `${a.pasien_nama} is now on the cashier ready-to-bill list.`), 'ok')
+    muat()
+  }
+
+  /**
+   * Jalan pulang. Tanpa ini, satu-satunya cara menambah tindakan yang terlewat
+   * adalah menyuruh kasir menagih dua kali, dan struk kedua untuk satu
+   * kedatangan tidak bisa dijelaskan ke pasien mana pun.
+   */
+  const batalSiapTagih = async (a: Antrean) => {
+    if (!await konfirmasi({
+      judul: t('Tarik kembali dari kasir?', 'Pull back from the cashier?'),
+      pesan: t('Kunjungan ini kembali ditandai belum selesai diperiksa, jadi kasir tidak akan menagihnya dulu.',
+               'This visit goes back to not-yet-finished, so the cashier will hold off billing it.'),
+      tombol: t('Tarik kembali', 'Pull back'),
+    })) return
+    setSibuk(true)
+    const { error } = await supabase.rpc('batal_siap_tagih', { p_visit: a.id })
+    setSibuk(false)
+    if (error) { kabar(pesanError(error), 'galat'); return }
+    muat()
+  }
+
   const KARTU = 'bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-sm'
 
   return (
@@ -453,15 +555,45 @@ export default function HalamanKunjungan() {
                       Mati saat `diperiksa`: pasiennya sudah di dalam ruangan.
                       Tapi HIDUP LAGI di `resep` dan `obat`, karena farmasi
                       juga memanggil orang ke loketnya. */}
-                  {bolehPanggil(a.status) && (
-                    <div className="px-3 pb-2.5">
-                      <button onClick={e => { e.stopPropagation(); panggil(a.id) }} disabled={sibuk}
-                        className="w-full inline-flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg border border-[var(--line)] text-[11px] font-semibold text-[var(--brand)] hover:bg-[var(--surface)] transition disabled:opacity-50">
-                        <Volume2 size={12} />
-                        {a.jumlah_panggil > 0
-                          ? t(`Panggil lagi · ${a.jumlah_panggil}x`, `Call again · ${a.jumlah_panggil}x`)
-                          : t('Panggil', 'Call')}
-                      </button>
+                  {(bolehPanggil(a.status) || (bolehSiapTagih && !tutup && a.status !== 'terdaftar')) && (
+                    <div className="px-3 pb-2.5 flex items-center gap-1.5">
+                      {bolehPanggil(a.status) && (
+                        <button onClick={e => { e.stopPropagation(); panggil(a.id) }} disabled={sibuk}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg border border-[var(--line)] text-[11px] font-semibold text-[var(--brand)] hover:bg-[var(--surface)] transition disabled:opacity-50">
+                          <Volume2 size={12} />
+                          {a.jumlah_panggil > 0
+                            ? t(`Panggil lagi · ${a.jumlah_panggil}x`, `Call again · ${a.jumlah_panggil}x`)
+                            : t('Panggil', 'Call')}
+                        </button>
+                      )}
+
+                      {/* Pintasan yang diminta pemilik: menyatakan pasien ini
+                          selesai diperiksa TANPA membuka layar Resep dulu.
+                          Untuk kunjungan yang memang tidak berobat, membuka
+                          layar resep cuma untuk mengatakan "tidak ada resep"
+                          adalah tiga klik untuk satu kalimat, dan yang tiga
+                          klik akan dilewati sampai kasirnya menelepon. */}
+                      {bolehSiapTagih && !tutup && a.status !== 'terdaftar' && (
+                        a.siap_tagih_pada ? (
+                          <button onClick={e => { e.stopPropagation(); batalSiapTagih(a) }} disabled={sibuk}
+                            title={t('Sudah dikirim ke kasir. Tekan untuk menariknya kembali.',
+                                     'Already sent to the cashier. Press to pull it back.')}
+                            className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-emerald-300 bg-emerald-50 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition disabled:opacity-50">
+                            <CheckCircle2 size={12} /> {t('Di kasir', 'At cashier')}
+                          </button>
+                        ) : (
+                          <button onClick={e => { e.stopPropagation(); siapkanTagihan(a) }} disabled={sibuk}
+                            title={t('Selesai diperiksa, tidak ada resep atau pemeriksaan lain yang menyusul. Kirim ke kasir.',
+                                     'Exam finished, no prescription or test to follow. Send to the cashier.')}
+                            className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-semibold transition disabled:opacity-50 ${
+                              a.penunjang_menggantung > 0
+                                ? 'border-amber-300 text-amber-700 hover:bg-amber-50'
+                                : 'border-[var(--line)] text-[var(--ink-soft)] hover:bg-[var(--surface)]'
+                            }`}>
+                            <Send size={12} /> {t('Ke kasir', 'To cashier')}
+                          </button>
+                        )
+                      )}
                     </div>
                   )}
                   </div>
@@ -714,14 +846,55 @@ export default function HalamanKunjungan() {
                     {/* Kalau tidak ada tombol maju, harus jelas siapa yang
                         menggesernya. Layar yang cuma diam membuat orang
                         mengira ada yang rusak, lalu mencari jalan lain. */}
-                    {!berikut && (
+                    {/* Pernyataan siap ditagih, dan ia menggantikan kalimat
+                        pasrah yang dulu ada di sini ("bergeser sendiri...").
+                        Kalimat itu benar tentang REL kunjungan tapi diam
+                        tentang UANG, dan yang diam di situ persis yang bikin
+                        kasir menagih sebelum tindakannya masuk. */}
+                    {!berikut && bolehSiapTagih && (
+                      aktif.siap_tagih_pada ? (
+                        <div className="flex flex-wrap items-center gap-3">
+                          <p className="text-sm text-emerald-700 font-medium flex items-start gap-2">
+                            <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
+                            <span>
+                              {t('Sudah dikirim ke kasir sebagai siap ditagih.', 'Sent to the cashier as ready to bill.')}
+                              {aktif.siap_tagih_catatan && (
+                                <span className="block text-xs text-amber-700 font-normal mt-0.5">
+                                  {t('Alasan:', 'Reason:')} {aktif.siap_tagih_catatan}
+                                </span>
+                              )}
+                            </span>
+                          </p>
+                          <button onClick={() => batalSiapTagih(aktif)} disabled={sibuk}
+                            className="inline-flex items-center gap-1.5 border border-[var(--line)] text-[var(--ink-soft)] px-3 py-2 rounded-xl text-xs hover:bg-[var(--surface-2)] transition disabled:opacity-50">
+                            <RotateCcw size={13} /> {t('Tarik kembali', 'Pull back')}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-3">
+                          <button onClick={() => siapkanTagihan(aktif)} disabled={sibuk}
+                            className="inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
+                            <Send size={16} /> {t('Selesai periksa, kirim ke kasir', 'Exam done, send to cashier')}
+                          </button>
+                          <p className="text-xs text-[var(--ink-faint)] max-w-md leading-relaxed">
+                            {aktif.penunjang_menggantung > 0
+                              ? t(`Masih ada ${aktif.penunjang_menggantung} pemeriksaan penunjang yang belum keluar hasilnya.`,
+                                   `${aktif.penunjang_menggantung} tests are still pending.`)
+                              : t('Kasir menunggu tanda ini sebelum menagih. Menambah tindakan sesudahnya menariknya kembali sendiri.',
+                                   'The cashier waits for this before billing. Adding a charge afterwards pulls it back on its own.')}
+                          </p>
+                        </div>
+                      )
+                    )}
+
+                    {!berikut && !bolehSiapTagih && (
                       <p className="text-sm text-[var(--ink-soft)] flex items-start gap-2">
                         <ArrowRight size={15} className="shrink-0 mt-0.5 text-[var(--ink-faint)]" />
-                        {aktif.status === 'diperiksa'
-                          ? t('Bergeser sendiri ke Obat begitu dokter memfinalkan resepnya. Kalau kunjungan ini tanpa obat, kasir yang menutupnya.',
-                               'Moves to Drugs on its own once the doctor finalises the prescription. If there are no drugs, the cashier closes it.')
-                          : t('Farmasi yang menutupnya saat obatnya diserahkan.',
-                               'Pharmacy closes it when the drugs are handed over.')}
+                        {aktif.siap_tagih_pada
+                          ? t('Sudah dinyatakan siap ditagih oleh yang memeriksa. Kasir yang menutupnya.',
+                               'Marked ready to bill by the examiner. The cashier closes it.')
+                          : t('Menunggu dokter atau perawat menyatakan pemeriksaannya selesai.',
+                               'Waiting for the doctor or nurse to mark the exam finished.')}
                       </p>
                     )}
                     {berikut && (

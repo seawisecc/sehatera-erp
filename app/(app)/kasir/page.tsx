@@ -310,7 +310,7 @@ export default function HalamanKasir() {
       // tetap harus bisa ditagih, dan itu justru kejadian yang paling sering.
       const { data } = await app.scope(
         supabase.from('v_antrean_hari_ini')
-          .select('id,nomor_antre,pasien_nama,nomor_rm,alergi,unit_nama,status,status_resep,nilai_biaya,transaction_id,obat_belum_dipilih')
+          .select('id,nomor_antre,pasien_nama,nomor_rm,alergi,unit_nama,status,status_resep,nilai_biaya,transaction_id,obat_belum_dipilih,siap_tagih_pada,siap_tagih_catatan,penunjang_menggantung')
           .not('status', 'in', '("batal")')
           .is('transaction_id', null)
           .order('dibuka_pada')
@@ -667,10 +667,31 @@ export default function HalamanKasir() {
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[var(--surface-2)] text-[var(--ink-faint)]">
                             {t('RESEP MASIH DRAF', 'PRESCRIPTION DRAFT')}
                           </span>
-                        ) : (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-100 text-green-700">
-                            {t('SIAP DITAGIH', 'READY TO BILL')}
+                        ) : !r.siap_tagih_pada ? (
+                          /* Lencana ini dulu HIJAU SECARA BAWAAN: yang tidak
+                             sedang menunggu farmasi dianggap siap, jadi pasien
+                             yang dokternya masih mengetik tampil sama persis
+                             dengan yang pemeriksaannya sudah tuntas. Kasir yang
+                             menagih duluan tidak menagih tindakannya, dan
+                             kehilangan yang tidak disadari tidak pernah
+                             dilaporkan sebagai keluhan. Sejak 0068 hijau
+                             menuntut ada yang menyatakannya. */
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[var(--surface-2)] text-[var(--ink-faint)]">
+                            {t('MASIH DIPERIKSA', 'STILL IN EXAM')}
                           </span>
+                        ) : (
+                          <>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-100 text-green-700">
+                              {t('SIAP DITAGIH', 'READY TO BILL')}
+                            </span>
+                            {r.penunjang_menggantung > 0 && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800"
+                                title={r.siap_tagih_catatan || ''}>
+                                {t(`HASIL BELUM KELUAR · ${r.penunjang_menggantung}`,
+                                   `RESULTS PENDING · ${r.penunjang_menggantung}`)}
+                              </span>
+                            )}
+                          </>
                         )}
                       </div>
                     </button>

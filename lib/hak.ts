@@ -28,6 +28,7 @@ export type Kapabilitas =
   | 'penunjang.minta'
   | 'penunjang.hasil'
   | 'penunjang.baca'
+  | 'kunjungan.siap_tagih'
 
 const MATRIKS: Record<Kapabilitas, string[]> = {
   'rekam_medis.baca':  ['pemilik', 'admin', 'dokter', 'perawat'],
@@ -41,6 +42,9 @@ const MATRIKS: Record<Kapabilitas, string[]> = {
   'penunjang.minta':   ['pemilik', 'admin', 'dokter'],
   'penunjang.hasil':   ['pemilik', 'admin', 'analis'],
   'penunjang.baca':    ['pemilik', 'admin', 'dokter', 'perawat', 'analis'],
+  // Kasir sengaja TIDAK di sini. Kasir yang bisa menyatakan sendiri bahwa
+  // tagihannya lengkap sedang menandatangani pekerjaan orang lain.
+  'kunjungan.siap_tagih': ['pemilik', 'admin', 'dokter', 'perawat'],
 }
 
 /**
