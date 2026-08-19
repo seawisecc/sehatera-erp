@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
+import PemilihOutlet from '@/components/PemilihOutlet'
 import { useLang, LangToggle } from '@/lib/i18n'
 import { ThemeToggle } from '@/lib/theme'
 import { Logo, Mark } from '@/components/Logo'
@@ -155,6 +156,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="ml-auto flex items-center gap-2">
+              {/* Pemilih outlet menyembunyikan dirinya sendiri kalau outletnya
+                  cuma satu, jadi apotek tunggal tidak pernah melihatnya. */}
+              <PemilihOutlet />
               {app.isSuper && (
                 <select
                   value={app.superViewCompany}

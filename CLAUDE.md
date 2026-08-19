@@ -97,6 +97,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0059_identitas_pasien_lengkap` | NIK & telepon wajib dengan pintu darurat berjejak, kerabat, alamat berkolom |
 | `0060_rujukan_internal` | Satu kunjungan berpindah poli; SOAP & tarif konsultasi jadi per poli |
 | `0061_penunjang` | Lab & radiologi: `visit_penunjang`, `lab_results`, peran `analis` |
+| `0062_multi_outlet` | `company_groups`, `outlet_aktif`, `auth_company_id()` berurut & berpindah outlet |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -829,6 +830,39 @@ pengirimannya sudah jalan. Layarnya mengatakan ini apa adanya.
 'antre'`), yang juga benar untuk baris yang sudah ada. Jawabannya ada di `found`
 sesudah `INSERT ... ON CONFLICT DO NOTHING`, tapi ia harus ditangkap ke variabel
 sebelum SELECT berikutnya menimpanya. Ditemukan uji, bukan saat membacanya.
+
+## Multi outlet: tiap outlet tetap faskes tersendiri
+
+Migrasi 0062. `plans.max_outlets` sudah ada sejak 0001 dan halaman harga sudah
+menjual "Cabang", tapi outletnya sendiri tidak pernah ada, dan
+`company_usage(..., 'outlets')` bahkan tidak menghitung apa pun.
+
+**Tiap outlet tetap satu baris `companies`.** Bukan jalan pintas: tiap cabang
+apotek punya SIA dan apoteker penanggung jawabnya sendiri, stoknya sendiri, dan
+SIPNAP-nya dilaporkan per outlet. Menyatukan stok beberapa outlet di satu badan
+usaha justru membuat laporan wajibnya salah.
+
+Yang ditambahkan cuma tiga, dan tidak satu pun menyentuh stok atau RLS:
+`company_groups`, `outlet_aktif` (penunjuk outlet yang sedang dibuka), dan
+`auth_company_id()` yang menghormatinya. **Seluruh fungsi lain tidak diubah**,
+dan itu seluruh alasan bentuk ini dipilih: ratusan tempat memanggil
+`auth_company_id()`, jadi berpindah outlet cukup mengubah jawaban SATU fungsi.
+
+- **`outlet_aktif` sengaja TIDAK punya policy.** Satu-satunya jalan masuk
+  `pilih_outlet()`, yang memeriksa keanggotaan. Kalau bisa ditulis langsung,
+  menunjuk ke outlet orang lain membuat SELURUH RLS aplikasi ikut penunjuk itu.
+- **`auth_company_id()` juga memeriksa keanggotaan saat membaca penunjuk.**
+  Dua lapis, karena yang satu lapis sudah cukup untuk membuka semuanya.
+- Penunjuknya **per pengguna, bukan per tab**. Dua tab untuk dua outlet akan
+  mengikuti pilihan terakhir. Disengaja: menyimpannya per tab berarti mengirim
+  outlet aktif pada tiap permintaan, dan permintaan yang lupa membawanya akan
+  menulis ke outlet yang salah.
+- Outlet baru **mewarisi paket dan masa aktif**, tidak membuat langganan kedua.
+
+**Sekalian membetulkan bug lama:** `auth_company_id()` dulu memakai `limit 1`
+TANPA `order by`. Untuk siapa pun yang terdaftar di dua fasilitas, PostgreSQL
+boleh mengembalikan yang mana saja dan boleh berbeda antar permintaan: data
+tersimpan ke outlet yang salah tanpa pernah muncul sebagai galat.
 
 ## Tidak ada `alert`, `confirm`, atau `prompt` di aplikasi ini
 

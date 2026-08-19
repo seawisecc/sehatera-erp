@@ -19,6 +19,7 @@ import JejakAudit from '@/components/JejakAudit'
 import PengaturanPoli from '@/components/klinik/PengaturanPoli'
 import JadwalPraktik from '@/components/klinik/JadwalPraktik'
 import SistemNasional from '@/components/klinik/SistemNasional'
+import OutletCabang from '@/components/OutletCabang'
 
 /**
  * Pengaturan: profil apotek, pengguna, data apoteker, tampilan, langganan.
@@ -38,7 +39,7 @@ import SistemNasional from '@/components/klinik/SistemNasional'
  * 3. Nonaktifkan dan hapus pengguna tidak pernah melaporkan kegagalan.
  */
 
-const TAB_SAH = ['profil', 'pengguna', 'poli', 'apoteker', 'nasional', 'tampilan', 'langganan', 'jejak'] as const
+const TAB_SAH = ['profil', 'outlet', 'pengguna', 'poli', 'apoteker', 'nasional', 'tampilan', 'langganan', 'jejak'] as const
 type Tab = typeof TAB_SAH[number]
 
 export default function HalamanPengaturan() {
@@ -251,6 +252,7 @@ export default function HalamanPengaturan() {
   const klinik = app.sektor !== 'apotek'
   const settingsMenu = [
     { id: 'profil',    label: t('Profil Apotek', 'Pharmacy Profile'),   desc: t('Nama, alamat, logo', 'Name, address, logo'),                Icon: Building2 },
+    { id: 'outlet',    label: t('Outlet & Cabang', 'Outlets & Branches'), desc: t('Cabang, dan rekap lintas outlet', 'Branches, and cross-outlet summary'), Icon: Building2 },
     { id: 'pengguna',  label: t('Manajemen Pengguna', 'User Management'), desc: t('Akses pengguna, anggota tim', 'User access, team members'), Icon: Users },
     ...(klinik ? [{ id: 'poli', label: t('Poli & Dokter', 'Units & Doctors'), desc: t('Ruang periksa, deret antrean', 'Exam rooms, queue series'), Icon: Stethoscope }] : []),
     { id: 'apoteker',  label: klinik ? t('Farmasi & Penanggung Jawab', 'Pharmacy & Person in Charge') : t('Data Apoteker', 'Pharmacist Data'),
@@ -553,6 +555,8 @@ export default function HalamanPengaturan() {
                       <LayarAntrean />
                     </div>
                   )}
+
+                  {tab === 'outlet' && <OutletCabang />}
 
                   {tab === 'nasional' && <SistemNasional />}
 
