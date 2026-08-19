@@ -485,3 +485,136 @@ ${baris}
 <p>Semoga lekas sembuh</p>
 </body></html>`
 }
+
+// ============================================================
+// Etiket obat
+// ============================================================
+
+export type BarisEtiket = {
+  nama_obat?: string | null
+  jumlah?: number | null
+  satuan?: string | null
+  dosis?: string | null
+  frekuensi?: string | null
+  rute?: string | null
+  aturan_pakai?: string | null
+  kategori?: string | null
+}
+
+export type DataEtiket = {
+  nomor_resep?: string | null
+  nama_pasien?: string | null
+  nomor_rm?: string | null
+  tanggal?: string | null
+  dokter?: string | null
+}
+
+/**
+ * Rute yang berarti obat LUAR.
+ *
+ * Etiket obat di Indonesia berwarna: putih untuk obat dalam, biru untuk obat
+ * luar. Itu bukan hiasan melainkan pengaman terakhir sebelum obat masuk mulut:
+ * salep mata yang tertempel etiket putih dan tertulis "3x sehari 1 sendok"
+ * adalah kalimat yang bisa diminum orang.
+ *
+ * Daftarnya ditulis sebagai yang LUAR, bukan sebagai yang bukan-oral. Rute
+ * baru yang belum terpikir akan jatuh ke putih, dan putih adalah bawaan yang
+ * lebih sering benar. Yang kurang yakin tetap terbaca dari tulisan rutenya
+ * sendiri, yang selalu dicetak apa adanya.
+ */
+const RUTE_LUAR = [
+  'topikal', 'kulit', 'oles', 'salep', 'krim', 'gel',
+  'mata', 'okular', 'tetes mata', 'telinga', 'otic', 'tetes telinga',
+  'hidung', 'nasal', 'semprot hidung',
+  'rektal', 'dubur', 'suppositoria', 'vaginal', 'ovula',
+  'inhalasi', 'nebulisasi', 'kumur', 'obat kumur',
+]
+
+const luar = (rute?: string | null): boolean => {
+  const r = (rute || '').toLowerCase().trim()
+  if (!r) return false
+  return RUTE_LUAR.some(x => r.includes(x))
+}
+
+/**
+ * Etiket yang ditempel di plastik obat, satu per baris resep.
+ *
+ * Ditulis sebagai lembar berisi banyak kartu, bukan satu kartu per jendela:
+ * apotek mencetak satu resep sekaligus, dan membuka lima jendela cetak untuk
+ * lima obat berarti lima kali dialog printer.
+ *
+ * **Aturan pakainya dirangkai dari kolom BERKODE**, bukan dari satu kotak
+ * bebas. Itu sebabnya dosis, frekuensi, dan rute dipisah sejak migrasi 0023:
+ * "3x1 sesudah makan" yang terlanjur satu kalimat tidak bisa dibelah kembali,
+ * dan yang tidak bisa dibelah tidak bisa dicetak dengan benar maupun dikirim
+ * ke SatuSehat.
+ *
+ * Ukurannya 70 x 40 mm, dua kolom per baris. Itu ukuran etiket yang umum
+ * dijual di Indonesia, jadi kertas stiker yang sudah dipotong tetap terpakai.
+ */
+export function etiketObat(p: ProfilApotek, d: DataEtiket, items: BarisEtiket[]): string {
+  const namaFaskes = teks(p.nama_faskes || p.nama_apotek, 'Apotek')
+  const tgl = tanggalPanjang(d.tanggal || new Date().toISOString())
+
+  const kartu = items.map(it => {
+    const isLuar = luar(it.rute)
+    // Baris aturan pakai dirangkai dari kolom, dan yang kosong tidak
+    // meninggalkan tanda hubung menggantung.
+    const aturan = [it.frekuensi, it.dosis].filter(Boolean).join(' ').trim()
+    const tambahan = [it.rute, it.aturan_pakai].filter(Boolean).join(', ')
+    const golongan = (it.kategori || '').toLowerCase()
+    const wajibHabis = golongan.includes('antibiotik')
+
+    return `
+      <div class="etiket ${isLuar ? 'luar' : 'dalam'}">
+        <div class="kop">
+          <strong>${namaFaskes}</strong>
+          <span>${teks(p.nomor_telepon, '')}</span>
+        </div>
+        <div class="baris">
+          <span class="no">${teks(d.nomor_resep, '')}</span>
+          <span class="tgl">${tgl}</span>
+        </div>
+        <div class="pasien">${teks(d.nama_pasien, 'Pasien')}</div>
+        <div class="obat">${teks(it.nama_obat)} ${it.jumlah ? `&middot; ${teks(it.jumlah)} ${teks(it.satuan, '')}` : ''}</div>
+        <div class="aturan">${aturan ? teks(aturan) : '&nbsp;'}</div>
+        ${tambahan ? `<div class="tambahan">${teks(tambahan)}</div>` : ''}
+        ${wajibHabis ? `<div class="habiskan">HARUS DIHABISKAN</div>` : ''}
+        <div class="kaki">
+          <span>${isLuar ? 'OBAT LUAR' : 'OBAT DALAM'}</span>
+          <span>${teks(p.nama_apoteker, '')}</span>
+        </div>
+      </div>`
+  }).join('')
+
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8">
+<title>Etiket ${teks(d.nomor_resep, '')} | ${namaFaskes}</title>
+<style>
+  @page { size: A4; margin: 8mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff; margin: 0; }
+  .lembar { display: flex; flex-wrap: wrap; gap: 4mm; }
+  .etiket {
+    width: 70mm; height: 40mm; padding: 2.5mm 3mm;
+    border: 1px solid #000; border-radius: 1.5mm;
+    display: flex; flex-direction: column; overflow: hidden;
+    page-break-inside: avoid;
+  }
+  /* Warna etiket dicetak sebagai PITA di tepi, bukan sebagai latar penuh.
+     Latar penuh menghabiskan tinta dan membuat tulisan hitam di atas biru
+     lebih sulit dibaca, padahal yang harus terbaca justru aturan pakainya. */
+  .etiket.dalam { border-left: 4mm solid #d9d9d9; }
+  .etiket.luar  { border-left: 4mm solid #1e4d8c; }
+  .kop { display: flex; justify-content: space-between; font-size: 7pt; line-height: 1.1; }
+  .baris { display: flex; justify-content: space-between; font-size: 6.5pt; color: #333; margin-top: 0.5mm; }
+  .pasien { font-size: 9pt; font-weight: bold; margin-top: 1mm; line-height: 1.1; }
+  .obat { font-size: 8pt; margin-top: 0.5mm; line-height: 1.15; }
+  .aturan { font-size: 12pt; font-weight: bold; margin-top: 1mm; line-height: 1.1; }
+  .tambahan { font-size: 7.5pt; line-height: 1.15; }
+  .habiskan { font-size: 7.5pt; font-weight: bold; margin-top: 0.5mm; letter-spacing: 0.02em; }
+  .kaki { margin-top: auto; display: flex; justify-content: space-between; font-size: 6.5pt; color: #333; }
+  @media print { .etiket { break-inside: avoid; } }
+</style></head><body>
+  <div class="lembar">${kartu}</div>
+</body></html>`
+}

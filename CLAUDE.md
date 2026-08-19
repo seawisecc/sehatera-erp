@@ -843,6 +843,30 @@ pengirimannya sudah jalan. Layarnya mengatakan ini apa adanya.
 sesudah `INSERT ... ON CONFLICT DO NOTHING`, tapi ia harus ditangkap ke variabel
 sebelum SELECT berikutnya menimpanya. Ditemukan uji, bukan saat membacanya.
 
+## Etiket obat: warna itu pengaman, bukan hiasan
+
+`etiketObat()` di `lib/cetak.ts`, dicetak dari layar Farmasi. Satu kartu per
+baris resep, 70 x 40 mm, dua kolom di A4, supaya kertas stiker yang sudah
+dipotong tetap terpakai.
+
+**Putih untuk obat dalam, biru untuk obat luar.** Itu konvensi apotek Indonesia
+dan ia adalah pengaman terakhir sebelum obat masuk mulut: salep mata yang
+tertempel etiket putih bertuliskan "3x sehari 1 sendok" adalah kalimat yang
+bisa diminum orang. `RUTE_LUAR` ditulis sebagai daftar yang LUAR, bukan sebagai
+"yang bukan oral": rute baru yang belum terpikir jatuh ke putih, dan putih
+adalah bawaan yang lebih sering benar.
+
+**Aturan pakainya dirangkai dari kolom BERKODE** (`dosis`, `frekuensi`,
+`rute`), dan itu justru alasan ketiganya dipisah sejak migrasi 0023. "3x1
+sesudah makan" yang terlanjur satu kalimat tidak bisa dibelah kembali, dan yang
+tidak bisa dibelah tidak bisa dicetak dengan benar maupun dikirim ke SatuSehat.
+
+Dicetak dari Farmasi, bukan dari layar dokter: yang menempelkannya adalah yang
+menyiapkan obatnya, dan etiket yang dicetak sebelum obatnya disiapkan akan
+tertempel di plastik yang salah. Bisa dicetak ulang kapan saja, termasuk
+sesudah diserahkan: plastik sobek dan etiket miring itu kejadian sehari-hari,
+dan yang tidak bisa dicetak ulang akan ditulis tangan.
+
 ## Tarif penunjang: paket punya CETAKAN parameternya
 
 Migrasi 0063. Layanan yang berjenis `lab` atau `radiologi` muncul sebagai

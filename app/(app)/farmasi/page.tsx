@@ -1,13 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, Check, ChevronDown, ChevronRight, HandCoins, HandHelping, Package, Pill, RefreshCw, Search, StickyNote } from 'lucide-react'
+import { AlertTriangle, Check, ChevronDown, ChevronRight, HandCoins, HandHelping, Package, Pill, Printer, RefreshCw, Search, StickyNote } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { jam } from '@/lib/format'
+import { bukaCetak, etiketObat } from '@/lib/cetak'
 
 /**
  * Antrean penyiapan resep.
@@ -136,6 +137,44 @@ export default function HalamanFarmasi() {
     setSibuk(null)
     if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
+  }
+
+  /**
+   * Etiket obat, satu kartu per baris resep.
+   *
+   * Ditempatkan di layar Farmasi dan bukan di layar dokter karena yang
+   * menempelkannya adalah yang menyiapkan obatnya, dan etiket yang dicetak
+   * sebelum obatnya disiapkan akan tertempel di plastik yang salah.
+   *
+   * Barisnya diambil dari yang SUDAH termuat di layar. Kalau belum pernah
+   * dibuka, dimuat dulu: mencetak etiket kosong karena datanya belum sampai
+   * adalah cara paling mudah menempelkan kertas polos di plastik obat.
+   */
+  const cetakEtiket = async (r: Resep) => {
+    let daftar = items[r.id]
+    if (!daftar) {
+      const { data, error } = await supabase.rpc('isi_resep', { p_resep: r.id })
+      if (error) { kabar(pesanError(error), 'galat'); return }
+      daftar = ((data as any)?.items ?? []) as any[]
+      setItems(x => ({ ...x, [r.id]: daftar as any[] }))
+    }
+    const isi = (daftar || []).filter((it: any) => (it.nama_obat || '').trim())
+    if (isi.length === 0) {
+      kabar(t('Resep ini belum punya baris obat yang bisa dicetak.',
+              'This prescription has no drug lines to print yet.'), 'galat')
+      return
+    }
+    const ok = bukaCetak(etiketObat(app.settingsData || {}, {
+      nomor_resep: r.nomor,
+      nama_pasien: r.pasien_nama,
+      nomor_rm: r.nomor_rm,
+      tanggal: r.difinalkan_pada,
+      dokter: r.dokter_email,
+    }, isi as any), 900, 700)
+    if (!ok) {
+      kabar(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk alamat ini.',
+              'The print window was blocked. Allow pop-ups for this address.'), 'galat')
+    }
   }
 
   const serahkan = async (r: Resep) => {
@@ -372,6 +411,15 @@ export default function HalamanFarmasi() {
                       )}
 
                       <div className="mt-3 flex items-center gap-2 flex-wrap">
+                        {/* Etiket boleh dicetak sejak resep masuk antrean, dan
+                            tetap bisa dicetak ulang sesudah diserahkan: plastik
+                            yang sobek atau etiket yang tertempel miring adalah
+                            kejadian sehari-hari, dan yang tidak bisa dicetak
+                            ulang akan ditulis tangan. */}
+                        <button onClick={() => cetakEtiket(r)} disabled={sibuk === r.id}
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--line)] text-sm font-medium text-[var(--ink-soft)] hover:border-[var(--brand)] hover:text-[var(--brand)] transition disabled:opacity-50">
+                          <Printer size={14} /> {t('Cetak etiket', 'Print labels')}
+                        </button>
                         {r.status === 'final' && (
                           <button onClick={() => pindah(r, 'disiapkan')} disabled={sibuk === r.id}
                             className="inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
