@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { History, Search, Stethoscope, UserPlus } from 'lucide-react'
+import { Eye, History, Pencil, Search, Stethoscope, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -10,6 +10,8 @@ import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TR } from '@/lib/ui'
 import { tanggal } from '@/lib/format'
 import FormPasien, { type Pasien } from '@/components/klinik/FormPasien'
 import RiwayatPasien from '@/components/klinik/RiwayatPasien'
+import DetailPasien from '@/components/klinik/DetailPasien'
+import TombolIkon from '@/components/TombolIkon'
 import { boleh } from '@/lib/hak'
 
 /**
@@ -30,11 +32,6 @@ const KELAMIN: Record<string, [string, string]> = {
   L: ['Laki-laki', 'Male'],
   P: ['Perempuan', 'Female'],
 }
-const PENJAMIN: Record<string, [string, string]> = {
-  umum: ['Umum', 'Self-pay'],
-  bpjs: ['BPJS', 'BPJS'],
-  asuransi: ['Asuransi', 'Insurance'],
-}
 
 export default function HalamanPasien() {
   const { t, lang } = useLang()
@@ -45,6 +42,7 @@ export default function HalamanPasien() {
   const [cari, setCari] = useState('')
   const [form, setForm] = useState<Pasien | null | undefined>(undefined)
   const [riwayat, setRiwayat] = useState<string | null>(null)
+  const [lihat, setLihat] = useState<Pasien | null>(null)
   const [sibuk, setSibuk] = useState(false)
 
   const muat = useCallback(async () => {
@@ -61,7 +59,7 @@ export default function HalamanPasien() {
     const q = cari.trim().toLowerCase()
     if (!q) return daftar
     return daftar.filter(p =>
-      [p.nama, p.nik, p.nomor_rm, p.telepon, p.nomor_penjamin]
+      [p.nama, p.nik, p.nomor_rm, p.telepon, p.nomor_penjamin, p.nomor_bpjs, p.nomor_polis, p.kerabat_telepon]
         .some(v => (v || '').toString().toLowerCase().includes(q)))
   }, [daftar, cari])
 
@@ -78,20 +76,22 @@ export default function HalamanPasien() {
     return true
   }
 
-  /** Mendaftarkan kunjungan langsung dari daftar pasien: yang paling sering
-   *  terjadi adalah pasien lama datang lagi, dan memaksanya lewat layar
-   *  Kunjungan dulu berarti mencari orang yang sama dua kali. */
-  const mulaiKunjungan = async (p: Pasien) => {
-    const keluhan = prompt(t(`Keluhan ${p.nama} hari ini?`, `What brings ${p.nama} in today?`), '')
-    if (keluhan === null) return
-    setSibuk(true)
-    const { error } = await supabase.rpc('daftar_kunjungan', {
-      p_patient: p.id, p_keluhan: keluhan, p_penjamin: p.penjamin,
-      p_company: (app.isSuper && app.superViewCompany) || null,
-    })
-    setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
-    window.location.href = '/kunjungan'
+  /**
+   * Membuka pendaftaran kunjungan untuk pasien ini, bukan mendaftarkannya.
+   *
+   * Versi lama menanyakan keluhan lewat kotak bawaan peramban lalu langsung
+   * membuat kunjungan dengan penjamin yang tersimpan di profil pasien. Dua hal
+   * salah di situ. Poli dan dokternya tidak pernah ditanya, jadi kunjungannya
+   * lahir tanpa poli dan nomor antreannya jatuh ke deret bawaan. Dan
+   * penjaminnya diambil dari profil, padahal siapa yang menanggung kunjungan
+   * HARI INI ditentukan hari ini: pasien yang biasa BPJS bisa datang sebagai
+   * pasien umum karena rujukannya belum keluar.
+   *
+   * Sekarang ia membuka formulir pendaftaran yang sama dengan yang dipakai di
+   * layar Kunjungan, dengan pasiennya sudah terpilih.
+   */
+  const mulaiKunjungan = (p: Pasien) => {
+    window.location.href = `/kunjungan?pasien=${p.id}`
   }
 
   const umur = (iso: string | null) => {
@@ -135,7 +135,7 @@ export default function HalamanPasien() {
               <th className={TH_L}>{t('Nama', 'Name')}</th>
               <th className={TH_L}>{t('Lahir / Umur', 'Born / Age')}</th>
               <th className={TH_L}>NIK</th>
-              <th className={TH_C}>{t('Penjamin', 'Payer')}</th>
+              <th className={TH_L}>{t('Telepon', 'Phone')}</th>
               <th className={TH_C}>{t('Aksi', 'Action')}</th>
             </tr>
           </thead>
@@ -155,11 +155,20 @@ export default function HalamanPasien() {
                 <tr key={p.id} className={TR}>
                   <td className="px-4 py-3 num text-xs text-[var(--brand)] font-medium">{p.nomor_rm || '-'}</td>
                   <td className="px-4 py-3">
-                    <button onClick={() => setForm(p)} className="text-left">
+                    {/* Menekan nama membuka BACAAN, bukan formulir ubah.
+                        Dulu keduanya satu tindakan, jadi orang yang cuma ingin
+                        memastikan nomor telepon berada satu ketikan dari
+                        mengubah tanggal lahir orang tanpa sadar. */}
+                    <button onClick={() => setLihat(p)} className="text-left">
                       <span className="font-medium text-[var(--ink)] hover:underline underline-offset-4">{p.nama}</span>
                       {p.alergi && (
                         <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700 align-middle">
                           {t('ALERGI', 'ALLERGY')}
+                        </span>
+                      )}
+                      {p.identitas_belum_lengkap && (
+                        <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 align-middle">
+                          {t('IDENTITAS BELUM LENGKAP', 'IDENTITY INCOMPLETE')}
                         </span>
                       )}
                     </button>
@@ -173,30 +182,36 @@ export default function HalamanPasien() {
                     {tanggal(p.tanggal_lahir) || '-'}{u !== null ? ` · ${u} ${t('th', 'y')}` : ''}
                   </td>
                   <td className="px-4 py-3 text-[var(--ink-soft)] text-xs num">{p.nik || '-'}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                      p.penjamin === 'bpjs' ? 'bg-emerald-50 text-emerald-700'
-                      : p.penjamin === 'asuransi' ? 'bg-blue-50 text-blue-700'
-                      : 'bg-[var(--surface-2)] text-[var(--ink-soft)]'}`}>
-                      {PENJAMIN[p.penjamin]?.[lang === 'en' ? 1 : 0] || p.penjamin}
-                    </span>
-                  </td>
+                  <td className="px-4 py-3 text-[var(--ink-soft)] text-xs num">{p.telepon || '-'}</td>
                   <td className="px-4 py-3">
+                    {/* Ikon saja, keterangannya muncul saat disentuh tetikus.
+                        Urutannya mengikuti seberapa sering dipakai, bukan
+                        seberapa penting: yang paling sering dilakukan dari
+                        daftar pasien adalah MELIHAT, lalu membaca riwayat.
+                        Mendaftarkan kunjungan ada di ujung karena pintu
+                        utamanya memang layar Kunjungan. */}
                     <div className="flex items-center justify-center gap-1.5">
-                      {/* Riwayat lebih dulu, dan itu bukan urutan sembarangan:
-                          yang paling sering dicari dari daftar pasien adalah
-                          "apa yang terjadi terakhir kali", bukan mendaftarkan
-                          kunjungan baru. */}
+                      <TombolIkon label={t('Lihat data pasien', 'View patient')}
+                        onClick={e => { e.stopPropagation(); setLihat(p) }}>
+                        <Eye size={14} />
+                      </TombolIkon>
+
                       {boleh(app.currentRole, 'rekam_medis.baca', app.isSuper) && (
-                      <button onClick={e => { e.stopPropagation(); setRiwayat(p.id) }}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--line)] text-[var(--ink-soft)] text-xs font-medium hover:bg-[var(--surface-2)] hover:text-[var(--brand)] transition whitespace-nowrap">
-                        <History size={13} /> {t('Riwayat', 'History')}
-                      </button>
+                        <TombolIkon label={t('Riwayat rekam medis', 'Medical history')}
+                          onClick={e => { e.stopPropagation(); setRiwayat(p.id) }}>
+                          <History size={14} />
+                        </TombolIkon>
                       )}
-                      <button onClick={e => { e.stopPropagation(); mulaiKunjungan(p) }} disabled={sibuk}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--line)] text-[var(--brand)] text-xs font-medium hover:bg-[var(--surface-2)] transition whitespace-nowrap disabled:opacity-50">
-                        <Stethoscope size={13} /> {t('Daftarkan Kunjungan', 'Start Visit')}
-                      </button>
+
+                      <TombolIkon label={t('Ubah data pasien', 'Edit patient')}
+                        onClick={e => { e.stopPropagation(); setForm(p) }}>
+                        <Pencil size={14} />
+                      </TombolIkon>
+
+                      <TombolIkon label={t('Daftarkan kunjungan', 'Start a visit')} warna="brand"
+                        onClick={e => { e.stopPropagation(); mulaiKunjungan(p) }}>
+                        <Stethoscope size={14} />
+                      </TombolIkon>
                     </div>
                   </td>
                 </tr>
@@ -208,6 +223,17 @@ export default function HalamanPasien() {
 
       {form !== undefined && (
         <FormPasien pasien={form} sibuk={sibuk} onTutup={() => setForm(undefined)} onSimpan={simpan} />
+      )}
+
+      {lihat && (
+        <DetailPasien
+          pasien={lihat}
+          onTutup={() => setLihat(null)}
+          onUbah={() => { const p = lihat; setLihat(null); setForm(p) }}
+          onRiwayat={() => { const p = lihat; setLihat(null); setRiwayat(p.id) }}
+          bolehUbah
+          bolehRiwayat={boleh(app.currentRole, 'rekam_medis.baca', app.isSuper)}
+        />
       )}
 
       {riwayat && (

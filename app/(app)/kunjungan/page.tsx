@@ -117,6 +117,42 @@ export default function HalamanKunjungan() {
   /** Pasien yang dipilih tapi BELUM didaftarkan. Lihat komentar di daftarkan(). */
   const [pasienDipilih, setPasienDipilih] = useState<Pasien | null>(null)
 
+  /**
+   * Dibuka dari daftar Pasien lewat `?pasien=<id>`.
+   *
+   * Layar Pasien dulu mendaftarkan kunjungan sendiri lewat kotak bawaan
+   * peramban, jadi kunjungannya lahir tanpa poli dan tanpa dokter, dan
+   * penjaminnya diambil dari profil. Sekarang ia cuma menunjuk ke sini, dan
+   * yang mendaftarkan tetap satu formulir yang sama: satu pintu berarti satu
+   * tempat yang harus benar.
+   *
+   * Alamatnya dibersihkan sesudah dipakai supaya menyegarkan halaman tidak
+   * membuka ulang formulir yang barusan ditutup orangnya.
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const id = new URLSearchParams(window.location.search).get('pasien')
+    if (!id) return
+    ;(async () => {
+      const { data } = await supabase.from('patients').select('*').eq('id', id).maybeSingle()
+      if (data) {
+        setPasienDipilih(data as Pasien)
+        setBukaDaftar(true)
+        setCariPasien('')
+      }
+      window.history.replaceState({}, '', '/kunjungan')
+    })()
+  }, [])
+
+  useEffect(() => {
+    if (!bukaDaftar) return
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setBukaDaftar(false); setPasienDipilih(null) }
+    }
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [bukaDaftar])
+
   const namaLangkah: Record<string, string> = {
     terdaftar: t('Terdaftar', 'Registered'),
     diperiksa: t('Diperiksa', 'In exam'),
@@ -679,7 +715,12 @@ export default function HalamanKunjungan() {
       {/* ── Daftarkan kunjungan ── */}
       {bukaDaftar && (
         <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 pt-[10vh]" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[85vh] overflow-y-auto">
+          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[85vh] overflow-y-auto relative">
+            <button onClick={() => { setBukaDaftar(false); setPasienDipilih(null) }}
+              aria-label={t('Tutup', 'Close')}
+              className="absolute right-4 top-4 text-[var(--ink-faint)] hover:text-[var(--ink)]">
+              <X size={18} />
+            </button>
             <h2 className="text-lg font-bold text-[var(--brand)] mb-1">{t('Daftarkan Kunjungan', 'Register a Visit')}</h2>
             <p className="text-xs text-[var(--ink-soft)] mb-4">
               {t('Cari pasien yang sudah pernah datang. Kalau belum ada, daftarkan sebagai pasien baru.',
@@ -737,13 +778,26 @@ export default function HalamanKunjungan() {
               </div>
             )}
 
-            {/* Penjamin. Bawaannya IKUT PROFIL PASIEN, bukan Umum: pasien BPJS
-                yang terburu-buru didaftarkan sebagai umum akan ditagih penuh
-                di depan orangnya. */}
+            {/* Penjamin ditentukan DI SINI, tiap kunjungan.
+                Satu orang bisa memegang kartu BPJS sekaligus asuransi kantor,
+                dan yang menanggung hari ini belum tentu yang sama dengan bulan
+                lalu: rujukan BPJS yang belum keluar membuat pasien BPJS datang
+                sebagai pasien umum. Karena itu ini bukan sifat pasien.
+                Kartu yang dipegangnya ditunjukkan sebagai petunjuk, bukan
+                sebagai pilihan otomatis: yang memutuskan tetap orang di loket
+                yang sedang memegang kartunya. */}
             <div className="mb-4">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-faint)] mb-1.5">
-                {t('Penjamin', 'Payer')}
+                {t('Penjamin kunjungan ini', 'Payer for this visit')}
               </p>
+              {pasienDipilih && (pasienDipilih.nomor_bpjs || pasienDipilih.nomor_polis) && (
+                <p className="text-[11px] text-[var(--ink-faint)] mb-1.5">
+                  {t('Kartu yang tercatat:', 'Cards on file:')}{' '}
+                  {[pasienDipilih.nomor_bpjs ? `BPJS ${pasienDipilih.nomor_bpjs}` : null,
+                    pasienDipilih.nomor_polis ? `${t('Polis', 'Policy')} ${pasienDipilih.nomor_polis}` : null]
+                    .filter(Boolean).join(' · ')}
+                </p>
+              )}
               <div className="flex flex-wrap gap-1.5">
                 {([
                   ['',         t('Ikut profil pasien', 'From patient profile')],

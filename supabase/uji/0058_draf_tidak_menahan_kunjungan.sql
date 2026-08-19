@@ -28,8 +28,13 @@ begin
   v_vis := (public.daftar_kunjungan(v_pas, 'Uji draf', 'umum', v_unit, null, v_co) ->> 'id')::uuid;
   perform public.ubah_status_kunjungan(v_vis, 'diperiksa');
 
-  insert into public.prescriptions (company_id, visit_id, patient_id, status)
-  values (v_co, v_vis, v_pas, 'draf');
+  -- Diagnosis wajib sebelum kunjungan bisa ditutup (aturan sejak 0018), jadi
+  -- ia harus ada di sini supaya yang diuji benar-benar soal drafnya.
+  insert into public.visit_diagnoses (company_id, visit_id, kode_icd10, nama, tipe)
+  values (v_co, v_vis, 'J00', 'Nasofaringitis akut', 'primer');
+
+  insert into public.prescriptions (company_id, visit_id, status)
+  values (v_co, v_vis, 'draf');
 
   insert into public.transactions (company_id, visit_id, total, bayar)
   values (v_co, v_vis, 0, 0) returning id into v_trx;
@@ -48,8 +53,11 @@ begin
   v_vis := (public.daftar_kunjungan(v_pas, 'Uji final', 'umum', v_unit, null, v_co) ->> 'id')::uuid;
   perform public.ubah_status_kunjungan(v_vis, 'diperiksa');
 
-  insert into public.prescriptions (company_id, visit_id, patient_id, status)
-  values (v_co, v_vis, v_pas, 'final');
+  insert into public.visit_diagnoses (company_id, visit_id, kode_icd10, nama, tipe)
+  values (v_co, v_vis, 'J00', 'Nasofaringitis akut', 'primer');
+
+  insert into public.prescriptions (company_id, visit_id, status)
+  values (v_co, v_vis, 'final');
 
   insert into public.transactions (company_id, visit_id, total, bayar)
   values (v_co, v_vis, 0, 0) returning id into v_trx;
@@ -62,9 +70,18 @@ begin
 
   -- 3. Reservasi kembar ditolak dengan pesan yang bisa dipakai ----------------
   v_tgl := current_date + 1;
-  insert into public.doctor_schedules (company_id, unit_id, hari, jam_mulai, jam_selesai, kuota)
-  values (v_co, v_unit, extract(dow from v_tgl)::smallint, '08:00', '12:00', 0)
-  returning id into v_jad;
+  -- Pakai jadwal yang SUDAH ADA kalau ada. Uji yang selalu menyisipkan jadwal
+  -- baru akan menabrak `uq_jadwal_sesi` begitu klinik sungguhan mengisi
+  -- jadwalnya, dan yang gagal jadi ujinya, bukan yang diuji.
+  select id into v_jad from public.doctor_schedules
+   where company_id = v_co and unit_id = v_unit and aktif
+     and hari = extract(dow from v_tgl)::smallint
+   limit 1;
+  if v_jad is null then
+    insert into public.doctor_schedules (company_id, unit_id, hari, jam_mulai, jam_selesai, kuota)
+    values (v_co, v_unit, extract(dow from v_tgl)::smallint, '21:00', '22:00', 0)
+    returning id into v_jad;
+  end if;
 
   insert into public.patients (company_id, nama) values (v_co, 'UJI RESERVASI KEMBAR')
     returning id into v_pas;

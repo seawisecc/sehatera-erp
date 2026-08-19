@@ -94,6 +94,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0056_antrean_kirim` | `outbound_messages`: idempoten, mundur berlipat, menyerah itu keadaan |
 | `0057_antre_kirim_penanda_baru` | `found` ditangkap sebelum SELECT menimpanya |
 | `0058_draf_tidak_menahan_kunjungan` | Resep `draf` tidak menahan penutupan; reservasi kembar bicara SH004 |
+| `0059_identitas_pasien_lengkap` | NIK & telepon wajib dengan pintu darurat berjejak, kerabat, alamat berkolom |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -826,6 +827,49 @@ pengirimannya sudah jalan. Layarnya mengatakan ini apa adanya.
 'antre'`), yang juga benar untuk baris yang sudah ada. Jawabannya ada di `found`
 sesudah `INSERT ... ON CONFLICT DO NOTHING`, tapi ia harus ditangkap ke variabel
 sebelum SELECT berikutnya menimpanya. Ditemukan uji, bukan saat membacanya.
+
+## Identitas pasien: wajib, tapi palangnya punya pintu
+
+Migrasi 0059. NIK dan telepon WAJIB atas permintaan pemilik, ditegakkan di
+`simpan_pasien()` bukan cuma di form: impor CSV menembak tabel langsung.
+
+**Tapi ada `identitas_belum_lengkap` yang MENUNTUT alasan**, dan alasannya
+masuk jejak audit. Pasien yang datang tidak sadarkan diri tidak memegang KTP,
+dan petugas yang tidak bisa mendaftarkannya akan mengarang enam belas angka
+supaya formulirnya mau lewat. NIK karangan lebih berbahaya daripada NIK kosong:
+ia terlihat seperti data, ikut terkirim ke SatuSehat, dan menempel pada orang
+lain. Pola yang sama dengan `p_tanpa_bayar` pada `serahkan_resep()` di 0035:
+**palang yang tidak bisa dilewati akan diakali dengan cara yang tidak
+meninggalkan jejak sama sekali.**
+
+**`patients.penjamin` BUKAN sifat orangnya**, dan formulir pasien tidak lagi
+menyuntingnya. Satu orang bisa memegang kartu BPJS sekaligus asuransi kantor,
+dan yang menanggung kunjungan HARI INI ditentukan hari ini: pasien BPJS yang
+rujukannya belum keluar datang sebagai pasien umum. Yang menempel pada orangnya
+adalah NOMOR kartunya (`nomor_bpjs`, `nomor_polis`), dan layar pendaftaran
+menampilkannya sebagai PETUNJUK, bukan sebagai pilihan otomatis. Kolom
+`penjamin` dibiarkan sebagai bawaan; jangan menambah kode baru yang
+memperlakukannya sebagai status pasien.
+
+Alamat dipecah berkolom (`kelurahan`, `kecamatan`, `kota`, `provinsi`,
+`kode_pos`, `rt`, `rw`) mengikuti aturan lama: SatuSehat mewajibkan `address`
+berkolom, dan membelah alamat setahun yang terlanjur satu baris bebas tidak
+bisa dilakukan tanpa menebak. `alamat` tetap ada sebagai baris jalannya.
+
+## Membaca dan mengubah adalah dua tindakan
+
+`DetailPasien` lahir karena satu-satunya cara melihat identitas pasien dulu
+adalah menekan namanya, yang membuka formulir ubah. Artinya orang yang cuma
+ingin memastikan nomor telepon berada satu ketikan dari mengubah tanggal lahir
+orang tanpa sadar. Yang kosong ditampilkan sebagai "belum diisi", tidak
+disembunyikan: baris yang hilang terbaca sebagai "tidak ada informasinya",
+padahal yang dibutuhkan justru tahu ada yang belum dilengkapi.
+
+**Tombol aksi berbentuk ikon memakai `components/TombolIkon.tsx`**, yang
+membawa `title` bawaan peramban DAN gelembung sendiri. Keduanya perlu: `title`
+untuk pembaca layar dan pengguna papan ketik, gelembung karena `title` baru
+muncul sesudah satu detik lebih dan di layar sesibuk daftar pasien itu terlalu
+lama untuk menolong siapa pun.
 
 ## Dua hal yang ditemukan saat memeriksa ulang, bukan dari galat
 
