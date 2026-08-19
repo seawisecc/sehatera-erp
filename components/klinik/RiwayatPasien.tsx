@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { AlertTriangle, FileText, Pill, Stethoscope, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { tanggal, tanggalJam } from '@/lib/format'
 import RekamMedis from '@/components/klinik/RekamMedis'
@@ -31,13 +32,14 @@ export default function RiwayatPasien({
   onTutup: () => void
 }) {
   const { t } = useLang()
+  const { kabar } = useUmpan()
   const [isi, setIsi] = useState<any>(null)
   const [memuat, setMemuat] = useState(true)
   const [buka, setBuka] = useState<any>(null)
 
   const muat = async () => {
     const { data, error } = await supabase.rpc('riwayat_pasien', { p_pasien: pasienId })
-    if (error) { alert(pesanError(error)); onTutup(); return }
+    if (error) { kabar(pesanError(error), 'galat'); onTutup(); return }
     setIsi(data)
     setMemuat(false)
   }
@@ -47,7 +49,7 @@ export default function RiwayatPasien({
     ;(async () => {
       const { data, error } = await supabase.rpc('riwayat_pasien', { p_pasien: pasienId })
       if (batal) return
-      if (error) { alert(pesanError(error)); onTutup(); return }
+      if (error) { kabar(pesanError(error), 'galat'); onTutup(); return }
       setIsi(data)
       setMemuat(false)
     })()

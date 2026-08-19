@@ -5,6 +5,7 @@ import { AlertTriangle, CalendarClock, Printer } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TR } from '@/lib/ui'
 import { angka, tanggal } from '@/lib/format'
@@ -28,6 +29,7 @@ import TindakLanjutBatch, { type BatchTindakLanjut } from '@/components/TindakLa
 
 export default function HalamanTindakLanjut() {
   const { t, lang } = useLang()
+  const { kabar, konfirmasi } = useUmpan()
   const app = useApp()
   const scope = app.scope
 
@@ -77,24 +79,24 @@ export default function HalamanTindakLanjut() {
       saksi_1: row.saksi_1,
       saksi_2: row.saksi_2,
     }))
-    if (!ok) alert(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
+    if (!ok) kabar(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
   }
 
-  const konfirmasi = async (row: any) => {
-    if (!confirm(t(
+  const konfirmasiRetur = async (row: any) => {
+    if (!await konfirmasi({ judul: t(
       `Konfirmasi retur ${row.nomor_retur || ''}?\nStok "${row.products?.nama_obat || ''}" berkurang ${row.qty_retur} ${row.products?.satuan || ''}.`,
-      `Confirm return ${row.nomor_retur || ''}?\nStock of "${row.products?.nama_obat || ''}" drops by ${row.qty_retur} ${row.products?.satuan || ''}.`))) return
+      `Confirm return ${row.nomor_retur || ''}?\nStock of "${row.products?.nama_obat || ''}" drops by ${row.qty_retur} ${row.products?.satuan || ''}.`)})) return
     setSibuk(true)
     const { error } = await supabase.rpc('konfirmasi_retur', { p_retur_id: row.id })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 
   const batalkan = async (row: any) => {
-    if (!confirm(t(`Batalkan retur ${row.nomor_retur || ''}?`, `Cancel return ${row.nomor_retur || ''}?`))) return
+    if (!await konfirmasi({ bahaya: true, tombol: t('Batalkan retur', 'Cancel return'), judul: t(`Batalkan retur ${row.nomor_retur || ''}?`, `Cancel return ${row.nomor_retur || ''}?`) })) return
     const { error } = await supabase.from('retur_supplier').update({ status: 'dibatalkan' }).eq('id', row.id)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 
@@ -282,7 +284,7 @@ export default function HalamanTindakLanjut() {
                   <td className="px-4 py-3">
                     {(!r.status || r.status === 'diajukan') ? (
                       <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => konfirmasi(r)} disabled={sibuk}
+                        <button onClick={() => konfirmasiRetur(r)} disabled={sibuk}
                           className="px-2.5 py-1 rounded-lg bg-[var(--brand)] text-[var(--on-brand)] text-xs font-medium hover:bg-[var(--brand-hover)] transition whitespace-nowrap disabled:opacity-50">
                           {t('Konfirmasi', 'Confirm')}
                         </button>

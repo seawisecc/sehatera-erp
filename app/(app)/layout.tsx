@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import { AppProvider, useApp } from '@/lib/app-context'
 import { AppShell } from '@/components/layout/AppShell'
 import { Mark } from '@/components/Logo'
+import { UmpanProvider } from '@/components/Umpan'
 
 /**
  * Layout untuk seluruh halaman di dalam aplikasi.
@@ -20,7 +21,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={<Memuat />}>
       <AppProvider>
-        <Gerbang>{children}</Gerbang>
+        <UmpanProvider>
+          <Gerbang>{children}</Gerbang>
+        </UmpanProvider>
       </AppProvider>
     </Suspense>
   )

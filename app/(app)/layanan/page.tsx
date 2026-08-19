@@ -6,6 +6,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
 
@@ -36,6 +37,7 @@ type Layanan = {
 
 export default function HalamanLayanan() {
   const { t } = useLang()
+  const { kabar, konfirmasi } = useUmpan()
   const app = useApp()
 
   const [services, setServices] = useState<Layanan[]>([])
@@ -56,7 +58,7 @@ export default function HalamanLayanan() {
   }, [app.superViewCompany])
 
   const simpanBaru = async () => {
-    if (!form.nama.trim()) { alert(t('Nama layanan wajib diisi', 'Service name is required')); return }
+    if (!form.nama.trim()) { kabar(t('Nama layanan wajib diisi', 'Service name is required')); return }
     const { error } = await supabase.from('services').insert([{
       nama: form.nama.trim(),
       harga: form.harga || 0,
@@ -64,7 +66,7 @@ export default function HalamanLayanan() {
       kode_icd9: form.kode_icd9,
       ...app.cid(),
     }])
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setShowForm(false)
     setForm({ nama: '', harga: 0, deskripsi: '', kode_icd9: null })
     muat()
@@ -79,15 +81,15 @@ export default function HalamanLayanan() {
       status: edit.status,
       kode_icd9: edit.kode_icd9,
     }).eq('id', edit.id)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setEdit(null)
     muat()
   }
 
   const hapus = async (s: Layanan) => {
-    if (!confirm(t(`Hapus layanan "${s.nama}"?`, `Delete service "${s.nama}"?`))) return
+    if (!await konfirmasi({ bahaya: true, tombol: t('Hapus', 'Delete'), judul: t(`Hapus layanan "${s.nama}"?`, `Delete service "${s.nama}"?`) })) return
     const { error } = await supabase.from('services').delete().eq('id', s.id)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 

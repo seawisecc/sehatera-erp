@@ -5,6 +5,7 @@ import { Eye, History, Pencil, Search, Stethoscope, UserPlus } from 'lucide-reac
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TR } from '@/lib/ui'
 import { tanggal } from '@/lib/format'
@@ -35,6 +36,7 @@ const KELAMIN: Record<string, [string, string]> = {
 
 export default function HalamanPasien() {
   const { t, lang } = useLang()
+  const { kabar } = useUmpan()
   const app = useApp()
 
   const [daftar, setDaftar] = useState<Pasien[]>([])
@@ -70,7 +72,7 @@ export default function HalamanPasien() {
       p_company: (app.isSuper && app.superViewCompany) || null,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return false }
+    if (error) { kabar(pesanError(error), 'galat'); return false }
     setForm(undefined)
     muat()
     return true

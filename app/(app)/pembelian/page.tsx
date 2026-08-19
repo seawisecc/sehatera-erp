@@ -5,6 +5,7 @@ import { AlertTriangle, Check, Pencil, Receipt, Truck, Wand2, X } from 'lucide-r
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
 import { rupiah, angka, tanggal } from '@/lib/format'
@@ -43,6 +44,7 @@ type BarisTerima = {
 
 export default function HalamanPembelian() {
   const { t } = useLang()
+  const { kabar, konfirmasi } = useUmpan()
   const app = useApp()
   const scope = app.scope
 
@@ -127,9 +129,9 @@ export default function HalamanPembelian() {
   }
 
   const simpanPO = async () => {
-    if (terkunci) { alert(t('Pilih satu apotek dulu di pemilih faskes sebelum membuat PO.', 'Select a specific pharmacy first before creating a PO.')); return }
+    if (terkunci) { kabar(t('Pilih satu apotek dulu di pemilih faskes sebelum membuat PO.', 'Select a specific pharmacy first before creating a PO.')); return }
     if (!supplierPilihan || itemPO.length === 0) {
-      alert(t('Pilih supplier dan tambahkan produk dulu.', 'Select a supplier and add products first.')); return
+      kabar(t('Pilih supplier dan tambahkan produk dulu.', 'Select a supplier and add products first.')); return
     }
     setSibuk(true)
     const total_nilai = itemPO.reduce((a, b) => a + b.subtotal, 0)
@@ -137,7 +139,7 @@ export default function HalamanPembelian() {
     const { data: po, error } = await supabase.from('purchase_orders')
       .insert([{ supplier_id: supplierPilihan.id, total_nilai, catatan: catatanPO, ...cid }])
       .select().single()
-    if (error) { setSibuk(false); alert(pesanError(error)); return }
+    if (error) { setSibuk(false); kabar(pesanError(error), 'galat'); return }
 
     const { error: eItem } = await supabase.from('po_items')
       .insert(itemPO.map(i => ({ ...i, po_id: po.id, ...cid })))
@@ -145,17 +147,17 @@ export default function HalamanPembelian() {
     if (eItem) {
       // PO tanpa baris tidak berguna dan membingungkan; buang lagi.
       await supabase.from('purchase_orders').delete().eq('id', po.id)
-      alert(pesanError(eItem)); return
+      kabar(pesanError(eItem), 'galat'); return
     }
     tutupFormPO()
     muat()
-    alert(`PO ${po.nomor_po} ${t('berhasil dibuat.', 'created.')}`)
+    kabar(`PO ${po.nomor_po} ${t('berhasil dibuat.', 'created.')}`)
   }
 
   // ── Order terpandu ──
 
   const mulaiTerpandu = async () => {
-    if (terkunci) { alert(t('Pilih satu apotek dulu di pemilih faskes sebelum membuat order.', 'Select a specific pharmacy first before creating an order.')); return }
+    if (terkunci) { kabar(t('Pilih satu apotek dulu di pemilih faskes sebelum membuat order.', 'Select a specific pharmacy first before creating an order.')); return }
     setTerpanduSibuk(true)
     const { data: prods } = await scope(
       supabase.from('products').select('id,nama_obat,satuan,stok_total,stok_minimum,harga_beli').order('nama_obat')
@@ -163,7 +165,7 @@ export default function HalamanPembelian() {
     const minim = (prods || []).filter((p: any) => (p.stok_total ?? 0) <= (p.stok_minimum ?? 0))
     if (minim.length === 0) {
       setTerpanduSibuk(false)
-      alert(t('Tidak ada barang yang mencapai stok minimum.', 'No items have reached minimum stock.'))
+      kabar(t('Tidak ada barang yang mencapai stok minimum.', 'No items have reached minimum stock.'))
       return
     }
     const ids = minim.map((p: any) => p.id)
@@ -197,7 +199,7 @@ export default function HalamanPembelian() {
 
   const simpanTerpandu = async () => {
     const sah = terpanduItems.filter(i => i.supplier_id && i.qty > 0)
-    if (sah.length === 0) { alert(t('Tidak ada item dengan supplier dan qty yang sah.', 'No items with a valid supplier and qty.')); return }
+    if (sah.length === 0) { kabar(t('Tidak ada item dengan supplier dan qty yang sah.', 'No items with a valid supplier and qty.')); return }
     setTerpanduSibuk(true)
     const grup: Record<string, any[]> = {}
     sah.forEach(i => { (grup[i.supplier_id] = grup[i.supplier_id] || []).push(i) })
@@ -212,7 +214,7 @@ export default function HalamanPembelian() {
       }]).select().single()
       if (error) {
         setTerpanduSibuk(false)
-        alert(pesanError(error) + (jadi.length ? `\n\n${jadi.length} PO sudah terlanjur dibuat: ${jadi.join(', ')}` : ''))
+        kabar(pesanError(error) + (jadi.length ? `\n\n${jadi.length} PO sudah terlanjur dibuat: ${jadi.join(', ')}` : ''), 'galat')
         muat(); return
       }
       const { error: eItem } = await supabase.from('po_items').insert(items.map(i => ({
@@ -222,7 +224,7 @@ export default function HalamanPembelian() {
       if (eItem) {
         await supabase.from('purchase_orders').delete().eq('id', po.id)
         setTerpanduSibuk(false)
-        alert(pesanError(eItem) + (jadi.length ? `\n\n${jadi.length} PO sudah terlanjur dibuat: ${jadi.join(', ')}` : ''))
+        kabar(pesanError(eItem) + (jadi.length ? `\n\n${jadi.length} PO sudah terlanjur dibuat: ${jadi.join(', ')}` : ''), 'galat')
         muat(); return
       }
       jadi.push(po.nomor_po)
@@ -230,7 +232,7 @@ export default function HalamanPembelian() {
     setTerpanduSibuk(false)
     tutupTerpandu()
     muat()
-    alert(`${jadi.length} ${t('PO dibuat dan siap dikirim', 'POs created and ready to send')}: ${jadi.join(', ')}`)
+    kabar(`${jadi.length} ${t('PO dibuat dan siap dikirim', 'POs created and ready to send')}: ${jadi.join(', ')}`)
   }
 
   // ── Penerimaan ──
@@ -273,7 +275,7 @@ export default function HalamanPembelian() {
       p_faktur: faktur.nomor_faktur.trim() ? faktur : null,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
 
     setTerima(null); setBarisTerima([])
     muat()
@@ -281,22 +283,22 @@ export default function HalamanPembelian() {
     const pesanFaktur = hasil?.nomor_faktur
       ? `\n${t('Faktur', 'Invoice')} ${hasil.nomor_faktur} ${t('tercatat, jatuh tempo', 'recorded, due')} ${tanggal(hasil.jatuh_tempo)}.`
       : ''
-    alert((tutup
+    kabar((tutup
       ? t('PO selesai. Stok dan batch sudah diperbarui.', 'PO completed. Stock and batches updated.')
       : t('Penerimaan parsial disimpan. PO masih terbuka.', 'Partial receipt saved. PO still open.')) + pesanFaktur)
   }
 
   const batalkanPO = async (po: any) => {
-    if (!confirm(t(`Batalkan PO ${po.nomor_po}? Barang yang sudah diterima tidak ikut dibatalkan.`,
-                   `Cancel PO ${po.nomor_po}? Goods already received are not reversed.`))) return
+    if (!await konfirmasi({ bahaya: true, tombol: t('Batalkan PO', 'Cancel PO'), judul: t(`Batalkan PO ${po.nomor_po}?`, `Cancel PO ${po.nomor_po}?`), pesan: t(`Barang yang sudah diterima tidak ikut dibatalkan.`,
+                   `Cancel PO ${po.nomor_po}? Goods already received are not reversed.`)})) return
     const { error } = await supabase.from('purchase_orders').update({ status: 'dibatalkan' }).eq('id', po.id)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setTerima(null); setBarisTerima([]); muat()
   }
 
   const kirimPO = async (po: any) => {
     const { error } = await supabase.from('purchase_orders').update({ status: 'dikirim' }).eq('id', po.id)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 
@@ -312,7 +314,7 @@ export default function HalamanPembelian() {
       supplier_alamat: po.suppliers?.alamat,
       supplier_telepon: po.suppliers?.telepon,
     }, items || []))
-    if (!ok) alert(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
+    if (!ok) kabar(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
   }
 
   const bukaDetail = async (po: any) => {

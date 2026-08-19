@@ -6,6 +6,7 @@ import Portal from '@/components/Portal'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { rupiah } from '@/lib/format'
 
@@ -38,6 +39,7 @@ const KOSONG = { nama: '', kode: '', kode_bpjs: '', tarif_konsultasi: '' }
 
 export default function PengaturanPoli() {
   const { t } = useLang()
+  const { kabar } = useUmpan()
   const app = useApp()
 
   const [poli, setPoli] = useState<Poli[]>([])
@@ -82,7 +84,7 @@ export default function PengaturanPoli() {
       },
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setForm(null); setUbahId(null)
     muat()
   }
@@ -91,7 +93,7 @@ export default function PengaturanPoli() {
     setSibuk(true)
     const { error } = await supabase.rpc('nonaktifkan_poli', { p_id: p.id, p_aktif: aktif })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 
@@ -100,7 +102,7 @@ export default function PengaturanPoli() {
     const baru = kini.includes(email) ? kini.filter(e => e !== email) : [...kini, email]
     setTugas({ ...tugas, [p.id]: baru })
     const { error } = await supabase.rpc('set_dokter_poli', { p_unit: p.id, p_emails: baru })
-    if (error) { alert(pesanError(error)); muat() }
+    if (error) { kabar(pesanError(error), 'galat'); muat() }
   }
 
   const I = 'w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]'

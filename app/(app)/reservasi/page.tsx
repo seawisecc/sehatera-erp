@@ -5,6 +5,7 @@ import { CalendarClock, Check, Phone, Search, UserPlus, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { boleh } from '@/lib/hak'
 import { tanggal } from '@/lib/format'
@@ -46,6 +47,7 @@ const jamPendek = (j: string) => (j || '').slice(0, 5)
 
 export default function HalamanReservasi() {
   const { t } = useLang()
+  const { kabar, tanya } = useUmpan()
   const app = useApp()
 
   const bolehTulis = boleh(app.currentRole, 'reservasi.tulis', app.isSuper)
@@ -214,7 +216,7 @@ export default function HalamanReservasi() {
       p_company: app.superViewCompany || null,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setBuka(false)
     setForm({ nama: '', telepon: '', jadwal: '', keluhan: '', penjamin: 'umum', asuransi: '', nomor_penjamin: '', patient_id: '' })
     setCariPasien('')
@@ -227,19 +229,19 @@ export default function HalamanReservasi() {
       p_id: r.id, p_patient: patientId || r.patient_id || null,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setCocokkan(null)
     setCariCocok('')
     muat()
   }
 
   const batalkan = async (r: any) => {
-    const alasan = window.prompt(t('Alasan pembatalan (boleh dikosongkan):', 'Reason for cancelling (optional):'))
+    const alasan = await tanya({ judul: t('Alasan pembatalan (boleh dikosongkan):', 'Reason for cancelling (optional):')})
     if (alasan === null) return
     setSibuk(true)
     const { error } = await supabase.rpc('batal_reservasi', { p_id: r.id, p_alasan: alasan || null })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { bukaCetak, beritaAcaraPemusnahan } from '@/lib/cetak'
 import { angka, tanggal } from '@/lib/format'
@@ -48,6 +49,7 @@ const INPUT = 'w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm f
 
 export default function TindakLanjutBatch({ batch, profil, namaApoteker, onTutup, onSelesai }: Props) {
   const { t } = useLang()
+  const { kabar, konfirmasi } = useUmpan()
 
   const [mode, setMode] = useState<'pilih' | 'musnahkan' | 'retur'>('pilih')
   const [sibuk, setSibuk] = useState(false)
@@ -98,25 +100,25 @@ export default function TindakLanjutBatch({ batch, profil, namaApoteker, onTutup
   }, [onTutup])
 
   const tandaiSelesai = async () => {
-    if (!confirm(t(
+    if (!await konfirmasi({ judul: t(
       'Singkirkan pengingat untuk batch ini?\nStok tidak diubah sama sekali, batchnya hanya berhenti muncul di daftar.',
-      'Remove the reminder for this batch?\nStock is not changed at all, the batch just stops appearing in the list.'))) return
+      'Remove the reminder for this batch?\nStock is not changed at all, the batch just stops appearing in the list.')})) return
     setSibuk(true)
     const { error } = await supabase.rpc('abaikan_batch', { p_batch_id: batch.id })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     onSelesai(); onTutup()
   }
 
   const kirimMusnahkan = async () => {
-    if (!musnah.saksi_1.trim()) { alert(t('Saksi pertama wajib diisi.', 'The first witness is required.')); return }
+    if (!musnah.saksi_1.trim()) { kabar(t('Saksi pertama wajib diisi.', 'The first witness is required.')); return }
     setSibuk(true)
     const { data, error } = await supabase.rpc('musnahkan_batch', {
       p_batch_id: batch.id,
       p_data: musnah,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
 
     const ba = data as any
     const ok = bukaCetak(beritaAcaraPemusnahan(profil, {
@@ -133,15 +135,15 @@ export default function TindakLanjutBatch({ batch, profil, namaApoteker, onTutup
       saksi_2: musnah.saksi_2,
     }))
     onSelesai(); onTutup()
-    if (!ok) alert(t(`Pemusnahan tercatat sebagai ${ba?.nomor_ba}, tapi jendela cetak diblokir peramban. Cetak ulang dari Tindak Lanjut.`,
+    if (!ok) kabar(t(`Pemusnahan tercatat sebagai ${ba?.nomor_ba}, tapi jendela cetak diblokir peramban. Cetak ulang dari Tindak Lanjut.`,
                      `Destruction recorded as ${ba?.nomor_ba}, but the print window was blocked. Reprint it from Follow-up.`))
   }
 
   const kirimRetur = async () => {
     const supplierId = retur.supplier_id || supplierBatch?.id
-    if (!supplierId) { alert(t('Pilih supplier dulu.', 'Choose a supplier first.')); return }
+    if (!supplierId) { kabar(t('Pilih supplier dulu.', 'Choose a supplier first.')); return }
     if (retur.qty_retur <= 0 || retur.qty_retur > batch.stok_batch) {
-      alert(t(`Jumlah retur harus antara 1 dan ${batch.stok_batch}.`, `Return quantity must be between 1 and ${batch.stok_batch}.`)); return
+      kabar(t(`Jumlah retur harus antara 1 dan ${batch.stok_batch}.`, `Return quantity must be between 1 and ${batch.stok_batch}.`)); return
     }
     setSibuk(true)
     const { error } = await supabase.from('retur_supplier').insert([{
@@ -150,9 +152,9 @@ export default function TindakLanjutBatch({ batch, profil, namaApoteker, onTutup
       alasan: retur.alasan, status: 'diajukan',
     }])
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     onSelesai(); onTutup()
-    alert(t('Retur diajukan. Stok belum berubah, konfirmasi di Tindak Lanjut, tab Retur, untuk memprosesnya.',
+    kabar(t('Retur diajukan. Stok belum berubah, konfirmasi di Tindak Lanjut, tab Retur, untuk memprosesnya.',
             'Return filed. Stock is unchanged, confirm it in Follow-up, Returns tab, to process it.'))
   }
 

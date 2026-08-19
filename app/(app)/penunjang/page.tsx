@@ -5,6 +5,7 @@ import { Check, FlaskRound, Plus, RefreshCw, Trash2, Zap } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { boleh } from '@/lib/hak'
 import { jam } from '@/lib/format'
@@ -54,6 +55,7 @@ const HASIL_KOSONG: BarisHasil = {
 
 export default function HalamanPenunjang() {
   const { t } = useLang()
+  const { kabar } = useUmpan()
   const app = useApp()
 
   const bolehIsi = boleh(app.currentRole, 'penunjang.hasil', app.isSuper)
@@ -113,7 +115,7 @@ export default function HalamanPenunjang() {
       : null
 
     if (kerja.jenis === 'lab' && selesai && (isi || []).length === 0) {
-      alert(t('Belum ada satu pun parameter yang diisi.', 'No parameter has been filled in yet.'))
+      kabar(t('Belum ada satu pun parameter yang diisi.', 'No parameter has been filled in yet.'))
       return
     }
 
@@ -126,7 +128,7 @@ export default function HalamanPenunjang() {
       p_selesai: selesai,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setKerja(null)
     muat()
   }

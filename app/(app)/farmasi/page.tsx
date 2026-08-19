@@ -5,6 +5,7 @@ import { AlertTriangle, Check, ChevronDown, ChevronRight, HandCoins, HandHelping
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { jam } from '@/lib/format'
 
@@ -56,6 +57,7 @@ const JEDA_SEGAR = 10_000
 
 export default function HalamanFarmasi() {
   const { t } = useLang()
+  const { kabar, konfirmasi, tanya } = useUmpan()
   const app = useApp()
 
   const [daftar, setDaftar] = useState<Resep[]>([])
@@ -87,7 +89,7 @@ export default function HalamanFarmasi() {
 
   const muatIsi = async (resepId: string) => {
     const { data, error } = await supabase.rpc('isi_resep', { p_resep: resepId })
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setItems(x => ({ ...x, [resepId]: (data as any)?.items ?? [] }))
   }
 
@@ -122,7 +124,7 @@ export default function HalamanFarmasi() {
       p_jumlah: null, p_satuan: p.satuan,
     })
     setSibuk(null)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setIsiUntuk(null); setCari(''); setHasil([])
     await muatIsi(resepId)
     muat()
@@ -132,7 +134,7 @@ export default function HalamanFarmasi() {
     setSibuk(r.id)
     const { error } = await supabase.rpc('ubah_status_resep', { p_resep: r.id, p_status: status })
     setSibuk(null)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 
@@ -142,17 +144,17 @@ export default function HalamanFarmasi() {
       // Jalannya ada, tapi harus disengaja dan harus ditulis alasannya.
       // Palang yang tidak bisa dilewati akan diakali dengan cara yang tidak
       // meninggalkan jejak sama sekali: menekan tombol bayar padahal belum.
-      alasan = window.prompt(t(
+      alasan = await tanya({ judul: t(
         'Pembayaran resep ini belum tercatat. Kalau obatnya tetap diserahkan sekarang, tulis alasannya. Alasan ini masuk ke jejak audit.',
-        'Payment for this prescription is not recorded. If you hand it over anyway, state why. This reason goes into the audit trail.'))
+        'Payment for this prescription is not recorded. If you hand it over anyway, state why. This reason goes into the audit trail.')})
       if (alasan === null) return
       if (!alasan.trim()) {
-        alert(t('Alasannya wajib diisi.', 'A reason is required.'))
+        kabar(t('Alasannya wajib diisi.', 'A reason is required.'))
         return
       }
-    } else if (!window.confirm(t(
+    } else if (!await konfirmasi({ judul: t(
         `Serahkan obat ${r.pasien_nama} sekarang?`,
-        `Hand over the medicine for ${r.pasien_nama} now?`))) {
+        `Hand over the medicine for ${r.pasien_nama} now?`)})) {
       return
     }
 
@@ -163,7 +165,7 @@ export default function HalamanFarmasi() {
       p_alasan: alasan,
     })
     setSibuk(null)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { AlertTriangle, Check, Plus, Search, Trash2, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { tanggalJam } from '@/lib/format'
 import { BENTUK_ICD10, cariICD, namaTerbaik, usePencarianICD, KESADARAN, STATUS_PULANG, type SaranICD } from '@/lib/icd10'
@@ -56,6 +57,7 @@ export default function RekamMedis({
   onSimpan: () => void
 }) {
   const { t, lang } = useLang()
+  const { kabar } = useUmpan()
   const en = lang === 'en'
 
   const [isi, setIsi] = useState<Isi | null>(null)
@@ -78,7 +80,7 @@ export default function RekamMedis({
     ;(async () => {
       const { data, error } = await supabase.rpc('rekam_medis', { p_visit: visitId })
       if (batal) return
-      if (error) { alert(pesanError(error)); onTutup(); return }
+      if (error) { kabar(pesanError(error), 'galat'); onTutup(); return }
       const d = data as Isi
       setIsi(d)
       if (d.soap) setSoap({
@@ -126,7 +128,7 @@ export default function RekamMedis({
       p_kunjungan: kunjungan,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     onSimpan()
     onTutup()
   }
@@ -136,7 +138,7 @@ export default function RekamMedis({
     setSibuk(true)
     const { error } = await supabase.rpc('tambah_adendum', { p_visit: visitId, p_isi: adendum })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setAdendum('')
     const { data } = await supabase.rpc('rekam_medis', { p_visit: visitId })
     setIsi(data as Isi)

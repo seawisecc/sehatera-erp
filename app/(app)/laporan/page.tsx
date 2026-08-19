@@ -5,6 +5,7 @@ import { Printer } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD } from '@/lib/ui'
 import { rupiah, angka, tanggalJam } from '@/lib/format'
@@ -32,6 +33,7 @@ const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
 
 export default function HalamanLaporan() {
   const { t } = useLang()
+  const { kabar, konfirmasi } = useUmpan()
   const app = useApp()
 
   const [tab, setTab] = useState<'penjualan' | 'metode' | 'penjamin' | 'sipnap'>('penjualan')
@@ -131,14 +133,14 @@ export default function HalamanLaporan() {
       `Batalkan transaksi ${trx.nomor_transaksi}? Stok obat dan stok batch akan dikembalikan.`,
       `Cancel transaction ${trx.nomor_transaksi}? Product and batch stock will be restored.`,
     )
-    if (!confirm(pesan)) return
+    if (!await konfirmasi({ bahaya: true, tombol: t('Batalkan transaksi', 'Cancel transaction'), judul: pesan })) return
     setSibuk(true)
     const { data, error } = await supabase.rpc('cancel_transaction', { p_transaction_id: trx.id })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
     const catatan = (data as any)?.catatan_pembatalan
-    alert(catatan
+    kabar(catatan
       ? t('Transaksi dibatalkan. ', 'Transaction cancelled. ') + catatan
       : t('Transaksi dibatalkan, stok dikembalikan.', 'Transaction cancelled, stock restored.'))
   }
@@ -156,7 +158,7 @@ export default function HalamanLaporan() {
       supabase.from('products').select('*').eq('kategori', golongan).order('nama_obat')
     )
     if (!prods || prods.length === 0) {
-      alert(t('Belum ada produk berkategori ', 'No products in category ') + golongan + '.')
+      kabar(t('Belum ada produk berkategori ', 'No products in category ') + golongan + '.')
       return
     }
     const ids = prods.map((p: any) => p.id)
@@ -199,7 +201,7 @@ export default function HalamanLaporan() {
     })
 
     const ok = bukaCetak(laporanSipnap(app.settingsData, sipnap, baris), 1200, 800)
-    if (!ok) alert(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
+    if (!ok) kabar(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
   }
 
   const rekap = useMemo(() => {

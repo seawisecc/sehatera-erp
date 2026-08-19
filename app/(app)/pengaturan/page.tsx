@@ -10,6 +10,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { useTheme, ThemePicker } from '@/lib/theme'
 import { pesanError } from '@/lib/session'
 import { menuItems, ROLE_PAGES } from '@/lib/navigation'
@@ -42,6 +43,7 @@ type Tab = typeof TAB_SAH[number]
 
 export default function HalamanPengaturan() {
   const { t, lang } = useLang()
+  const { kabar, konfirmasi } = useUmpan()
   const app = useApp()
   const { theme } = useTheme()
   const router = useRouter()
@@ -112,13 +114,13 @@ export default function HalamanPengaturan() {
       ? await supabase.from('settings').update(payload).eq('id', (ada as any).id)
       : await supabase.from('settings').insert([{ ...payload, ...app.cid() }])
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
-    alert(t('Profil apotek disimpan.', 'Pharmacy profile saved.'))
+    if (error) { kabar(pesanError(error), 'galat'); return }
+    kabar(t('Profil apotek disimpan.', 'Pharmacy profile saved.'))
     app.muatSettings()
   }
 
   const handleLogoUpload = (file: File) => {
-    if (file.size > 4 * 1024 * 1024) { alert(t('Ukuran maksimal 4MB.', 'Maximum size is 4MB.')); return }
+    if (file.size > 4 * 1024 * 1024) { kabar(t('Ukuran maksimal 4MB.', 'Maximum size is 4MB.')); return }
     const reader = new FileReader()
     reader.onload = () => app.setSettingsData({ ...app.settingsData, logo_url: reader.result as string })
     reader.readAsDataURL(file)
@@ -139,7 +141,7 @@ export default function HalamanPengaturan() {
    * apotek yang menjual narkotika dan psikotropika itu bukan detail sepele.
    */
   const handleUndang = async () => {
-    if (!userForm.email.trim()) { alert(t('Email wajib diisi.', 'Email is required.')); return }
+    if (!userForm.email.trim()) { kabar(t('Email wajib diisi.', 'Email is required.')); return }
     setSavingUser(true)
     const { data, error } = await supabase.rpc('buat_undangan', {
       p_email: userForm.email.trim(),
@@ -148,7 +150,7 @@ export default function HalamanPengaturan() {
       p_modules: userForm.modules,
     })
     setSavingUser(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
 
     // Tokennya hanya dikembalikan SEKALI, karena sesudah ini yang tersimpan di
     // database cuma sidiknya. Jadi tautannya ditampilkan sekarang, bukan nanti.
@@ -171,10 +173,10 @@ export default function HalamanPengaturan() {
   useEffect(() => { muatUndangan() }, [muatUndangan])
 
   const cabutUndangan = async (u: any) => {
-    if (!confirm(t(`Cabut undangan untuk ${u.email}? Tautannya langsung tidak bisa dipakai.`,
-                   `Revoke the invitation for ${u.email}? The link stops working immediately.`))) return
+    if (!await konfirmasi({ bahaya: true, tombol: t('Cabut undangan', 'Revoke'), judul: t(`Cabut undangan untuk ${u.email}?`, `Revoke the invitation for ${u.email}?`), pesan: t(`Tautannya langsung tidak bisa dipakai.`,
+                   `Revoke the invitation for ${u.email}? The link stops working immediately.`)})) return
     const { error } = await supabase.rpc('cabut_undangan', { p_id: u.id })
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muatUndangan()
   }
 
@@ -184,7 +186,7 @@ export default function HalamanPengaturan() {
       nama: editUser.nama, role: editUser.role, status: editUser.status,
       modules: Array.isArray(editUser.modules) ? editUser.modules : [],
     }).eq('id', editUser.id)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setEditUser(null)
     fetchUsers()
   }
@@ -203,7 +205,7 @@ export default function HalamanPengaturan() {
   const toggleUserStatus = async (u: any) => {
     const { error } = await supabase.from('app_users')
       .update({ status: u.status === 'aktif' ? 'nonaktif' : 'aktif' }).eq('id', u.id)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     fetchUsers()
   }
 
@@ -216,21 +218,21 @@ export default function HalamanPengaturan() {
    */
   const simpanModeFarmasi = async (mode: string) => {
     if ((app.settingsData.mode_farmasi || 'apotek') === mode) return
-    if (mode === 'instalasi' && !confirm(
+    if (mode === 'instalasi' && !await konfirmasi({ judul: 
       t('Sesudah ini, penyerahan obat yang tidak terikat ke kunjungan pasien akan ditolak. Penjualan bebas di kasir tidak bisa lagi. Lanjutkan?',
-        'After this, dispensing not tied to a patient visit will be rejected. Walk-in sales at the counter will no longer work. Continue?'))) return
+        'After this, dispensing not tied to a patient visit will be rejected. Walk-in sales at the counter will no longer work. Continue?')})) return
     setSibuk(true)
     const { error } = await supabase.rpc('set_mode_farmasi', { p_mode: mode })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     app.setSettingsData({ ...app.settingsData, mode_farmasi: mode })
   }
 
   const handleDeleteUser = async (u: any) => {
-    if (!confirm(t(`Hapus pengguna "${u.nama}"? Akun loginnya tetap ada, tapi ia kehilangan akses ke apotek ini.`,
-                   `Delete user "${u.nama}"? Their login account remains, but they lose access to this pharmacy.`))) return
+    if (!await konfirmasi({ bahaya: true, tombol: t('Hapus pengguna', 'Remove user'), judul: t(`Hapus pengguna "${u.nama}"?`, `Remove "${u.nama}"?`), pesan: t(`Akun loginnya tetap ada, tapi ia kehilangan akses ke apotek ini.`,
+                   `Delete user "${u.nama}"? Their login account remains, but they lose access to this pharmacy.`)})) return
     const { error } = await supabase.from('app_users').delete().eq('id', u.id)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     fetchUsers()
   }
 
@@ -329,7 +331,7 @@ export default function HalamanPengaturan() {
                             if (!app.session?.company) return
                             const { error } = await supabase.from('companies')
                               .update({ theme }).eq('id', app.session.company.id)
-                            alert(error ? pesanError(error)
+                            kabar(error ? pesanError(error)
                               : t('Tema bawaan apotek disimpan.', 'Pharmacy default theme saved.'))
                           }}
                           className="mt-4 px-4 py-2 rounded-lg text-sm font-medium bg-[var(--brand)] text-[var(--on-brand)] hover:bg-[var(--brand-hover)] transition">
@@ -819,7 +821,7 @@ export default function HalamanPengaturan() {
                                   await navigator.clipboard.writeText(undanganBaru.tautan)
                                   setTersalin(true); setTimeout(() => setTersalin(false), 2000)
                                 } catch {
-                                  alert(t('Peramban menolak menyalin. Pilih teksnya lalu salin sendiri.',
+                                  kabar(t('Peramban menolak menyalin. Pilih teksnya lalu salin sendiri.',
                                           'The browser refused to copy. Select the text and copy it manually.'))
                                 }
                               }}
@@ -929,6 +931,7 @@ export default function HalamanPengaturan() {
  */
 function LayarAntrean() {
   const { t } = useLang()
+  const { kabar, konfirmasi } = useUmpan()
   const [token, setToken] = useState<string | null>(null)
   const [sibuk, setSibuk] = useState(false)
   const [tersalin, setTersalin] = useState(false)
@@ -937,7 +940,7 @@ function LayarAntrean() {
     setSibuk(true)
     const { data, error } = await supabase.rpc('token_antrean_saya', { p_putar: putar })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setToken(data as string)
   }
 
@@ -970,7 +973,15 @@ function LayarAntrean() {
               {tersalin ? t('tersalin', 'copied') : t('Salin', 'Copy')}
             </button>
           </div>
-          <button onClick={() => { if (confirm(t('Putar tokennya? Televisi yang sudah terpasang harus dibuka ulang dengan alamat baru.', 'Rotate the token? Any TV already set up must be reopened with the new address.'))) ambil(true) }}
+          <button onClick={async () => {
+              if (await konfirmasi({
+                judul: t('Putar token layar antrean?', 'Rotate the waiting-room token?'),
+                pesan: t('Televisi yang sudah terpasang harus dibuka ulang dengan alamat yang baru, dan alamat lamanya langsung mati.',
+                         'Any TV already set up must be reopened with the new address, and the old one stops working immediately.'),
+                tombol: t('Putar token', 'Rotate token'),
+                bahaya: true,
+              })) ambil(true)
+            }}
             disabled={sibuk}
             className="text-xs text-[var(--ink-faint)] hover:text-red-600 underline underline-offset-2 disabled:opacity-50">
             {t('Putar token', 'Rotate token')}
@@ -994,6 +1005,7 @@ function LayarAntrean() {
  */
 function DaftarAsuransi() {
   const { t } = useLang()
+  const { kabar } = useUmpan()
   const app = useApp()
   const [daftar, setDaftar] = useState<any[]>([])
   const [nama, setNama] = useState('')
@@ -1014,7 +1026,7 @@ function DaftarAsuransi() {
     setSibuk(true)
     const { error } = await supabase.from('insurers').insert([{ nama: n }])
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setNama(''); muat()
   }
 
@@ -1022,7 +1034,7 @@ function DaftarAsuransi() {
     setSibuk(true)
     const { error } = await supabase.from('insurers').update({ aktif: !a.aktif }).eq('id', a.id)
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 

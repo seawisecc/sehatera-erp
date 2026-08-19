@@ -6,6 +6,7 @@ import Portal from '@/components/Portal'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { boleh } from '@/lib/hak'
 import { rupiah, tanggalJam } from '@/lib/format'
@@ -56,6 +57,7 @@ export default function Penunjang({
   onTutup: () => void
 }) {
   const { t, lang } = useLang()
+  const { kabar, tanya } = useUmpan()
   const app = useApp()
 
   const bolehMinta = boleh(app.currentRole, 'penunjang.minta', app.isSuper) && !tertutup
@@ -70,7 +72,7 @@ export default function Penunjang({
   const muat = useCallback(async () => {
     setMemuat(true)
     const { data, error } = await supabase.rpc('penunjang_kunjungan', { p_visit: visitId })
-    if (error) alert(pesanError(error))
+    if (error) kabar(pesanError(error), 'galat')
     setDaftar(((data as Baris[]) || []))
     setMemuat(false)
   }, [visitId])
@@ -104,20 +106,20 @@ export default function Penunjang({
       p_prioritas: form.cito ? 'cito' : 'rutin',
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setBuka(false)
     setForm({ jenis: 'lab', service: '', nama: '', catatan: '', cito: false })
     muat()
   }
 
   const batal = async (b: Baris) => {
-    const alasan = window.prompt(t(`Batalkan permintaan ${b.nama}? Tulis alasannya.`,
-                                   `Cancel ${b.nama}? Write the reason.`))
+    const alasan = await tanya({ judul: t(`Batalkan permintaan ${b.nama}? Tulis alasannya.`,
+                                   `Cancel ${b.nama}? Write the reason.`)})
     if (alasan === null) return
     setSibuk(true)
     const { error } = await supabase.rpc('batal_penunjang', { p_id: b.id, p_alasan: alasan })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 

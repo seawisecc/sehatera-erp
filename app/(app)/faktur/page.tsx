@@ -5,6 +5,7 @@ import { CalendarClock, CreditCard, Printer, Receipt, Wallet } from 'lucide-reac
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { bukaCetak, buktiPembayaranFaktur } from '@/lib/cetak'
 import { TR } from '@/lib/ui'
@@ -38,6 +39,7 @@ const tgl = (v: string | null) =>
 
 export default function HalamanFaktur() {
   const { t } = useLang()
+  const { kabar } = useUmpan()
   const app = useApp()
 
   const [daftar, setDaftar] = useState<Faktur[]>([])
@@ -94,7 +96,7 @@ export default function HalamanFaktur() {
       catatan_bayar: formBayar.catatan_bayar,
     }).eq('id', bayar.id)
     setMenyimpan(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
 
     // Bukti dicetak dari salinan di memori, bukan dari hasil muat ulang: kalau
     // pencetakan menunggu kueri berikutnya, jendela cetak dibuka terlambat dan

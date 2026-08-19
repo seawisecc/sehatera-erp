@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { rupiah } from '@/lib/format'
 
@@ -33,6 +34,7 @@ const FITUR: { kunci: string; label: [string, string]; jenis: 'tier' | 'bool' | 
 
 export default function EditorPaket() {
   const { t, lang } = useLang()
+  const { kabar } = useUmpan()
   const [paket, setPaket] = useState<any[]>([])
   const [edit, setEdit] = useState<any>(null)
   const [sibuk, setSibuk] = useState(false)
@@ -59,7 +61,7 @@ export default function EditorPaket() {
       p_features: edit.features || {},
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setEdit(null)
     muat()
   }

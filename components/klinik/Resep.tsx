@@ -5,6 +5,7 @@ import { AlertTriangle, Check, HandHelping, PackageX, Plus, Search, Trash2, X } 
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { angka, tanggalJam } from '@/lib/format'
 
@@ -61,6 +62,7 @@ export default function Resep({
   onSimpan: () => void
 }) {
   const { t } = useLang()
+  const { kabar, konfirmasi, tanya } = useUmpan()
   const app = useApp()
 
   const [resep, setResep] = useState<any>(null)
@@ -74,7 +76,7 @@ export default function Resep({
 
   const muat = async () => {
     const { data, error } = await supabase.rpc('resep_kunjungan', { p_visit: visitId })
-    if (error) { alert(pesanError(error)); onTutup(); return }
+    if (error) { kabar(pesanError(error), 'galat'); onTutup(); return }
     const d = data as any
     setResep(d.resep)
     setCatatan(d.resep?.catatan || '')
@@ -153,12 +155,12 @@ export default function Resep({
 
   const kirim = async (final: boolean) => {
     if (final && items.length === 0) {
-      alert(t('Resep kosong tidak bisa difinalkan.', 'An empty prescription cannot be finalised.'))
+      kabar(t('Resep kosong tidak bisa difinalkan.', 'An empty prescription cannot be finalised.'))
       return
     }
-    if (final && !confirm(t(
+    if (final && !await konfirmasi({ judul: t(
       'Sesudah difinalkan, isi resep tidak bisa diubah lagi. Koreksi dilakukan dengan membatalkannya lalu menulis ulang. Lanjutkan?',
-      'Once finalised, the prescription cannot be edited. Corrections are made by cancelling and rewriting. Continue?'))) return
+      'Once finalised, the prescription cannot be edited. Corrections are made by cancelling and rewriting. Continue?')})) return
 
     setSibuk(true)
     const { error } = await supabase.rpc('simpan_resep', {
@@ -173,19 +175,19 @@ export default function Resep({
       p_final: final,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     onSimpan()
     if (final) onTutup(); else muat()
   }
 
   const batalkanResep = async () => {
-    const alasan = prompt(t('Batalkan resep ini? Tulis alasannya, dan resep baru bisa ditulis sesudahnya.',
-                            'Cancel this prescription? Write the reason, then a new one can be written.'), '')
+    const alasan = await tanya({ judul: t('Batalkan resep ini? Tulis alasannya, dan resep baru bisa ditulis sesudahnya.',
+                            'Cancel this prescription? Write the reason, then a new one can be written.'), nilai: '' })
     if (alasan === null) return
     setSibuk(true)
     const { error } = await supabase.rpc('batalkan_resep', { p_resep: resep.id, p_alasan: alasan })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     onSimpan()
     setResep(null); setItems([]); setCatatan('')
     muat()

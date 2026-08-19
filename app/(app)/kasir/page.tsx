@@ -5,6 +5,7 @@ import { AlertTriangle, HeartPulse, Search } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
 import { rupiah, angka, tanggalJam } from '@/lib/format'
@@ -54,6 +55,7 @@ type Item = {
 
 export default function HalamanKasir() {
   const { t } = useLang()
+  const { kabar } = useUmpan()
   const app = useApp()
   const scope = app.scope
 
@@ -123,12 +125,12 @@ export default function HalamanKasir() {
 
   const tambahObat = (p: any) => {
     if ((p.stok_total ?? 0) <= 0) {
-      alert(t(`Stok ${p.nama_obat} habis, tidak bisa dijual.`, `${p.nama_obat} is out of stock.`)); return
+      kabar(t(`Stok ${p.nama_obat} habis, tidak bisa dijual.`, `${p.nama_obat} is out of stock.`)); return
     }
     const ada = keranjang.find(k => k.id === p.id)
     if (ada) {
       if (ada.jumlah + 1 > (p.stok_total ?? 0)) {
-        alert(t(`Stok ${p.nama_obat} hanya ${p.stok_total}.`, `Only ${p.stok_total} of ${p.nama_obat} in stock.`)); return
+        kabar(t(`Stok ${p.nama_obat} hanya ${p.stok_total}.`, `Only ${p.stok_total} of ${p.nama_obat} in stock.`)); return
       }
       setKeranjang(keranjang.map(k => k.id === p.id ? { ...k, jumlah: k.jumlah + 1 } : k))
     } else {
@@ -179,16 +181,16 @@ export default function HalamanKasir() {
 
   const proses = async () => {
     if (sibuk) return
-    if (terkunciLangganan) { alert(app.langganan.pesan?.isi || ''); return }
+    if (terkunciLangganan) { kabar(app.langganan.pesan?.isi || ''); return }
     if (terkunciSuper) {
-      alert(t('Pemilih faskes masih menampilkan semua apotek. Pilih satu apotek dulu sebelum transaksi.',
+      kabar(t('Pemilih faskes masih menampilkan semua apotek. Pilih satu apotek dulu sebelum transaksi.',
               'The facility picker still shows all pharmacies. Select one before making a transaction.')); return
     }
-    if (keranjang.length === 0) { alert(t('Keranjang kosong.', 'Cart is empty.')); return }
+    if (keranjang.length === 0) { kabar(t('Keranjang kosong.', 'Cart is empty.')); return }
 
     const lebih = keranjang.find(k => !k.is_jasa && k.jumlah > k.stok_total)
     if (lebih) {
-      alert(t(`Stok ${lebih.nama_obat} tidak cukup: tersedia ${lebih.stok_total}, diminta ${lebih.jumlah}.`,
+      kabar(t(`Stok ${lebih.nama_obat} tidak cukup: tersedia ${lebih.stok_total}, diminta ${lebih.jumlah}.`,
               `Insufficient stock for ${lebih.nama_obat}: ${lebih.stok_total} available, ${lebih.jumlah} requested.`)); return
     }
     // Yang harus ditutup tunai cuma sisanya sesudah dikurangi tagihan
@@ -196,14 +198,14 @@ export default function HalamanKasir() {
     // dan itu sah.
     const harusTunai = Math.max(total - (penjamin === 'umum' ? 0 : ditagihkan), 0)
     if (bayar < harusTunai) {
-      alert(t(`Pembayaran kurang. Pasien harus membayar ${rupiah(harusTunai)}.`,
+      kabar(t(`Pembayaran kurang. Pasien harus membayar ${rupiah(harusTunai)}.`,
               `Payment is short. The patient must pay ${rupiah(harusTunai)}.`)); return
     }
     if (penjamin === 'asuransi' && !asuransiTrx) {
-      alert(t('Pilih dulu asuransinya.', 'Choose the insurer first.')); return
+      kabar(t('Pilih dulu asuransinya.', 'Choose the insurer first.')); return
     }
     if (perluResep && (!pasien.nama_pasien.trim() || !pasien.nomor_resep.trim())) {
-      alert(adaGolongan
+      kabar(adaGolongan
         ? t('Obat golongan Narkotika, Psikotropika, atau Prekursor wajib mencatat nama pasien dan nomor resep.',
              'Narcotics, psychotropics, or precursors require the patient name and prescription number.')
         : t('Transaksi resep wajib mencatat nama pasien dan nomor resep.',
@@ -212,7 +214,7 @@ export default function HalamanKasir() {
     }
 
     if (instalasi && !visitId) {
-      alert(t('Pilih dulu kunjungan pasiennya. Instalasi farmasi hanya melayani pasien fasilitas ini, jadi penyerahan obat harus terikat ke satu kunjungan.',
+      kabar(t('Pilih dulu kunjungan pasiennya. Instalasi farmasi hanya melayani pasien fasilitas ini, jadi penyerahan obat harus terikat ke satu kunjungan.',
               'Choose the patient visit first. A pharmacy installation serves only this facility patients, so dispensing must be tied to a visit.'))
       return
     }
@@ -243,7 +245,7 @@ export default function HalamanKasir() {
       p_company: (app.isSuper && app.superViewCompany) || null,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
 
     // Pembayaran dicatat SESUDAH penjualannya berhasil, tidak sebelumnya.
     // Fungsinya idempoten, jadi aman diulang.
@@ -263,7 +265,7 @@ export default function HalamanKasir() {
         p_resep: resepId, p_transaksi: (data as any)?.id ?? null,
       })
       if (e2) {
-        alert(t('Penjualan tersimpan, tapi pembayaran resepnya gagal dicatat. Layar Farmasi akan tetap menampilkannya sebagai BELUM BAYAR, jadi obatnya bisa tertahan. Beri tahu saya kalau ini terjadi.',
+        kabar(t('Penjualan tersimpan, tapi pembayaran resepnya gagal dicatat. Layar Farmasi akan tetap menampilkannya sebagai BELUM BAYAR, jadi obatnya bisa tertahan. Beri tahu saya kalau ini terjadi.',
                 'The sale was saved, but the prescription payment could not be recorded. The Pharmacy screen will still show it as UNPAID, so the medicine may be held back.')
               + '\n\n' + pesanError(e2))
       }
@@ -279,7 +281,7 @@ export default function HalamanKasir() {
 
   const cetakStruk = () => {
     const ok = bukaCetak(strukPenjualan(app.settingsData, struk, strukItems), 350, 600)
-    if (!ok) alert(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
+    if (!ok) kabar(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
   }
 
   /**
@@ -333,7 +335,7 @@ export default function HalamanKasir() {
    */
   const muatTagihan = async (r: any) => {
     const { data, error } = await supabase.rpc('tagihan_kunjungan', { p_visit: r.visit_id })
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     const d = data as any
     const masuk: Item[] = []
     const lewat: string[] = []
@@ -380,7 +382,7 @@ export default function HalamanKasir() {
       nomor_resep: r.nomor || x.nomor_resep,
     }))
     if (lewat.length) {
-      alert(t(`Tidak semua obat masuk keranjang:\n\n${lewat.join('\n')}\n\nSisanya perlu ditangani di luar aplikasi.`,
+      kabar(t(`Tidak semua obat masuk keranjang:\n\n${lewat.join('\n')}\n\nSisanya perlu ditangani di luar aplikasi.`,
               `Not everything went into the cart:\n\n${lewat.join('\n')}\n\nThe rest needs handling outside the app.`))
     }
   }
@@ -563,7 +565,7 @@ export default function HalamanKasir() {
                           className="w-14 text-center text-sm border border-[var(--line)] rounded px-1 py-0.5 num focus:outline-none focus:ring-1 focus:ring-[var(--brand)]" />
                         <button onClick={() => {
                           if (!item.is_jasa && item.jumlah + 1 > item.stok_total) {
-                            alert(t(`Stok ${item.nama_obat} hanya ${item.stok_total}.`, `Only ${item.stok_total} of ${item.nama_obat} in stock.`)); return
+                            kabar(t(`Stok ${item.nama_obat} hanya ${item.stok_total}.`, `Only ${item.stok_total} of ${item.nama_obat} in stock.`)); return
                           }
                           ubahJumlah(item.id, item.jumlah + 1)
                         }}

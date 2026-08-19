@@ -6,6 +6,7 @@ import { AlertTriangle, Search } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD, KATEGORI_BADGE } from '@/lib/ui'
 import { rupiah, angka } from '@/lib/format'
@@ -43,6 +44,7 @@ const FORM_KOSONG = {
 
 export default function HalamanProduk() {
   const { t } = useLang()
+  const { kabar } = useUmpan()
   const app = useApp()
   const scope = app.scope
 
@@ -102,11 +104,11 @@ export default function HalamanProduk() {
   }, [produk, cari, fKategori, fStok, fStatus])
 
   const simpanBaru = async () => {
-    if (!form.nama_obat.trim()) { alert(t('Nama obat wajib diisi.', 'Drug name is required.')); return }
+    if (!form.nama_obat.trim()) { kabar(t('Nama obat wajib diisi.', 'Drug name is required.')); return }
     setSibuk(true)
     const { error } = await supabase.from('products').insert([{ ...form, ...app.cid() }])
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setFormBuka(false)
     setForm(FORM_KOSONG)
     muat()
@@ -130,7 +132,7 @@ export default function HalamanProduk() {
     } else {
       const { error } = await supabase.from('product_suppliers')
         .insert([{ product_id: edit.id, supplier_id: supplierId, ...app.cid() }])
-      if (error) { alert(pesanError(error)); return }
+      if (error) { kabar(pesanError(error), 'galat'); return }
     }
     const { data } = await supabase.from('product_suppliers').select('*, suppliers(*)').eq('product_id', edit.id)
     setEditSuppliers(data || [])
@@ -138,7 +140,7 @@ export default function HalamanProduk() {
 
   const simpanEdit = async () => {
     if (!edit) return
-    if (!String(edit.nama_obat || '').trim()) { alert(t('Nama obat wajib diisi.', 'Drug name is required.')); return }
+    if (!String(edit.nama_obat || '').trim()) { kabar(t('Nama obat wajib diisi.', 'Drug name is required.')); return }
     setSibuk(true)
     const { error } = await supabase.from('products').update({
       nama_obat: edit.nama_obat, nama_generik: edit.nama_generik,
@@ -147,7 +149,7 @@ export default function HalamanProduk() {
       stok_minimum: edit.stok_minimum,
     }).eq('id', edit.id)
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setEdit(null); setEditSuppliers([]); setCariSupplier('')
     muat()
     if (detail && detail.id === edit.id) setDetail({ ...detail, ...edit })

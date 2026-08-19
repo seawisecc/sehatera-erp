@@ -6,6 +6,7 @@ import Portal from '@/components/Portal'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { tanggalJam } from '@/lib/format'
 
@@ -62,6 +63,7 @@ const SISTEM = ['satusehat', 'bpjs_pcare', 'bpjs_vclaim'] as const
 
 export default function SistemNasional() {
   const { t } = useLang()
+  const { kabar } = useUmpan()
   const app = useApp()
 
   const [daftar, setDaftar] = useState<Baris[]>([])
@@ -112,7 +114,7 @@ export default function SistemNasional() {
       p_company: app.superViewCompany || null,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setForm(null)
     muat()
   }

@@ -6,6 +6,7 @@ import Portal from '@/components/Portal'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 
 /**
@@ -43,6 +44,7 @@ const KOSONG = { unit_id: '', dokter_email: '', hari: [] as number[], jam_mulai:
 
 export default function JadwalPraktik() {
   const { t } = useLang()
+  const { kabar } = useUmpan()
   const app = useApp()
 
   const [poli, setPoli] = useState<any[]>([])
@@ -89,7 +91,7 @@ export default function JadwalPraktik() {
     }))
     const { error } = await supabase.from('doctor_schedules').insert(baris)
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setForm(null)
     muat()
   }
@@ -98,7 +100,7 @@ export default function JadwalPraktik() {
     setSibuk(true)
     const { error } = await supabase.from('doctor_schedules').delete().eq('id', j.id)
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 

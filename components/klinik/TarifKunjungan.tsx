@@ -5,6 +5,7 @@ import { Check, Plus, Search, Trash2, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { rupiah } from '@/lib/format'
 
@@ -50,6 +51,7 @@ export default function TarifKunjungan({
   onSimpan: () => void
 }) {
   const { t, lang } = useLang()
+  const { kabar } = useUmpan()
   const app = useApp()
   const en = lang === 'en'
 
@@ -67,7 +69,7 @@ export default function TarifKunjungan({
         app.scope(supabase.from('services').select('id,nama,harga').eq('status', 'aktif').order('nama')),
       ])
       if (batal) return
-      if (tag.error) { alert(pesanError(tag.error)); onTutup(); return }
+      if (tag.error) { kabar(pesanError(tag.error), 'galat'); onTutup(); return }
       setItems((((tag.data as any)?.biaya || []) as any[]).map(x => ({
         jenis: x.jenis, service_id: x.service_id, nama: x.nama,
         jumlah: String(Number(x.jumlah)), harga: String(Number(x.harga)),
@@ -116,7 +118,7 @@ export default function TarifKunjungan({
       })),
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     onSimpan()
     onTutup()
   }

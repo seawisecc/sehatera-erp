@@ -830,6 +830,34 @@ pengirimannya sudah jalan. Layarnya mengatakan ini apa adanya.
 sesudah `INSERT ... ON CONFLICT DO NOTHING`, tapi ia harus ditangkap ke variabel
 sebelum SELECT berikutnya menimpanya. Ditemukan uji, bukan saat membacanya.
 
+## Tidak ada `alert`, `confirm`, atau `prompt` di aplikasi ini
+
+Semuanya lewat `components/Umpan.tsx`: `kabar()`, `konfirmasi()`, `tanya()`.
+Dulu ada 139 kotak bawaan peramban, dan empat hal salah dengannya. Tampilannya
+milik sistem operasi, bukan milik aplikasi: kotak abu-abu bertuliskan
+"localhost says" adalah satu-satunya bagian yang membuat orang berhenti
+mengira ini perangkat lunak yang dibeli. Ia MEMBEKUKAN seluruh peramban, jadi
+kasir yang mendapat kotak galat tidak bisa menggulung struk di belakangnya
+untuk memeriksa apa yang salah. Tombolnya selalu "OK" walau yang akan terjadi
+adalah menghapus data. Dan karena tiap kejadian menuntut satu klik, orang
+menekan OK tanpa membaca, lalu kejadian berikutnya yang penting ikut ditekan
+OK juga.
+
+- `kabar(teks, 'galat' | 'ok' | 'info')` menumpuk di pojok dan hilang sendiri.
+  Yang berupa galat bertahan lebih lama karena kalimat penolakan di aplikasi
+  ini panjang: ia menyebutkan apa yang harus dilakukan orangnya.
+- `konfirmasi({ judul, pesan, tombol, bahaya })` untuk ya/tidak. **Tombolnya
+  menyebut tindakannya** ("Hapus", "Batalkan PO") dan merah kalau merusak.
+- `tanya({ judul, label, wajib })` untuk satu baris jawaban, misalnya alasan
+  pembatalan.
+
+Ketiganya mengembalikan Promise, jadi bentuk pemanggilnya sama seperti yang
+digantikan: `if (!await konfirmasi({...})) return`.
+
+**Jangan menambahkan `alert`/`confirm`/`prompt` baru.** Selain alasan di atas,
+kotak bawaan peramban juga membekukan automasi peramban, dan itu sudah dua kali
+menghentikan sesi kerja di tengah jalan.
+
 ## Rujukan internal: SATU kunjungan yang berpindah poli
 
 Migrasi 0060. Pasien yang diperiksa dokter umum lalu dirujuk ke spesialis di

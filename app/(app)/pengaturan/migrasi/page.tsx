@@ -6,6 +6,7 @@ import { ArrowLeft, ClipboardList, Download, PackageOpen, Pill, Receipt, Truck, 
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { parseCSV, unduhCSV } from '@/lib/csv'
 
 /**
@@ -18,6 +19,7 @@ import { parseCSV, unduhCSV } from '@/lib/csv'
  */
 export default function HalamanMigrasi() {
   const { t } = useLang()
+  const { kabar } = useUmpan()
   const app = useApp()
 
   const [importInfo, setImportInfo] = useState<Record<string, string>>({})
@@ -226,7 +228,7 @@ export default function HalamanMigrasi() {
                 <Upload size={14} /> {importing === c.key ? t('Mengimpor…', 'Importing…') : t('Upload CSV', 'Upload CSV')}
                 <input type="file" accept=".csv,text/csv" className="hidden"
                   onChange={e => {
-                    if (app.isSuper && !migrasiCompany) { alert(t('Pilih apotek tujuan dulu di atas.', 'Select a target pharmacy above first.')); e.target.value = ''; return }
+                    if (app.isSuper && !migrasiCompany) { kabar(t('Pilih apotek tujuan dulu di atas.', 'Select a target pharmacy above first.')); e.target.value = ''; return }
                     if (e.target.files?.[0]) { c.onUpload(e.target.files[0]); e.target.value = '' }
                   }} />
               </label>
@@ -246,7 +248,7 @@ export default function HalamanMigrasi() {
         <p className="text-xs text-[var(--ink-soft)] mb-3">{t('Unduh data apotek saat ini ke CSV.', 'Download current pharmacy data to CSV.')}</p>
         <div className="flex flex-wrap gap-2">
           {([['Produk', exportProduk], ['Supplier', exportSupplier], ['Stok / Batch', exportStok], ['Transaksi', exportTransaksi], ['Faktur', exportFaktur]] as const).map(([label, fn]) => (
-            <button key={label} onClick={() => { if (app.isSuper && !migrasiCompany) return alert(t('Pilih apotek tujuan dulu di atas.', 'Select a target pharmacy above first.')); (fn as () => void)() }}
+            <button key={label} onClick={() => { if (app.isSuper && !migrasiCompany) return kabar(t('Pilih apotek tujuan dulu di atas.', 'Select a target pharmacy above first.')); (fn as () => void)() }}
               className="inline-flex items-center gap-2 border border-[var(--line)] text-[var(--brand)] px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-[var(--surface-2)] transition"><Download size={14} /> {t('Export', 'Export')} {label}</button>
           ))}
         </div>

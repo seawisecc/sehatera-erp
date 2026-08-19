@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TR } from '@/lib/ui'
 
@@ -36,6 +37,7 @@ const FORM_KOSONG = { nama_supplier: '', jenis: 'PBF', alamat: '', telepon: '', 
 
 export default function HalamanSupplier() {
   const { t } = useLang()
+  const { kabar } = useUmpan()
   const app = useApp()
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
@@ -56,13 +58,13 @@ export default function HalamanSupplier() {
 
   const simpan = async () => {
     if (!form.nama_supplier.trim()) {
-      alert(t('Nama supplier wajib diisi', 'Supplier name is required'))
+      kabar(t('Nama supplier wajib diisi', 'Supplier name is required'))
       return
     }
     setSimpanan(true)
     const { error } = await supabase.from('suppliers').insert([{ ...form, ...app.cid() }])
     setSimpanan(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setShowForm(false)
     setForm(FORM_KOSONG)
     muat()

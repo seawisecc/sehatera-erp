@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TH_R, TR } from '@/lib/ui'
 import { rupiah, tanggal, tanggalInput } from '@/lib/format'
@@ -24,6 +25,7 @@ type Status = 'active' | 'trial' | 'suspended' | 'inactive'
 
 export default function HalamanKlien() {
   const { t } = useLang()
+  const { kabar, konfirmasi } = useUmpan()
   const app = useApp()
 
   const [plans, setPlans] = useState<any[]>([])
@@ -85,11 +87,11 @@ export default function HalamanKlien() {
       ? t('\n\nKasir apotek ini langsung berhenti bisa menjual.',
            '\n\nThis pharmacy cashier stops being able to sell immediately.')
       : ''
-    if (!confirm(`${aksi} ${t('faskes', 'facility')} "${c.nama}"?${ingat}`)) return
+    if (!await konfirmasi({ bahaya: true, tombol: aksi, judul: `${aksi} ${t('faskes', 'facility')} "${c.nama}"?`, pesan: ingat.trim() || undefined })) return
     setSibuk(true)
     const { error } = await supabase.rpc('set_company_status', { p_company: c.id, p_status: next })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     app.muatCompanies()
   }
 
@@ -111,13 +113,13 @@ export default function HalamanKlien() {
       p_sampai: tanpaBatas ? null : (tanggalAktif || null),
       p_tanpa_batas: tanpaBatas,
     })
-    if (error) { setSimpanan(false); alert(pesanError(error)); return }
+    if (error) { setSimpanan(false); kabar(pesanError(error), 'galat'); return }
 
     if (sektor !== (edit.sektor || 'apotek')) {
       const { error: eSektor } = await supabase.rpc('set_company_sektor', {
         p_company: edit.id, p_sektor: sektor,
       })
-      if (eSektor) { setSimpanan(false); alert(pesanError(eSektor)); return }
+      if (eSektor) { setSimpanan(false); kabar(pesanError(eSektor), 'galat'); return }
     }
     setSimpanan(false)
     setEdit(null)

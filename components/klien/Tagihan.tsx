@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
 import { rupiah, tanggal } from '@/lib/format'
@@ -31,6 +32,7 @@ const WARNA: Record<string, string> = {
 
 export default function Tagihan() {
   const { t } = useLang()
+  const { kabar, tanya } = useUmpan()
   const app = useApp()
 
   const [baris, setBaris] = useState<any[]>([])
@@ -62,40 +64,40 @@ export default function Tagihan() {
   const totalBelum = belum.reduce((a, b) => a + (b.jumlah || 0), 0)
 
   const terbitkan = async () => {
-    if (!terbit?.company) { alert(t('Pilih faskes dulu.', 'Choose a facility first.')); return }
+    if (!terbit?.company) { kabar(t('Pilih faskes dulu.', 'Choose a facility first.')); return }
     setSibuk(true)
     const { data, error } = await supabase.rpc('terbitkan_tagihan', {
       p_company: terbit.company,
       p_siklus: terbit.siklus,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setTerbit(null)
     muat()
-    alert(`${t('Tagihan', 'Invoice')} ${(data as any)?.nomor} ${t('diterbitkan.', 'issued.')}`)
+    kabar(`${t('Tagihan', 'Invoice')} ${(data as any)?.nomor} ${t('diterbitkan.', 'issued.')}`)
   }
 
   const lunasi = async (b: any) => {
-    const metode = prompt(t('Dibayar lewat apa? (transfer, tunai, QRIS)', 'Paid by what? (transfer, cash, QRIS)'), 'transfer')
+    const metode = await tanya({ judul: t('Dibayar lewat apa? (transfer, tunai, QRIS)', 'Paid by what? (transfer, cash, QRIS)'), nilai: 'transfer' })
     if (metode === null) return
-    const referensi = prompt(t('Nomor referensi atau bukti transfer (boleh kosong)', 'Reference or transfer proof number (optional)'), '') ?? ''
+    const referensi = await tanya({ judul: t('Nomor referensi atau bukti transfer (boleh kosong)', 'Reference or transfer proof number (optional)'), nilai: '' }) ?? ''
     setSibuk(true)
     const { error } = await supabase.rpc('lunasi_tagihan', {
       p_invoice: b.id, p_metode: metode, p_referensi: referensi,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
     app.muatCompanies()
   }
 
   const batalkan = async (b: any) => {
-    const alasan = prompt(t(`Batalkan tagihan ${b.nomor}? Tulis alasannya.`, `Cancel invoice ${b.nomor}? Write the reason.`), '')
+    const alasan = await tanya({ judul: t(`Batalkan tagihan ${b.nomor}? Tulis alasannya.`, `Cancel invoice ${b.nomor}? Write the reason.`), nilai: '' })
     if (alasan === null) return
     setSibuk(true)
     const { error } = await supabase.rpc('batalkan_tagihan', { p_invoice: b.id, p_alasan: alasan })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 

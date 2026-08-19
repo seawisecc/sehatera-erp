@@ -8,6 +8,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { rupiah, tanggal, tanggalJam } from '@/lib/format'
 import FormPasien, { type Pasien } from '@/components/klinik/FormPasien'
@@ -88,6 +89,7 @@ const bolehPanggil = (status: string) =>
 
 export default function HalamanKunjungan() {
   const { t, lang } = useLang()
+  const { kabar, tanya } = useUmpan()
   const app = useApp()
 
   const [antrean, setAntrean] = useState<Antrean[]>([])
@@ -251,7 +253,7 @@ export default function HalamanKunjungan() {
       p_nomor_penjamin: nomorPolis.trim() || null,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     setBukaDaftar(false); setCariPasien(''); setHasilPasien([]); setPasienDipilih(null)
     setDokterDipilih(''); setPenjaminDipilih(''); setAsuransiDipilih(''); setNomorPolis('')
     setPilih((data as any)?.id ?? null)
@@ -263,7 +265,7 @@ export default function HalamanKunjungan() {
     setSibuk(true)
     const { error } = await supabase.rpc('panggil_antrean', { p_visit: id })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 
@@ -279,7 +281,7 @@ export default function HalamanKunjungan() {
       p_visit: aktif.id, p_status: status, p_alasan: alasan ?? null,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 
@@ -290,14 +292,14 @@ export default function HalamanKunjungan() {
       p_visit: aktif.id, p_email: email || null,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return }
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 
   const batalkan = async () => {
     if (!aktif) return
-    const alasan = prompt(t(`Batalkan kunjungan ${aktif.pasien_nama}? Tulis alasannya.`,
-                            `Cancel the visit for ${aktif.pasien_nama}? Write the reason.`), '')
+    const alasan = await tanya({ judul: t(`Batalkan kunjungan ${aktif.pasien_nama}? Tulis alasannya.`,
+                            `Cancel the visit for ${aktif.pasien_nama}? Write the reason.`), nilai: '' })
     if (alasan === null) return
     await pindah('batal', alasan)
   }
@@ -309,7 +311,7 @@ export default function HalamanKunjungan() {
       p_company: (app.isSuper && app.superViewCompany) || null,
     })
     setSibuk(false)
-    if (error) { alert(pesanError(error)); return false }
+    if (error) { kabar(pesanError(error), 'galat'); return false }
     setFormPasien(undefined)
     // Pasien BARU pun lewat langkah memeriksa yang sama, bukan langsung
     // diterbitkan nomor antreannya. Justru pasien baru yang paling sering
