@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
-  ArrowLeft, Building2, Check, ChevronRight, CreditCard, Database,
+  ArrowLeft, Building2, Check, ChevronRight, CreditCard, Database, KeyRound,
   LayoutGrid, Pencil, Pill, ScrollText, Send, ShieldCheck, Stethoscope, Trash2,
   Upload, UserPlus, Users,
 } from 'lucide-react'
@@ -17,6 +17,7 @@ import { tanggal, rupiah } from '@/lib/format'
 import JejakAudit from '@/components/JejakAudit'
 import PengaturanPoli from '@/components/klinik/PengaturanPoli'
 import JadwalPraktik from '@/components/klinik/JadwalPraktik'
+import SistemNasional from '@/components/klinik/SistemNasional'
 
 /**
  * Pengaturan: profil apotek, pengguna, data apoteker, tampilan, langganan.
@@ -36,7 +37,7 @@ import JadwalPraktik from '@/components/klinik/JadwalPraktik'
  * 3. Nonaktifkan dan hapus pengguna tidak pernah melaporkan kegagalan.
  */
 
-const TAB_SAH = ['profil', 'pengguna', 'poli', 'apoteker', 'tampilan', 'langganan', 'jejak'] as const
+const TAB_SAH = ['profil', 'pengguna', 'poli', 'apoteker', 'nasional', 'tampilan', 'langganan', 'jejak'] as const
 type Tab = typeof TAB_SAH[number]
 
 export default function HalamanPengaturan() {
@@ -251,6 +252,10 @@ export default function HalamanPengaturan() {
     ...(klinik ? [{ id: 'poli', label: t('Poli & Dokter', 'Units & Doctors'), desc: t('Ruang periksa, deret antrean', 'Exam rooms, queue series'), Icon: Stethoscope }] : []),
     { id: 'apoteker',  label: klinik ? t('Farmasi & Penanggung Jawab', 'Pharmacy & Person in Charge') : t('Data Apoteker', 'Pharmacist Data'),
       desc: klinik ? t('Bentuk farmasi, SIPA', 'Pharmacy form, SIPA') : t('SIA, SIPA, penanggung jawab', 'SIA, SIPA, responsible person'), Icon: ShieldCheck },
+    // Cuma klinik dan rumah sakit. Apotek tidak mengirim Encounter ke
+    // SatuSehat, jadi menawarkan kotak kredensialnya berarti menawarkan
+    // sesuatu yang tidak akan pernah dipakai.
+    ...(klinik ? [{ id: 'nasional', label: t('SatuSehat & BPJS', 'SatuSehat & BPJS'), desc: t('Kredensial dan antrean kirim', 'Credentials and send queue'), Icon: KeyRound }] : []),
     { id: 'tampilan',  label: t('Tampilan', 'Appearance'),              desc: t('Tema warna aplikasi', 'App colour theme'),                  Icon: LayoutGrid },
     { id: 'langganan', label: t('Langganan', 'Subscription'),           desc: t('Paket, masa aktif, kuota', 'Plan, validity, quota'),        Icon: CreditCard },
     { id: 'jejak',     label: t('Jejak Audit', 'Audit Trail'),          desc: t('Siapa melakukan apa, kapan', 'Who did what, and when'),      Icon: ScrollText },
@@ -545,6 +550,8 @@ export default function HalamanPengaturan() {
                       <LayarAntrean />
                     </div>
                   )}
+
+                  {tab === 'nasional' && <SistemNasional />}
 
                   {tab === 'apoteker' && (
                     <div className="max-w-md">

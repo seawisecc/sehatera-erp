@@ -90,6 +90,9 @@ memasang lubang keamanan yang sudah ditutup.
 | `0052_apply_transaction_jalur_admin` | Gerbang `apply_transaction` pindah ke `boleh_admin_platform()` supaya pembayaran bisa diuji |
 | `0053_laporan_penjamin_jalur_admin` | `laporan_penjamin()` menerima faskes: super admin melihat angka klien, bukan angka sendiri |
 | `0054_reservasi` | `doctor_schedules`, `reservations`, kuota per sesi, `hadirkan_reservasi()` |
+| `0055_kredensial_faskes` | Kredensial per faskes di Supabase Vault; tabelnya tanpa policy |
+| `0056_antrean_kirim` | `outbound_messages`: idempoten, mundur berlipat, menyerah itu keadaan |
+| `0057_antre_kirim_penanda_baru` | `found` ditangkap sebelum SELECT menimpanya |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -680,7 +683,7 @@ menarik:
 | 3 | Layar antrean ruang tunggu + panggilan suara | **selesai** (migrasi 0041..0044) |
 | 4 | ICD-10 resmi dan ICD-9-CM untuk tindakan | **selesai** (migrasi 0025..0029) |
 | 5 | Reservasi | **selesai** (migrasi 0054) |
-| 6 | Kirim ke SatuSehat dan BPJS | **berikutnya**, tertahan kredensial |
+| 6 | Kirim ke SatuSehat dan BPJS | prasyaratnya **selesai** (0055, 0056); pengirimannya tertahan kredensial |
 
 ### Hak akses per sub-modul: SELESAI (migrasi 0039)
 
@@ -754,11 +757,81 @@ Kolom `settings` baru yang lupa didaftarkan di sana akan tersimpan diam-diam
 sebagai tidak berubah, tanpa pesan galat apa pun. Tiap kali menambah kolom
 `settings`, daftarkan juga di `payload` fungsi itu.
 
+## Kredensial sistem nasional: Vault, dan tabel tanpa policy
+
+Migrasi 0055. Kredensial SatuSehat dan BPJS diberikan **per faskes**, jadi
+menyimpannya polos di `settings` berarti satu kebocoran RLS, satu ekspor CSV
+yang salah kolom, atau satu backup yang tercecer membocorkan kunci SEMUA klinik
+sekaligus, dan kunci itu membuka data pasien di sistem nasional.
+
+- **Rahasianya di Supabase Vault** (`vault.create_secret` / `vault.update_secret`,
+  ekstensi `supabase_vault` 0.3.1, sudah terpasang). Yang tersimpan di
+  `faskes_credentials` cuma `secret_id`. Kuncinya di luar tabel, jadi `pg_dump`
+  cuma menghasilkan sandi. Enkripsi yang kuncinya ikut tersimpan di sebelahnya
+  bukan enkripsi.
+- **`faskes_credentials` sengaja TIDAK punya policy sama sekali**, jadi
+  PostgREST tidak bisa membacanya untuk siapa pun. Alasannya aturan lama
+  project ini: RLS menyaring BARIS, bukan KOLOM. Policy apa pun yang
+  mengizinkan pemilik melihat daftar kredensialnya otomatis mengizinkan ia
+  membaca `secret_id`. Jalan masuknya cuma tiga fungsi, masing-masing memberi
+  persis satu hal.
+- **`ambil_kredensial()` dicabut dari `authenticated`.** Ia satu-satunya yang
+  mengembalikan rahasianya. Kunci anon ada di dalam peramban tiap pengguna;
+  kalau fungsi ini terbuka, Vault berhenti berarti apa pun.
+- **Tidak ada jalan membaca balik dari layar, dan itu disengaja.** Yang bisa
+  dibaca balik akan dibaca balik, dan yang tampil di layar akan difoto. Kalau
+  kredensialnya hilang, jalannya mengambil yang baru dari portalnya.
+- Nama secret di Vault deterministik (`sehatera:<company>:<sistem>:<lingkungan>`)
+  supaya pemasangan ulang MENGGANTI, bukan menumpuk penunjuk yang tidak ada lagi
+  yang tahu masih dipakai atau tidak.
+
+**Panggil fungsi Vault dengan nama skema di depan.** `security definer` di sini
+mengunci `search_path = public, pg_temp`, jadi apa pun di luar itu tidak
+terlihat kalau tidak disebut skemanya. Ini persis kesalahan migrasi 0043.
+
+## Antrean kirim: idempoten, dan menyerah itu keadaan
+
+Migrasi 0056, bentuknya mengikuti `webhook_events` dari 0013.
+
+**Antrean, bukan kirim langsung saat kejadiannya.** Kalau HTTP-nya dipanggil
+saat kunjungan ditutup, dokter yang menekan Selesai ikut menunggu jaringan
+Kemenkes, dan kalau gagal, kunjungan itu tidak pernah terkirim tanpa ada yang
+tahu.
+
+- **Kunci idempoten dibuat PEMANGGIL**, bukan database. Kunjungan yang ditutup,
+  dibuka lagi, lalu ditutup lagi harus tetap satu kiriman.
+- **Payload disimpan sebagai cuplikan**, bukan dibangun ulang saat kirim. Kalau
+  dibangun ulang, perbaikan kode bulan depan diam-diam mengubah isi kiriman
+  yang sudah antre minggu lalu. Alasan yang sama dengan
+  `transaction_item_batches` di 0009.
+- **TIGA keadaan: `antre`, `terkirim`, `ditinggalkan`.** Yang gagal kembali ke
+  `antre` dengan jeda berlipat, dan `percobaan > 0` yang membedakannya dari yang
+  belum pernah dicoba. Keadaan "gagal" yang toh akan dicoba lagi cuma membuat
+  orang mengira ia berhenti.
+- **`percobaan` dinaikkan saat DIAMBIL, bukan saat gagal.** Pengirim yang mati
+  di tengah tidak sempat melapor, dan baris yang selalu membunuh pengirimnya
+  akan dicoba selamanya kalau hitungannya menunggu laporan.
+- Policy-nya cuma SELECT. Kalau INSERT/UPDATE ikut terbuka, siapa pun yang tahu
+  alamatnya bisa menandai kirimannya sendiri "terkirim".
+
+**Yang sengaja BELUM ada: pemanggil yang mengisi antreannya.** Bentuk payload
+FHIR harus dicocokkan ke dokumen resmi yang berlaku saat kredensialnya ada.
+Mengisi antrean dengan payload yang belum diverifikasi cuma menumpuk ribuan
+baris yang harus dibuang ulang, dan lebih buruk: membuat orang mengira
+pengirimannya sudah jalan. Layarnya mengatakan ini apa adanya.
+
+**`found` menjawab pernyataan TERAKHIR.** Migrasi 0057 lahir karena penanda
+`baru` di `antre_kirim` dihitung dari isi barisnya (`percobaan = 0 and status =
+'antre'`), yang juga benar untuk baris yang sudah ada. Jawabannya ada di `found`
+sesudah `INSERT ... ON CONFLICT DO NOTHING`, tapi ia harus ditangkap ke variabel
+sebelum SELECT berikutnya menimpanya. Ditemukan uji, bukan saat membacanya.
+
 ## Yang belum ada
 
-Pengiriman ke SatuSehat dan BPJS (bentuk datanya sudah siap, kredensialnya
-belum), pemetaan obat ke kode KFA, penyimpanan kredensial terenkripsi per
-tenant, dan antrean kirim ulang yang idempoten (pola `webhook_events`).
+Pengiriman ke SatuSehat dan BPJS: bentuk datanya siap, tempat menyimpan
+kredensialnya siap (0055), mesin antreannya siap (0056). Yang belum ada adalah
+pembangun payload FHIR-nya dan kredensial faskesnya sendiri. Juga belum:
+pemetaan obat ke kode KFA.
 
 Pemeriksaan interaksi obat **sengaja tidak dibuat**: butuh basis data interaksi
 terpelihara, dan yang setengah benar lebih berbahaya daripada tidak ada karena
