@@ -80,6 +80,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0042_antrean_bawa_panggilan` | `dipanggil_pada` & `jumlah_panggil` masuk ke `v_antrean_hari_ini` |
 | `0043_token_tanpa_pgcrypto` | Token dibuat dari `gen_random_uuid()`, bukan pgcrypto |
 | `0044_samaran_nama_bali` | `samarkan_nama()` mengerti penanda I, Ni, Ida, Sri |
+| `0045_tagihan_ikut_keadaan_resep` | `tagihan_kunjungan()` mengenal `disiapkan`/`siap`: obat kembali muncul di kasir |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -485,7 +486,13 @@ nilai itu. **Baris `dilayani` sebelum migrasi 0035 `dilayani_pada`-nya adalah
 waktu BAYAR, bukan waktu serah.** Tidak bisa diperbaiki surut.
 
 **Menambah nilai status berarti memeriksa tiap tempat yang menyebut nilai
-lama.** Migrasi 0036 lahir persis karena itu terlewat: `resep_kunjungan()`
+lama.** Pola ini sudah menggigit EMPAT kali: migrasi 0036 (`resep_kunjungan`),
+0042 (`v_antrean_hari_ini`), dan 0045 (`tagihan_kunjungan`, yang membuat obat
+hilang dari kasir dan baru ketahuan saat pemilik menjalankan satu pasien dari
+pendaftaran sampai bayar). Yang keempat lolos dari SEMUA uji karena tidak ada
+satu pun uji yang menjalankan satu kunjungan utuh melintasi modul. **Uji per
+migrasi tidak menggantikan satu uji yang menjalankan satu pasien dari
+pendaftaran sampai selesai.** Migrasi 0036 lahir persis karena itu terlewat: `resep_kunjungan()`
 menyaring daftar harfiah tiga status, jadi resep yang sedang disiapkan farmasi
 hilang dari layar dokter. Daftar harfiah tidak pernah mengeluh saat
 ketinggalan.
