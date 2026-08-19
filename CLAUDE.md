@@ -408,6 +408,24 @@ Kasir menekan Proses dengan bayar nol dan seluruhnya ditagihkan. Itu keputusan
 pemilik: satu pintu keluar berarti satu tempat yang harus benar, dan seluruh
 kunjungan muncul di laporan dengan penjaminnya.
 
+## Daftar antrean: yang sudah tutup ke bawah, bukan dibuang
+
+Urutan waktu daftar itu benar sebagai catatan dan salah sebagai alat kerja.
+Pukul sebelas di klinik yang sibuk, separuh daftar sudah selesai dan yang
+berikutnya harus dipanggil terselip di antaranya, jadi mata mencari tiap kali.
+Yang menentukan pekerjaan berikutnya adalah yang BELUM tutup.
+
+Digeser ke bawah dengan pemisah, **tidak disembunyikan**: kunjungan yang sudah
+selesai masih dibuka untuk menambah adendum rekam medis, mencetak ulang, dan
+memeriksa tagihan. Di dalam masing-masing kelompok urutannya tetap urutan
+datang. Berlaku untuk layar antrean mana pun yang ditambahkan nanti; Farmasi
+sudah mengelompokkan per keadaan, dan Reservasi sudah menaruh yang menunggu di
+atas.
+
+Angka di ringkasan atas harus bisa dijumlahkan dengan yang terlihat di daftar.
+`batal` disebut terpisah, bukan dilebur ke "selesai": dua angka yang tidak
+menjelaskan enam baris membuat orang berhenti percaya pada dua-duanya.
+
 ## Reservasi: janji datang, bukan rekam medis
 
 Modul baru di migrasi 0054, berdiri di atas poli dan dokter dari 0020. Tiga

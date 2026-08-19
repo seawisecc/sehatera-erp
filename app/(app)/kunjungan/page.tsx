@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle, ArrowLeft, ArrowRight, Check, FileText, Pill, Receipt, Search,
   Stethoscope, UserPlus, Volume2, X,
@@ -279,6 +279,22 @@ export default function HalamanKunjungan() {
   const belum = antrean.filter(a => a.status !== 'selesai' && a.status !== 'batal')
   const kelar = antrean.filter(a => a.status === 'selesai')
 
+  /**
+   * Yang sudah tutup pindah ke BAWAH, bukan dibuang.
+   *
+   * Urutan waktu daftar itu benar sebagai catatan, dan salah sebagai alat
+   * kerja. Di klinik yang sibuk, pukul sebelas separuh daftar sudah selesai
+   * dan yang berikutnya harus dipanggil terselip di antaranya, jadi mata
+   * mencari tiap kali. Yang menentukan pekerjaan berikutnya adalah yang BELUM
+   * tutup, dan itu yang harus ada di atas.
+   *
+   * Tidak disembunyikan, karena kunjungan yang sudah selesai masih dibuka:
+   * menambah adendum rekam medis, mencetak ulang, memeriksa tagihan. Di dalam
+   * masing-masing kelompok urutannya tetap urutan datang.
+   */
+  const tertutup = antrean.filter(a => a.status === 'selesai' || a.status === 'batal')
+  const urutAntrean = [...belum, ...tertutup]
+
   const iKini = aktif ? LANGKAH.indexOf(aktif.status as typeof LANGKAH[number]) : -1
 
   /**
@@ -318,6 +334,13 @@ export default function HalamanKunjungan() {
             <span className="num">{belum.length}</span> {t('menunggu', 'waiting')}
             {' · '}
             <span className="num">{kelar.length}</span> {t('selesai', 'done')}
+            {/* Batal disebut terpisah, bukan dilebur ke "selesai". Ringkasan di
+                atas harus bisa dijumlahkan dengan yang terlihat di daftar
+                sebelah: dua angka yang tidak menjelaskan enam baris membuat
+                orang berhenti percaya pada dua-duanya. */}
+            {tertutup.length - kelar.length > 0 && (
+              <>{' · '}<span className="num">{tertutup.length - kelar.length}</span> {t('batal', 'cancelled')}</>
+            )}
           </p>
         </div>
         <button onClick={() => { setBukaDaftar(true); setCariPasien('') }}
@@ -342,11 +365,17 @@ export default function HalamanKunjungan() {
             </p>
           ) : (
             <div className="space-y-1">
-              {antrean.map(a => {
+              {urutAntrean.map((a, i) => {
                 const on = aktif?.id === a.id
                 const tutup = a.status === 'selesai' || a.status === 'batal'
                 return (
-                  <div key={a.id}
+                  <Fragment key={a.id}>
+                  {i === belum.length && tertutup.length > 0 && (
+                    <p className="px-2 pt-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--ink-faint)] border-t border-[var(--line-soft)] mt-2">
+                      {t('Sudah tutup', 'Closed')} <span className="num">({tertutup.length})</span>
+                    </p>
+                  )}
+                  <div
                     className={`rounded-xl border transition ${
                       on ? 'border-[var(--brand)] bg-[var(--surface-2)]'
                          : 'border-transparent hover:bg-[var(--surface-2)]'
@@ -392,6 +421,7 @@ export default function HalamanKunjungan() {
                     </div>
                   )}
                   </div>
+                  </Fragment>
                 )
               })}
             </div>
