@@ -280,8 +280,29 @@ export default function HalamanKunjungan() {
   const kelar = antrean.filter(a => a.status === 'selesai')
 
   const iKini = aktif ? LANGKAH.indexOf(aktif.status as typeof LANGKAH[number]) : -1
-  const berikut = iKini >= 0 && iKini < LANGKAH.length - 1 ? LANGKAH[iKini + 1] : null
-  const sebelum = iKini > 0 ? LANGKAH[iKini - 1] : null
+
+  /**
+   * SATU langkah di rel ini yang digeser dengan tangan, dan cuma satu:
+   * menandai pasiennya benar-benar datang. Sisanya bergeser sendiri.
+   *
+   * `diperiksa` -> `obat` terjadi saat dokter memfinalkan resep, dan
+   * `obat` -> `selesai` saat farmasi menyerahkan obatnya atau kasir menutup
+   * kunjungan tanpa resep. Semuanya lewat trigger sejak migrasi 0040 dan 0049.
+   *
+   * Tombol majunya sempat tetap ada di sini, dan itu lebih buruk daripada
+   * tidak berguna. Menekan "Obat" pada kunjungan yang resepnya masih draf
+   * memindahkan pasiennya ke tahap obat tanpa ada satu pun resep yang sampai
+   * ke farmasi: papan bilang pasiennya sedang menunggu obat, dan tidak ada
+   * seorang pun yang sedang menyiapkannya. Yang menggeser rel harus orang
+   * yang benar-benar mengerjakan langkahnya, bukan siapa pun yang kebetulan
+   * sedang membuka layar ini.
+   */
+  const berikut = aktif?.status === 'terdaftar' ? 'diperiksa' as const : null
+
+  // Mundur cuma dari `diperiksa`, untuk membatalkan tekanan "Tiba" yang
+  // keliru. Dari `obat` tidak: yang menggeser ke sana adalah resep yang sudah
+  // final, dan menariknya kembali di layar tidak membatalkan resep itu.
+  const sebelum = aktif?.status === 'diperiksa' ? 'terdaftar' as const : null
 
   const KARTU = 'bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-sm'
 
@@ -586,6 +607,19 @@ export default function HalamanKunjungan() {
                         ke Diperiksa", melainkan menandai pasiennya SUDAH DATANG
                         dan masuk ruangan; petugas pendaftaran menekannya sambil
                         melihat orangnya berdiri. */}
+                    {/* Kalau tidak ada tombol maju, harus jelas siapa yang
+                        menggesernya. Layar yang cuma diam membuat orang
+                        mengira ada yang rusak, lalu mencari jalan lain. */}
+                    {!berikut && (
+                      <p className="text-sm text-[var(--ink-soft)] flex items-start gap-2">
+                        <ArrowRight size={15} className="shrink-0 mt-0.5 text-[var(--ink-faint)]" />
+                        {aktif.status === 'diperiksa'
+                          ? t('Bergeser sendiri ke Obat begitu dokter memfinalkan resepnya. Kalau kunjungan ini tanpa obat, kasir yang menutupnya.',
+                               'Moves to Drugs on its own once the doctor finalises the prescription. If there are no drugs, the cashier closes it.')
+                          : t('Farmasi yang menutupnya saat obatnya diserahkan.',
+                               'Pharmacy closes it when the drugs are handed over.')}
+                      </p>
+                    )}
                     {berikut && (
                       <button onClick={() => pindah(berikut)} disabled={sibuk}
                         className="inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
