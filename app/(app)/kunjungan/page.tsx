@@ -73,7 +73,7 @@ type Antrean = {
 type Poli = { id: string; nama: string; kode: string }
 type Dokter = { email: string; nama: string | null }
 
-const LANGKAH = ['terdaftar', 'diperiksa', 'resep', 'obat', 'selesai'] as const
+const LANGKAH = ['terdaftar', 'diperiksa', 'obat', 'selesai'] as const
 
 /**
  * Keadaan yang masih masuk akal dipanggil lewat pengeras suara.
@@ -82,7 +82,7 @@ const LANGKAH = ['terdaftar', 'diperiksa', 'resep', 'obat', 'selesai'] as const
  * `resep`/`obat` bukan sisa: farmasi memanggil orang ke loketnya sendiri.
  */
 const bolehPanggil = (status: string) =>
-  status === 'terdaftar' || status === 'resep' || status === 'obat'
+  status === 'terdaftar' || status === 'obat'
 
 export default function HalamanKunjungan() {
   const { t, lang } = useLang()
@@ -114,11 +114,12 @@ export default function HalamanKunjungan() {
   const [penjaminDipilih, setPenjaminDipilih] = useState('')
   const [asuransiDipilih, setAsuransiDipilih] = useState('')
   const [nomorPolis, setNomorPolis] = useState('')
+  /** Pasien yang dipilih tapi BELUM didaftarkan. Lihat komentar di daftarkan(). */
+  const [pasienDipilih, setPasienDipilih] = useState<Pasien | null>(null)
 
   const namaLangkah: Record<string, string> = {
     terdaftar: t('Terdaftar', 'Registered'),
     diperiksa: t('Diperiksa', 'In exam'),
-    resep:     t('Resep', 'Prescription'),
     obat:      t('Obat', 'Dispensing'),
     selesai:   t('Selesai', 'Done'),
     batal:     t('Batal', 'Cancelled'),
@@ -186,7 +187,18 @@ export default function HalamanKunjungan() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cariPasien, bukaDaftar, app.superViewCompany])
 
-  const daftarkan = async (p: Pasien) => {
+  /**
+   * Mendaftarkan pasien yang sudah dipilih DAN dikonfirmasi.
+   *
+   * Dulu pendaftaran terjadi seketika saat nama diklik di hasil pencarian.
+   * Itu cukup selama yang ditanyakan cuma poli, tapi sekarang ada dokter,
+   * penjamin, dan nomor polis: satu klik keliru langsung menerbitkan nomor
+   * antrean dengan penjamin yang salah, dan membatalkannya berarti kunjungan
+   * batal yang tercatat selamanya. Jadi ada satu langkah memeriksa dulu.
+   */
+  const daftarkan = async () => {
+    const p = pasienDipilih
+    if (!p) return
     setSibuk(true)
     const { data, error } = await supabase.rpc('daftar_kunjungan', {
       p_patient: p.id, p_keluhan: null,
@@ -200,7 +212,7 @@ export default function HalamanKunjungan() {
     })
     setSibuk(false)
     if (error) { alert(pesanError(error)); return }
-    setBukaDaftar(false); setCariPasien(''); setHasilPasien([])
+    setBukaDaftar(false); setCariPasien(''); setHasilPasien([]); setPasienDipilih(null)
     setDokterDipilih(''); setPenjaminDipilih(''); setAsuransiDipilih(''); setNomorPolis('')
     setPilih((data as any)?.id ?? null)
     muat()
@@ -257,7 +269,10 @@ export default function HalamanKunjungan() {
     setSibuk(false)
     if (error) { alert(pesanError(error)); return false }
     setFormPasien(undefined)
-    if (!id && data) await daftarkan(data as Pasien)
+    // Pasien BARU pun lewat langkah memeriksa yang sama, bukan langsung
+    // diterbitkan nomor antreannya. Justru pasien baru yang paling sering
+    // salah penjamin, karena profilnya baru saja diketik.
+    if (!id && data) setPasienDipilih(data as Pasien)
     return true
   }
 
@@ -566,10 +581,17 @@ export default function HalamanKunjungan() {
                   </p>
                 ) : (
                   <>
+                    {/* Kata tombolnya mengikuti apa yang benar-benar dilakukan
+                        orangnya. Dari Terdaftar yang terjadi bukan "memindahkan
+                        ke Diperiksa", melainkan menandai pasiennya SUDAH DATANG
+                        dan masuk ruangan; petugas pendaftaran menekannya sambil
+                        melihat orangnya berdiri. */}
                     {berikut && (
                       <button onClick={() => pindah(berikut)} disabled={sibuk}
                         className="inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                        {namaLangkah[berikut]} <ArrowRight size={16} />
+                        {aktif.status === 'terdaftar'
+                          ? t('Tiba, mulai periksa', 'Arrived, start exam')
+                          : namaLangkah[berikut]} <ArrowRight size={16} />
                       </button>
                     )}
                     {sebelum && (
@@ -717,7 +739,7 @@ export default function HalamanKunjungan() {
                   {t('Tidak ada yang cocok.', 'No match.')}
                 </p>
               ) : hasilPasien.map(p => (
-                <button key={p.id} onClick={() => daftarkan(p)} disabled={sibuk}
+                <button key={p.id} onClick={() => setPasienDipilih(p)} disabled={sibuk}
                   className="w-full text-left px-3 py-2.5 rounded-lg border border-[var(--line)] hover:bg-[var(--surface-2)] transition disabled:opacity-50">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-[var(--ink)] truncate">{p.nama}</span>
@@ -730,8 +752,74 @@ export default function HalamanKunjungan() {
               ))}
             </div>
 
+            {/* Ringkasan sebelum diterbitkan. Nomor antrean yang sudah terbit
+                tidak bisa ditarik kembali: membatalkannya meninggalkan
+                kunjungan batal yang tercatat selamanya. */}
+            {pasienDipilih && (
+              <div className="mt-4 rounded-xl border-2 border-[var(--brand)] bg-[var(--surface-2)] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-faint)] mb-2">
+                  {t('Periksa dulu sebelum didaftarkan', 'Check before registering')}
+                </p>
+                <p className="text-base font-bold text-[var(--ink)]">{pasienDipilih.nama}</p>
+                <p className="text-[11px] text-[var(--ink-faint)] num mb-2">
+                  {pasienDipilih.nomor_rm || '-'}
+                  {pasienDipilih.nik ? ` · ${pasienDipilih.nik}` : ''}
+                  {pasienDipilih.tanggal_lahir ? ` · ${tanggal(pasienDipilih.tanggal_lahir)}` : ''}
+                </p>
+                {pasienDipilih.alergi && (
+                  <p className="flex items-start gap-1.5 text-sm text-red-700 mb-2">
+                    <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                    <span><span className="font-semibold">{t('Alergi', 'Allergy')}:</span> {pasienDipilih.alergi}</span>
+                  </p>
+                )}
+                <dl className="text-sm space-y-0.5">
+                  <div className="flex gap-2">
+                    <dt className="text-[var(--ink-faint)] w-20 shrink-0">{t('Poli', 'Unit')}</dt>
+                    <dd className="text-[var(--ink)]">{poli.find(u => u.id === poliDipilih)?.nama || '-'}</dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="text-[var(--ink-faint)] w-20 shrink-0">{t('Dokter', 'Doctor')}</dt>
+                    <dd className="text-[var(--ink)]">
+                      {dokterDipilih
+                        ? (dokter.find(d => d.email === dokterDipilih)?.nama || dokterDipilih)
+                        : t('belum ditentukan', 'not assigned')}
+                    </dd>
+                  </div>
+                  <div className="flex gap-2">
+                    <dt className="text-[var(--ink-faint)] w-20 shrink-0">{t('Penjamin', 'Payer')}</dt>
+                    <dd className="text-[var(--ink)]">
+                      {penjaminDipilih === 'asuransi'
+                        ? (asuransi.find(a => a.id === asuransiDipilih)?.nama || t('asuransi, belum dipilih', 'insurance, not chosen'))
+                        : penjaminDipilih === 'bpjs' ? 'BPJS'
+                        : penjaminDipilih === 'umum' ? t('Umum', 'Self-pay')
+                        : `${t('ikut profil', 'from profile')}: ${(pasienDipilih.penjamin || 'umum').toUpperCase()}`}
+                      {nomorPolis.trim() && <span className="num text-[var(--ink-faint)]"> · {nomorPolis.trim()}</span>}
+                    </dd>
+                  </div>
+                </dl>
+
+                {penjaminDipilih === 'asuransi' && !asuransiDipilih && (
+                  <p className="mt-2 text-xs text-amber-700 font-medium">
+                    {t('Pilih dulu asuransinya di atas.', 'Choose the insurer above first.')}
+                  </p>
+                )}
+
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => setPasienDipilih(null)}
+                    className="px-3 py-2 rounded-lg border border-[var(--line)] text-[var(--ink-soft)] text-sm">
+                    {t('Ganti pasien', 'Change patient')}
+                  </button>
+                  <button onClick={daftarkan}
+                    disabled={sibuk || (penjaminDipilih === 'asuransi' && !asuransiDipilih)}
+                    className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
+                    {t('Daftarkan sekarang', 'Register now')}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-3 mt-5">
-              <button onClick={() => setBukaDaftar(false)}
+              <button onClick={() => { setBukaDaftar(false); setPasienDipilih(null) }}
                 className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
                 {t('Tutup', 'Close')}
               </button>

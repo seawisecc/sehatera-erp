@@ -1,0 +1,21 @@
+-- ============================================================
+-- 0050  Membuang daftar_kunjungan versi lama
+-- ============================================================
+--
+-- Migrasi 0048 menambahkan dua argumen ke `daftar_kunjungan` dengan nilai
+-- bawaan, dan itu MELAHIRKAN FUNGSI KEDUA, bukan mengganti yang lama.
+-- Sekarang ada dua:
+--
+--   daftar_kunjungan(uuid, text, text, uuid, text, uuid)                lama
+--   daftar_kunjungan(uuid, text, text, uuid, text, uuid, uuid, text)    baru
+--
+-- Memanggil dengan enam argumen jadi AMBIGU: PostgreSQL menolak dengan
+-- 42725 "is not unique" karena kedua-duanya cocok. Yang lebih buruk dari
+-- galatnya: kalau yang lama yang terpilih di suatu jalur, penjamin dan
+-- asuransinya diam-diam tidak tersimpan.
+--
+-- Ketahuan berkas uji satu-pasien-utuh, bukan dari membaca kode. Migrasi 0022
+-- melakukan hal yang sama untuk versi lima argumen, dan saya melewatkannya
+-- kali ini.
+
+drop function if exists public.daftar_kunjungan(uuid, text, text, uuid, text, uuid);

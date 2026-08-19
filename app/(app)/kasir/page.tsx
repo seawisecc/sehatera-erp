@@ -345,7 +345,7 @@ export default function HalamanKasir() {
       const { data } = await app.scope(
         supabase.from('v_antrean_hari_ini')
           .select('id,nomor_antre,pasien_nama,nomor_rm,status,unit_nama')
-          .in('status', ['resep', 'obat'])
+          .in('status', ['obat'])
           .order('dibuka_pada')
       )
       setKunjungan((data as any[]) || [])

@@ -84,6 +84,8 @@ memasang lubang keamanan yang sudah ditutup.
 | `0046_papan_tunggu_saja` | Papan hanya menampilkan yang benar-benar menunggu |
 | `0047_kasir_tahu_siap_ditagih` | `obat_belum_dipilih`: kasir tahu tagihannya sudah lengkap |
 | `0048_daftar_asuransi` | Tabel `insurers` per faskes, `visits.asuransi_id`, pendaftaran bawa dokter & penjamin |
+| `0049_rel_baru_kunjungan` | Keadaan `resep` dibuang; kasir & farmasi yang menutup kunjungan |
+| `0050_buang_daftar_kunjungan_lama` | Membuang `daftar_kunjungan` 6 argumen yang jadi ambigu |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -444,6 +446,36 @@ yang memutuskannya.
 diisi farmasi** (`obat_belum_dipilih`). Bukan soal urutan sopan: baris
 permintaan terbuka BELUM PUNYA HARGA sampai farmasi memilih produknya, jadi
 kasir yang menagih lebih dulu menagih KURANG.
+
+## Rel kunjungan: EMPAT keadaan, dan yang menutupnya bukan dokter
+
+**terdaftar → diperiksa → obat → selesai.** Keadaan `resep` DIBUANG di migrasi
+0049: sejak 0035 resep punya rel keadaannya sendiri yang dipegang layar
+Farmasi, jadi `resep` di rel kunjungan cuma satu klik kosong.
+
+- **terdaftar** didaftarkan, boleh dipanggil berkali-kali, tetap di papan
+- **diperiksa** ditekan "Tiba" saat orangnya benar-benar datang
+- **obat** bergeser SENDIRI begitu dokter memfinalkan resep
+- **selesai** ditutup KASIR (kalau tanpa resep) atau FARMASI saat menyerahkan
+
+**Semua kunjungan ditutup lewat kasir, termasuk BPJS dan asuransi.** Usul
+pemilik, dan lebih baik daripada usul saya: kunjungan bertagihan NOL (kapitasi
+BPJS, konsultasi gratis) tidak akan pernah dibayar, jadi kalau penutupannya
+menunggu pembayaran ia menggantung selamanya. Dengan semuanya lewat kasir,
+satu jalur menutup semua keadaan dan laporan per penjamin keluar sendiri.
+
+**`supabase/uji/0049_satu_pasien_utuh.sql` adalah uji yang paling penting di
+folder ini.** Ia menjalankan SATU kunjungan melintasi seluruh modul:
+pendaftaran, panggil, tiba, diagnosis, tindakan, resep, penyiapan farmasi,
+kasir, penyerahan. Uji per migrasi tidak menggantikannya: bug obat-hilang-di-
+kasir lolos dari SELURUH uji lain karena tidak ada yang menyeberangi modul.
+**Tiap perubahan yang menyentuh kunjungan harus lulus di sini.**
+
+**Menambah argumen berdefault ke fungsi yang sudah ada MELAHIRKAN fungsi
+kedua, bukan mengganti yang lama.** Migrasi 0048 melakukannya dan panggilan
+enam argumen jadi ambigu (42725). Yang lebih buruk dari galatnya: kalau versi
+lama yang terpilih di suatu jalur, argumen barunya diam-diam tidak tersimpan.
+Selalu `drop function` versi lamanya, seperti 0022 dan 0050.
 
 ## Rel kunjungan: digeser sendiri, bukan diklik
 
