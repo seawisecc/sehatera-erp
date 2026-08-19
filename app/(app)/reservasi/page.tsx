@@ -154,9 +154,49 @@ export default function HalamanReservasi() {
   }, [cari])
 
   const tersaring = useMemo(() => daftar.filter(cocok), [daftar, cocok])
-  const menunggu = useMemo(() => tersaring.filter(x => x.status === 'menunggu'), [tersaring])
-  const selesai = useMemo(() => tersaring.filter(x => x.status !== 'menunggu'), [tersaring])
   const jumlahMenunggu = useMemo(() => daftar.filter(x => x.status === 'menunggu').length, [daftar])
+
+  /**
+   * Dikelompokkan PER POLI, bukan satu daftar panjang.
+   *
+   * Satu daftar bercampur benar sebagai catatan dan salah sebagai alat kerja.
+   * Klinik empat poli dengan dua puluh pemesan berarti petugas Gigi harus
+   * membaca seluruh daftar untuk menemukan tiga orangnya, dan ia melakukannya
+   * tiap kali ada yang datang.
+   *
+   * Urutan polinya MENGIKUTI urutan kartu sesi di atas, bukan abjad, supaya
+   * mata turun dari kartu ke daftar tanpa mencari lagi. Poli yang jadwalnya
+   * sudah dihapus tetap muncul di bawah: reservasinya sudah terlanjur ada, dan
+   * baris yang hilang dari layar tidak hilang dari harinya.
+   *
+   * Di dalam tiap poli, yang belum datang di atas. Yang sudah tutup digeser
+   * ke bawah, bukan disembunyikan, sama seperti daftar Kunjungan.
+   */
+  const perPoli = useMemo(() => {
+    const urutan = new Map<string, number>()
+    sesi.forEach((x, i) => { if (!urutan.has(x.unit_id)) urutan.set(x.unit_id, i) })
+
+    const peta = new Map<string, { id: string; nama: string; isi: any[] }>()
+    for (const r of tersaring) {
+      const id = r.unit_id || 'tanpa-poli'
+      if (!peta.has(id)) {
+        peta.set(id, { id, nama: r.clinic_units?.nama || t('Tanpa poli', 'No unit'), isi: [] })
+      }
+      peta.get(id)!.isi.push(r)
+    }
+
+    return [...peta.values()]
+      .sort((a, b) => (urutan.get(a.id) ?? 999) - (urutan.get(b.id) ?? 999) || a.nama.localeCompare(b.nama))
+      .map(g => ({
+        ...g,
+        menunggu: g.isi.filter(x => x.status === 'menunggu').length,
+        isi: [
+          ...g.isi.filter(x => x.status === 'menunggu'),
+          ...g.isi.filter(x => x.status !== 'menunggu'),
+        ],
+      }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tersaring, sesi])
 
   const simpan = async () => {
     if (!form.nama.trim() || !form.jadwal) return
@@ -309,8 +349,20 @@ export default function HalamanReservasi() {
                `Nothing matches "${cari}" on this date.`)}
           </p>
         ) : (
-          <div className="space-y-2">
-            {[...menunggu, ...selesai].map(r => (
+          <div className="space-y-5">
+            {perPoli.map(g => (
+              <div key={g.id}>
+                <div className="flex items-baseline gap-2 mb-2 pb-1.5 border-b border-[var(--line-soft)]">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[var(--brand-soft)]">{g.nama}</p>
+                  <p className="text-[11px] text-[var(--ink-faint)]">
+                    <span className="num">{g.menunggu}</span> {t('ditunggu', 'expected')}
+                    {g.isi.length > g.menunggu && (
+                      <> · <span className="num">{g.isi.length - g.menunggu}</span> {t('sudah tutup', 'closed')}</>
+                    )}
+                  </p>
+                </div>
+                <div className="space-y-2">
+            {g.isi.map(r => (
               <div key={r.id}
                 className={`flex flex-wrap items-center gap-3 px-3 py-2.5 rounded-xl border ${
                   r.status === 'menunggu' ? 'border-[var(--line)]' : 'border-[var(--line-soft)] bg-[var(--surface-2)]/40'
@@ -357,6 +409,9 @@ export default function HalamanReservasi() {
                       : t('TIDAK DATANG', 'NO SHOW')}
                   </span>
                 )}
+              </div>
+            ))}
+                </div>
               </div>
             ))}
           </div>

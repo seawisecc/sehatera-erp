@@ -437,6 +437,19 @@ export default function Resep({
                   className="flex-1 inline-flex items-center justify-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] py-2.5 rounded-lg text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
                   <Check size={16} /> {t('Finalkan Resep', 'Finalise Prescription')}
                 </button>
+                {/* Draf pun harus bisa dibatalkan, dan itu bukan kelengkapan.
+                    Draf tidak pernah sampai ke farmasi, tapi ia tetap terhitung
+                    sebagai resep yang belum diserahkan, jadi kunjungannya tidak
+                    bisa ditutup kasir. Tanpa tombol ini, resep yang dibuka lalu
+                    ditinggalkan dokter membuat kunjungan itu menggantung
+                    terbuka selamanya, dan tidak ada seorang pun yang punya cara
+                    menutupnya. */}
+                {resep?.id && resep.status === 'draf' && !tertutup && (
+                  <button onClick={batalkanResep} disabled={sibuk}
+                    className="w-full border border-red-300 text-red-700 py-2.5 rounded-lg text-sm font-medium hover:bg-red-50 transition disabled:opacity-50">
+                    {t('Batalkan Draf Resep', 'Cancel Draft')}
+                  </button>
+                )}
               </>
             )}
           </div>

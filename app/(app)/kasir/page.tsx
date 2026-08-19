@@ -29,6 +29,8 @@ import { bukaCetak, strukPenjualan } from '@/lib/cetak'
  * cepat atau tidaknya antrean bergerak.
  */
 
+const URUT_KELOMPOK = ['administrasi', 'konsultasi', 'tindakan', 'obat', 'lainnya'] as const
+
 const METODE = ['Tunai', 'QRIS', 'Transfer', 'Debit', 'Kartu Kredit'] as const
 const GOLONGAN = ['narkotika', 'psikotropika', 'prekursor']
 
@@ -41,6 +43,13 @@ type Item = {
   stok_total: number
   kategori?: string | null
   is_jasa?: boolean
+  /**
+   * Dari mana barisnya datang: administrasi, konsultasi, tindakan, obat.
+   * Sama dengan `visit_charges.jenis`, ditambah `obat` untuk yang keluar dari
+   * resep. Kasir membaca satu daftar panjang berisi tarif, tindakan, dan obat
+   * bercampur, dan yang ditanya pasien hampir selalu "yang mana obatnya".
+   */
+  jenis?: string
 }
 
 export default function HalamanKasir() {
@@ -125,7 +134,7 @@ export default function HalamanKasir() {
     } else {
       setKeranjang([...keranjang, {
         id: p.id, nama_obat: p.nama_obat, kode: p.kode, harga_jual: p.harga_jual || 0,
-        jumlah: 1, stok_total: p.stok_total ?? 0, kategori: p.kategori,
+        jumlah: 1, stok_total: p.stok_total ?? 0, kategori: p.kategori, jenis: 'obat',
       }])
     }
     setCari('')
@@ -138,7 +147,7 @@ export default function HalamanKasir() {
     if (ada) setKeranjang(keranjang.map(k => k.id === id ? { ...k, jumlah: k.jumlah + 1 } : k))
     else setKeranjang([...keranjang, {
       id, nama_obat: s.nama, harga_jual: s.harga || 0, jumlah: 1,
-      is_jasa: true, kategori: 'jasa', stok_total: 0,
+      is_jasa: true, kategori: 'jasa', stok_total: 0, jenis: 'tindakan',
     }])
     setCari('')
     cariRef.current?.focus()
@@ -335,6 +344,7 @@ export default function HalamanKasir() {
       masuk.push({
         id: 'chg-' + c.id, nama_obat: c.nama, harga_jual: Number(c.harga) || 0,
         jumlah: Number(c.jumlah) || 1, is_jasa: true, kategori: 'jasa', stok_total: 0,
+        jenis: c.jenis || 'tindakan',
       })
     }
 
@@ -347,7 +357,7 @@ export default function HalamanKasir() {
       if (jumlah > stok) lewat.push(`${i.nama_obat} (${t('diambil', 'took')} ${stok} ${t('dari', 'of')} ${jumlah})`)
       masuk.push({
         id: i.product_id, nama_obat: i.nama_obat, harga_jual: Number(i.harga_jual) || 0,
-        jumlah: Math.min(jumlah, stok), stok_total: stok, kategori: i.kategori,
+        jumlah: Math.min(jumlah, stok), stok_total: stok, kategori: i.kategori, jenis: 'obat',
       })
     }
 
@@ -375,6 +385,43 @@ export default function HalamanKasir() {
     }
   }
 
+
+  /**
+   * Keranjang dikelompokkan menurut ASAL tagihannya.
+   *
+   * Kasir klinik membaca satu daftar berisi biaya administrasi, tarif
+   * konsultasi, tindakan, dan obat bercampur menurut waktu dicatat. Yang
+   * ditanya pasien di depan loket hampir selalu satu dari dua: "obatnya berapa"
+   * atau "tindakannya yang mana". Menjawabnya dari daftar bercampur berarti
+   * menelusuri baris satu per satu sambil orangnya menunggu.
+   *
+   * Judul kelompok hanya muncul kalau memang ada lebih dari satu kelompok:
+   * di apotek seluruh keranjang berisi obat, dan satu judul untuk satu-satunya
+   * kelompok cuma menambah baris yang tidak memberi tahu apa pun.
+   */
+  const berkelompok = useMemo(() => {
+    const kenal = new Set<string>(URUT_KELOMPOK)
+    return URUT_KELOMPOK
+      .map(id => ({
+        id,
+        // Jenis yang tidak dikenali jatuh ke "Lainnya", bukan hilang. Daftar
+        // harfiah yang ketinggalan sudah menggigit lima kali di project ini,
+        // dan di sini yang hilang adalah baris tagihan.
+        isi: keranjang.filter(k => (kenal.has(k.jenis || '') ? k.jenis : 'lainnya') === id),
+      }))
+      .filter(g => g.isi.length > 0)
+  }, [keranjang])
+
+  // Labelnya dibaca saat render, bukan ikut masuk ke memo di atas: kalau ikut,
+  // menukar bahasa ID/EN tidak mengubah judul kelompok sampai keranjangnya
+  // kebetulan berubah.
+  const labelKelompok: Record<string, string> = {
+    administrasi: t('Administrasi', 'Administration'),
+    konsultasi:   t('Konsultasi', 'Consultation'),
+    tindakan:     t('Tindakan & layanan', 'Procedures & services'),
+    obat:         t('Obat & farmasi', 'Medicines & pharmacy'),
+    lainnya:      t('Lainnya', 'Other'),
+  }
 
   const inputCls = 'w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]'
   const KARTU = 'bg-[var(--surface)]/70 backdrop-blur-sm border border-[var(--line)] rounded-xl shadow-sm'
@@ -483,7 +530,19 @@ export default function HalamanKasir() {
                   <tr><td colSpan={5} className="px-4 py-8 text-center text-[var(--ink-faint)]">
                     {t('Keranjang kosong. Cari obat di kotak di atas.', 'Cart is empty. Search for a medicine above.')}
                   </td></tr>
-                ) : keranjang.map(item => (
+                ) : berkelompok.flatMap(g => [
+                  ...(berkelompok.length > 1 ? [(
+                    <tr key={'h-' + g.id} className="bg-[var(--surface-2)]/60">
+                      <td colSpan={3} className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--ink-soft)]">
+                        {labelKelompok[g.id]}
+                      </td>
+                      <td className="px-4 py-1.5 text-right text-[11px] font-semibold text-[var(--ink-soft)] num">
+                        {rupiah(g.isi.reduce((a, b) => a + b.harga_jual * b.jumlah, 0))}
+                      </td>
+                      <td />
+                    </tr>
+                  )] : []),
+                  ...g.isi.map(item => (
                   <tr key={item.id} className={TR}>
                     <td className="px-4 py-3">
                       <div className="font-medium text-[var(--ink)]">{item.nama_obat}</div>
@@ -519,7 +578,8 @@ export default function HalamanKasir() {
                         className="text-red-400 hover:text-red-600 text-xs">✕</button>
                     </td>
                   </tr>
-                ))}
+                  )),
+                ])}
               </tbody>
             </table>
           </div>

@@ -93,6 +93,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0055_kredensial_faskes` | Kredensial per faskes di Supabase Vault; tabelnya tanpa policy |
 | `0056_antrean_kirim` | `outbound_messages`: idempoten, mundur berlipat, menyerah itu keadaan |
 | `0057_antre_kirim_penanda_baru` | `found` ditangkap sebelum SELECT menimpanya |
+| `0058_draf_tidak_menahan_kunjungan` | Resep `draf` tidak menahan penutupan; reservasi kembar bicara SH004 |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -825,6 +826,43 @@ pengirimannya sudah jalan. Layarnya mengatakan ini apa adanya.
 'antre'`), yang juga benar untuk baris yang sudah ada. Jawabannya ada di `found`
 sesudah `INSERT ... ON CONFLICT DO NOTHING`, tapi ia harus ditangkap ke variabel
 sebelum SELECT berikutnya menimpanya. Ditemukan uji, bukan saat membacanya.
+
+## Dua hal yang ditemukan saat memeriksa ulang, bukan dari galat
+
+**Resep `draf` menahan kunjungan selamanya** (diperbaiki di 0058). Draf tidak
+pernah masuk antrean farmasi, jadi tidak ada yang menyiapkannya, tapi ia
+terhitung sebagai resep yang belum diserahkan sehingga kasir tidak boleh
+menutup kunjungannya. Farmasi tidak melihatnya, kasir tidak boleh menutupnya,
+dan sejak tombol maju dibuang dari layar Kunjungan tidak ada lagi jalan
+memaksanya lewat. Layar resep sekarang punya tombol membatalkan draf; sebelum
+ini "Batalkan Resep" hanya muncul untuk yang berstatus `final`.
+
+**Pelanggaran indeks unik keluar sebagai "coba lagi sebentar lagi".**
+`pesanError()` hanya meloloskan SH001..SH007 apa adanya, jadi 23505 jadi ajakan
+mencoba lagi padahal mencoba lagi tidak akan pernah berhasil. `daftar_kunjungan`
+sudah menangkapnya sejak 0022; `buat_reservasi` ditulis tanpa menirunya.
+**Tiap fungsi yang bisa menabrak indeks unik karena tindakan wajar pengguna
+harus menerjemahkannya sendiri jadi SH004.**
+
+## Dua hal yang BELUM diperbaiki, dan alasannya
+
+**`PlanFeatures.klinik` tidak menggerbangi apa pun.** `lib/plan.ts`
+menghitungnya (`f.klinik === true`) dan `DaftarPaket` menampilkannya, tapi
+`lockedModules()` hanya mengunci `faktur`. Artinya seluruh modul klinik: rekam
+medis, e-resep, antrean, reservasi: terbuka untuk faskes mana pun yang
+sektornya `klinik`, tanpa memandang paket. Belum berdampak karena paket Klinik
+masih `is_public = false`, jadi belum ada yang bisa membelinya, tapi ini yang
+menentukan pendapatan begitu dijual. Sengaja tidak saya kunci sepihak:
+menyalakannya sekarang akan mengunci klinik contoh yang sedang dipakai
+mencoba, dan cara menguncinya (menyembunyikan menu? menolak mendaftar sebagai
+klinik?) itu keputusan pemilik.
+
+**`settings.ihs_organization_id` dan `faskes_credentials.publik->>'organization_id'`
+adalah dua tempat untuk satu fakta.** Yang benar tempatnya di kredensial:
+sandbox dan produksi punya organization id yang BERBEDA, dan kolom tunggal di
+`settings` tidak bisa menampung keduanya. Kolom lama dibiarkan sampai
+pengirimannya benar-benar disambungkan, supaya tidak ada yang membacanya lalu
+mengirim ke lingkungan yang salah. **Jangan menulis kode baru yang membacanya.**
 
 ## Yang belum ada
 
