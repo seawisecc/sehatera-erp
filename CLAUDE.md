@@ -83,6 +83,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0045_tagihan_ikut_keadaan_resep` | `tagihan_kunjungan()` mengenal `disiapkan`/`siap`: obat kembali muncul di kasir |
 | `0046_papan_tunggu_saja` | Papan hanya menampilkan yang benar-benar menunggu |
 | `0047_kasir_tahu_siap_ditagih` | `obat_belum_dipilih`: kasir tahu tagihannya sudah lengkap |
+| `0048_daftar_asuransi` | Tabel `insurers` per faskes, `visits.asuransi_id`, pendaftaran bawa dokter & penjamin |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -355,6 +356,23 @@ kredensialnya sudah ada:
 
 Yang menahan pekerjaan ini bukan lagi bentuk data, melainkan kredensial
 per faskes dan tempat menyimpannya terenkripsi.
+
+## Penjamin: tiga kategori, penerbitnya tabel
+
+`penjamin` tetap TIGA nilai (`umum`, `bpjs`, `asuransi`). Allianz, Prudential,
+Mandiri Inhealth dan seterusnya **tidak** jadi nilai `penjamin` baru: tiap
+klinik punya rekanan berbeda dan daftarnya berubah tiap kontrak diperbarui.
+Kalau jadi nilai status, tiap klinik yang menambah rekanan harus menunggu
+migrasi baru. Jadi penerbitnya tabel `insurers` per faskes, dan
+`visits.asuransi_id` menunjuk ke sana.
+
+Itu juga menghindari pemeriksaan yang sudah empat kali menggigit di project
+ini: yang tidak jadi nilai status tidak memaksa memeriksa tiap tempat yang
+menyebut nilai lama.
+
+`visits.nomor_penjamin` disimpan terpisah dari `patients.nomor_penjamin`:
+nomor polis bisa berganti di tengah tahun, dan yang dipakai menagih adalah
+nomor yang berlaku SAAT kunjungan itu.
 
 ## Uang kunjungan: satu tagihan, dan dua biaya yang masuk sendiri
 
