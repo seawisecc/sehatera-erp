@@ -45,10 +45,26 @@ function Layar() {
   const [segar, setSegar] = useState<Date | null>(null)
   const [basi, setBasi] = useState(false)
 
+  /**
+   * Peramban MELARANG suara sebelum ada interaksi manusia di tab ini, dan
+   * layar ruang tunggu justru dibuka lalu ditinggal. Jadi tidak akan pernah
+   * ada bunyinya sepintar apa pun kodenya. Satu tombol, ditekan sekali saat
+   * televisinya dipasang, dan itu satu-satunya jalan yang diberikan peramban.
+   */
+  const [suaraHidup, setSuaraHidup] = useState(false)
+
   // Nomor yang sudah diucapkan. Tanpa ini, tiap penyegaran akan mengulang
   // panggilan yang sama dan ruang tunggu jadi berisik terus-menerus.
   const sudahDiucap = useRef<Set<string>>(new Set())
   const pertama = useRef(true)
+
+  const hidupkanSuara = () => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return
+    const u = new SpeechSynthesisUtterance('Suara panggilan antrean dinyalakan.')
+    u.lang = 'id-ID'
+    window.speechSynthesis.speak(u)
+    setSuaraHidup(true)
+  }
 
   const ucap = useCallback((b: Baris) => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return
@@ -91,8 +107,13 @@ function Layar() {
     return () => clearInterval(t)
   }, [muat])
 
+  // Yang sudah dipanggil TETAP di papan sampai ia benar-benar masuk ruangan
+  // (statusnya berpindah, migrasi 0046). Panggilan poli lain tidak lagi
+  // menghapus panggilan sebelumnya: yang terbaru besar di tengah, sisanya
+  // tetap terbaca di samping.
   const dipanggil = antrean.filter(b => b.dipanggil_pada)
   const kini = dipanggil[0] || null
+  const dipanggilLain = dipanggil.slice(1, 5)
   const berikut = antrean.filter(b => !b.dipanggil_pada).slice(0, 6)
 
   if (galat) {
@@ -107,13 +128,25 @@ function Layar() {
     <main className="min-h-screen bg-[var(--paper)] text-[var(--ink)] p-6 lg:p-10 flex flex-col">
       <header className="flex items-baseline justify-between gap-4 mb-6">
         <h1 className="text-2xl lg:text-3xl font-bold text-[var(--brand)]">{faskes || 'Antrean'}</h1>
-        <div className="text-right">
-          <p className="num text-2xl lg:text-3xl font-bold tabular-nums">{jam(segar || new Date())}</p>
-          {basi && (
-            <p className="text-xs text-amber-700 font-medium">
-              Jaringan terputus, ini keadaan terakhir yang diketahui
-            </p>
+        <div className="flex items-center gap-4">
+          {!suaraHidup && (
+            <button onClick={hidupkanSuara}
+              className="rounded-xl bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2.5 text-sm font-semibold hover:bg-[var(--brand-hover)] transition">
+              Aktifkan suara
+            </button>
           )}
+          <div className="text-right">
+            <p className="num text-2xl lg:text-3xl font-bold tabular-nums">{jam(segar || new Date())}</p>
+            {basi ? (
+              <p className="text-xs text-amber-700 font-medium">
+                Jaringan terputus, ini keadaan terakhir yang diketahui
+              </p>
+            ) : suaraHidup ? (
+              <p className="text-xs text-[var(--ink-faint)]">Suara panggilan aktif</p>
+            ) : (
+              <p className="text-xs text-amber-700 font-medium">Suara belum aktif</p>
+            )}
+          </div>
         </div>
       </header>
 
@@ -141,6 +174,25 @@ function Layar() {
           )}
         </section>
 
+        <div className="flex flex-col gap-6">
+        {dipanggilLain.length > 0 && (
+          <section className="rounded-3xl bg-[var(--surface)] border border-[var(--line)] p-6">
+            <p className="text-lg font-semibold text-[var(--ink-soft)] mb-3">Sedang dipanggil</p>
+            <ul className="space-y-2">
+              {dipanggilLain.map((b, i) => (
+                <li key={`p-${b.nomor_antre}-${i}`}
+                  className="flex items-baseline gap-3 rounded-xl bg-[var(--accent-bg)] px-4 py-2.5">
+                  <span className="num text-2xl font-bold text-[var(--accent)] shrink-0">{b.nomor_antre || '-'}</span>
+                  <span className="min-w-0">
+                    <span className="block text-lg truncate">{b.nama}</span>
+                    {b.poli && <span className="block text-sm text-[var(--ink-faint)]">{b.poli}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {/* Menunggu */}
         <section className="rounded-3xl bg-[var(--surface)] border border-[var(--line)] p-6">
           <p className="text-lg font-semibold text-[var(--ink-soft)] mb-3">Menunggu</p>
@@ -161,6 +213,7 @@ function Layar() {
             </ul>
           )}
         </section>
+        </div>
       </div>
     </main>
   )

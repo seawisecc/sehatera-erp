@@ -35,7 +35,9 @@ declare
     -- ditambahkan migrasi 0035 untuk layar Farmasi
     'resep_id',
     -- ditambahkan migrasi 0042 untuk layar antrean ruang tunggu
-    'dipanggil_pada', 'jumlah_panggil'
+    'dipanggil_pada', 'jumlah_panggil',
+    -- ditambahkan migrasi 0047 supaya kasir tahu tagihannya sudah lengkap
+    'obat_belum_dipilih'
   ];
 begin
   select array_agg(k) into v_kurang

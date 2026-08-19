@@ -81,6 +81,8 @@ memasang lubang keamanan yang sudah ditutup.
 | `0043_token_tanpa_pgcrypto` | Token dibuat dari `gen_random_uuid()`, bukan pgcrypto |
 | `0044_samaran_nama_bali` | `samarkan_nama()` mengerti penanda I, Ni, Ida, Sri |
 | `0045_tagihan_ikut_keadaan_resep` | `tagihan_kunjungan()` mengenal `disiapkan`/`siap`: obat kembali muncul di kasir |
+| `0046_papan_tunggu_saja` | Papan hanya menampilkan yang benar-benar menunggu |
+| `0047_kasir_tahu_siap_ditagih` | `obat_belum_dipilih`: kasir tahu tagihannya sudah lengkap |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -404,6 +406,26 @@ Suaranya dibangkitkan `speechSynthesis` peramban, bukan berkas rekaman, jadi
 nomor apa pun bisa diucapkan tanpa menyiapkan ratusan potongan audio. Muatan
 PERTAMA sengaja tidak diucapkan: televisi yang menyala jam sepuluh tidak boleh
 membacakan seluruh pagi itu.
+
+**Peramban MELARANG suara sebelum ada interaksi manusia di tab itu**, dan layar
+ruang tunggu justru dibuka lalu ditinggal. Jadi ada tombol "Aktifkan suara"
+yang ditekan sekali saat televisinya dipasang, beserta penanda apakah suaranya
+sudah hidup. Tanpa itu tidak akan pernah bunyi, sepintar apa pun kodenya.
+
+**Yang sudah dipanggil tidak saling menghapus.** Versi pertama cuma menampilkan
+SATU yang terakhir dipanggil, jadi di klinik empat poli panggilan Gigi
+menghapus panggilan Umum sebelum orangnya sempat berdiri. Sekarang yang
+terbaru besar di tengah dan sisanya tetap terbaca di "Sedang dipanggil".
+
+Daftar status yang tampil ditulis sebagai yang **MASUK** (`terdaftar`, `obat`),
+bukan sebagai yang keluar. Kalau ditulis "not in (selesai, batal)", keadaan
+baru mana pun akan otomatis muncul di papan pengumuman ruang tunggu tanpa ada
+yang memutuskannya.
+
+**Kasir tidak boleh menagih selama masih ada permintaan terbuka yang belum
+diisi farmasi** (`obat_belum_dipilih`). Bukan soal urutan sopan: baris
+permintaan terbuka BELUM PUNYA HARGA sampai farmasi memilih produknya, jadi
+kasir yang menagih lebih dulu menagih KURANG.
 
 ## Rel kunjungan: digeser sendiri, bukan diklik
 

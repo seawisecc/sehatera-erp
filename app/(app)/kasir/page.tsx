@@ -271,7 +271,7 @@ export default function HalamanKasir() {
       // tetap harus bisa ditagih, dan itu justru kejadian yang paling sering.
       const { data } = await app.scope(
         supabase.from('v_antrean_hari_ini')
-          .select('id,nomor_antre,pasien_nama,nomor_rm,alergi,unit_nama,status,status_resep,nilai_biaya,transaction_id')
+          .select('id,nomor_antre,pasien_nama,nomor_rm,alergi,unit_nama,status,status_resep,nilai_biaya,transaction_id,obat_belum_dipilih')
           .not('status', 'in', '("batal")')
           .is('transaction_id', null)
           .order('dibuka_pada')
@@ -549,11 +549,29 @@ export default function HalamanKasir() {
                           <span className="num text-[10px] text-[var(--ink-faint)] shrink-0">{rupiah(r.nilai_biaya)}</span>
                         )}
                       </div>
-                      <p className="text-[10px] text-[var(--ink-faint)] mt-0.5 truncate">
-                        {r.unit_nama ? `${r.unit_nama} · ` : ''}{r.status}
-                        {r.status_resep === 'final' && ` · ${t('resep siap', 'prescription ready')}`}
-                        {r.status_resep === 'draf' && ` · ${t('resep masih draf', 'prescription still draft')}`}
-                      </p>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <span className="text-[10px] text-[var(--ink-faint)] truncate">
+                          {r.unit_nama ? `${r.unit_nama} · ` : ''}{r.status}
+                        </span>
+                        {/* Selama masih ada obat yang belum dipilih farmasi,
+                            tagihannya BELUM LENGKAP: baris permintaan terbuka
+                            belum punya harga. Menagih sekarang berarti menagih
+                            kurang, dan itu bukan soal urutan sopan. */}
+                        {r.obat_belum_dipilih > 0 ? (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800">
+                            {t(`MENUNGGU FARMASI · ${r.obat_belum_dipilih} obat belum dipilih`,
+                               `WAITING FOR PHARMACY · ${r.obat_belum_dipilih} not chosen`)}
+                          </span>
+                        ) : r.status_resep === 'draf' ? (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[var(--surface-2)] text-[var(--ink-faint)]">
+                            {t('RESEP MASIH DRAF', 'PRESCRIPTION DRAFT')}
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-100 text-green-700">
+                            {t('SIAP DITAGIH', 'READY TO BILL')}
+                          </span>
+                        )}
+                      </div>
                     </button>
                   ))}
                 </div>
