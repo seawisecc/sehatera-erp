@@ -57,6 +57,7 @@ export default function HalamanReservasi() {
   const [sibuk, setSibuk] = useState(false)
   const [galat, setGalat] = useState('')
 
+  const [cari, setCari] = useState('')
   const [buka, setBuka] = useState(false)
   const [form, setForm] = useState({
     nama: '', telepon: '', jadwal: '', keluhan: '',
@@ -130,8 +131,32 @@ export default function HalamanReservasi() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cariCocok])
 
-  const menunggu = useMemo(() => daftar.filter(x => x.status === 'menunggu'), [daftar])
-  const selesai = useMemo(() => daftar.filter(x => x.status !== 'menunggu'), [daftar])
+  /**
+   * Pencarian di sisi layar, bukan kueri baru ke database.
+   *
+   * Yang disaring adalah satu hari, jadi paling banyak beberapa puluh baris
+   * dan semuanya sudah ada di peramban. Memanggil ulang database tiap ketikan
+   * berarti hasilnya berkedip mengikuti jaringan, dan yang mengetik sedang
+   * berbicara dengan orang di telepon.
+   *
+   * Yang dicocokkan sengaja luas: nama pemesan DAN nama pasien terhubungnya
+   * (keduanya bisa berbeda, itu justru gunanya kolom terpisah), nomor
+   * reservasi, nomor RM, telepon, dan poli. Petugas loket menyebut apa saja
+   * yang diingatnya, dan yang paling sering diingat adalah nomor telepon.
+   */
+  const cocok = useCallback((r: any) => {
+    const q = cari.trim().toLowerCase()
+    if (!q) return true
+    return [
+      r.nama, r.patients?.nama, r.patients?.nomor_rm,
+      r.nomor, r.telepon, r.clinic_units?.nama, r.keluhan,
+    ].some(v => (v || '').toString().toLowerCase().includes(q))
+  }, [cari])
+
+  const tersaring = useMemo(() => daftar.filter(cocok), [daftar, cocok])
+  const menunggu = useMemo(() => tersaring.filter(x => x.status === 'menunggu'), [tersaring])
+  const selesai = useMemo(() => tersaring.filter(x => x.status !== 'menunggu'), [tersaring])
+  const jumlahMenunggu = useMemo(() => daftar.filter(x => x.status === 'menunggu').length, [daftar])
 
   const simpan = async () => {
     if (!form.nama.trim() || !form.jadwal) return
@@ -192,7 +217,7 @@ export default function HalamanReservasi() {
         <div>
           <h1 className="text-3xl font-bold text-[var(--ink)] mb-1">{t('Reservasi', 'Appointments')}</h1>
           <p className="text-[var(--ink-soft)] text-sm">
-            {tanggal(tgl)} · <span className="num">{menunggu.length}</span> {t('ditunggu', 'expected')}
+            {tanggal(tgl)} · <span className="num">{jumlahMenunggu}</span> {t('ditunggu', 'expected')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -249,11 +274,39 @@ export default function HalamanReservasi() {
       )}
 
       <div className={`${KARTU} p-5 sm:p-6`}>
+        {daftar.length > 0 && (
+          <div className="mb-4">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)] pointer-events-none" />
+              <input value={cari} onChange={e => setCari(e.target.value)}
+                placeholder={t('Cari nama, no. RM, telepon, nomor reservasi, atau poli',
+                               'Search name, record no., phone, booking no., or unit')}
+                className={inputCls + ' pl-9 pr-9'} />
+              {cari && (
+                <button onClick={() => setCari('')} aria-label={t('Kosongkan', 'Clear')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-[var(--ink-faint)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)]">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            {cari && tersaring.length > 0 && (
+              <p className="text-[11px] text-[var(--ink-faint)] mt-1.5">
+                <span className="num">{tersaring.length}</span> {t('dari', 'of')} <span className="num">{daftar.length}</span> {t('reservasi hari ini', 'bookings today')}
+              </p>
+            )}
+          </div>
+        )}
+
         {memuat ? (
           <p className="text-sm text-[var(--ink-faint)] py-8 text-center">{t('Memuat...', 'Loading...')}</p>
         ) : daftar.length === 0 ? (
           <p className="text-sm text-[var(--ink-soft)] py-8 text-center">
             {t('Belum ada yang memesan untuk tanggal ini.', 'Nobody has booked for this date yet.')}
+          </p>
+        ) : tersaring.length === 0 ? (
+          <p className="text-sm text-[var(--ink-soft)] py-8 text-center">
+            {t(`Tidak ada yang cocok dengan "${cari}" pada tanggal ini.`,
+               `Nothing matches "${cari}" on this date.`)}
           </p>
         ) : (
           <div className="space-y-2">
