@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, Search } from 'lucide-react'
+import { AlertTriangle, Search, Eye, Pencil } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -11,6 +11,7 @@ import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD, KATEGORI_BADGE } from '@/lib/ui'
 import { rupiah, angka } from '@/lib/format'
 import DetailProduk from '@/components/produk/DetailProduk'
+import TombolIkon from '@/components/TombolIkon'
 
 /**
  * Produk & Stok: katalog obat apotek.
@@ -274,15 +275,15 @@ export default function HalamanProduk() {
                     </span>
                   </td>
                   <td className={TD + ' text-right whitespace-nowrap'}>
-                    <div className="inline-flex items-center gap-1">
-                      <button onClick={() => setDetail(p)}
-                        className="px-2.5 py-1 rounded-lg text-xs font-medium text-[var(--brand)] hover:bg-[var(--paper)] transition">
-                        {t('Detail', 'Details')}
-                      </button>
-                      <button onClick={() => bukaEdit(p)}
-                        className="px-2.5 py-1 rounded-lg text-xs font-medium text-[var(--on-brand)] bg-[var(--brand)] hover:bg-[var(--brand-hover)] transition">
-                        Edit
-                      </button>
+                    <div className="inline-flex items-center gap-1.5">
+                      <TombolIkon label={t('Lihat detail & batch', 'View details & batches')}
+                        onClick={() => setDetail(p)}>
+                        <Eye size={14} />
+                      </TombolIkon>
+                      <TombolIkon label={t('Ubah data produk', 'Edit product')}
+                        onClick={() => bukaEdit(p)}>
+                        <Pencil size={14} />
+                      </TombolIkon>
                     </div>
                   </td>
                 </tr>

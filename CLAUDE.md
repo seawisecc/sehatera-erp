@@ -863,6 +863,24 @@ Rentang rujukan tetap bisa diubah per hasil: rentang bayi berbeda dari dewasa,
 dan hemoglobin perempuan berbeda dari laki-laki. Cetakan adalah titik mulai,
 bukan palang.
 
+## Tombol aksi di tabel: ikon berketerangan, satu bentuk
+
+`components/TombolIkon.tsx` dipakai di Pasien, Produk & Stok, dan Supplier.
+Sebelumnya tiap layar punya bentuknya sendiri: teks biasa di satu tempat,
+kotak pekat di tempat lain. Kotak pekat di TIAP baris membuat mata jatuh ke
+dua puluh delapan kotak gelap alih-alih ke nama obatnya.
+
+**Halaman Supplier dulu hanya bisa INSERT.** Satu digit telepon yang salah
+ketik tidak pernah bisa dibetulkan, dan supplier yang berhenti berdagang tetap
+muncul di daftar pemesanan selamanya. Sekarang ada ubah dan nonaktifkan.
+
+**Kadaluarsa punya TIGA tingkat, bukan dua.** "Sudah lewat" dan "25 hari lagi"
+dulu satu kelompok merah, jadi seluruh layar jadi dinding merah dan tidak ada
+yang menonjol. Padahal keduanya menuntut hal berlawanan: yang sudah lewat harus
+ditarik dari rak dan tidak boleh dijual sama sekali, yang 25 hari lagi justru
+harus didahulukan dijual. Warna yang sama untuk dua perintah yang berlawanan
+membuat keduanya diabaikan.
+
 ## Layar kunjungan: kartu tindakan yang membawa keadaannya
 
 Lima tombol seragam berbentuk pil tidak memberi tahu mana yang paling sering

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, CalendarClock, Printer } from 'lucide-react'
+import { AlertTriangle, CalendarClock, Printer, Ban } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -102,21 +102,40 @@ export default function HalamanTindakLanjut() {
 
   const hariIni = new Date(); hariIni.setHours(0, 0, 0, 0)
   const in30 = new Date(hariIni); in30.setDate(hariIni.getDate() + 30)
-  const merah = batches.filter(b => new Date(b.expired_date) <= in30)
+  /**
+   * TIGA tingkat, bukan dua.
+   *
+   * Sebelumnya "sudah lewat kadaluarsa" dan "kadaluarsa 25 hari lagi" masuk
+   * kelompok merah yang sama, jadi seluruh layar jadi dinding merah dan
+   * tidak ada yang menonjol. Padahal keduanya menuntut hal yang berbeda:
+   * yang sudah lewat harus DITARIK DARI RAK hari ini dan tidak boleh dijual
+   * lagi sama sekali, sedangkan yang 25 hari lagi justru harus didahulukan
+   * dijual. Warna yang sama untuk dua perintah yang berlawanan membuat
+   * keduanya diabaikan.
+   */
+  const lewat  = batches.filter(b => new Date(b.expired_date) < hariIni)
+  const merah  = batches.filter(b => new Date(b.expired_date) >= hariIni && new Date(b.expired_date) <= in30)
   const kuning = batches.filter(b => new Date(b.expired_date) > in30)
 
   const grup = [
     {
+      items: lewat, Icon: Ban,
+      wrap: 'bg-red-50 border-red-300', title: t('Sudah Kadaluarsa', 'Already Expired'),
+      sub: t('tarik dari rak', 'pull from shelf'),
+      titleCls: 'text-red-800', badgeCls: 'bg-red-600 text-white', card: 'border-red-200',
+      dayCls: 'text-red-700', btn: 'bg-red-600 hover:bg-red-700',
+    },
+    {
       items: merah, Icon: AlertTriangle,
-      wrap: 'bg-red-50 border-red-200', title: t('Segera Kadaluarsa', 'Expiring Soon'), sub: `≤30 ${t('hari', 'days')}`,
-      titleCls: 'text-red-700', badgeCls: 'bg-red-100 text-red-700', card: 'border-red-100',
-      dayCls: 'text-red-600', btn: 'bg-red-600 hover:bg-red-700',
+      wrap: 'bg-amber-50 border-amber-300', title: t('Segera Kadaluarsa', 'Expiring Soon'), sub: `≤30 ${t('hari', 'days')}`,
+      titleCls: 'text-amber-900', badgeCls: 'bg-amber-200 text-amber-900', card: 'border-amber-200',
+      dayCls: 'text-amber-800', btn: 'bg-amber-600 hover:bg-amber-700',
     },
     {
       items: kuning, Icon: CalendarClock,
-      wrap: 'bg-amber-50 border-amber-200', title: t('Perlu Perhatian', 'Needs Attention'), sub: `31-60 ${t('hari', 'days')}`,
-      titleCls: 'text-amber-800', badgeCls: 'bg-amber-100 text-amber-800', card: 'border-amber-100',
-      dayCls: 'text-amber-700', btn: 'bg-amber-600 hover:bg-amber-700',
+      wrap: 'bg-[var(--surface-2)] border-[var(--line)]', title: t('Perlu Perhatian', 'Needs Attention'), sub: `31-60 ${t('hari', 'days')}`,
+      titleCls: 'text-[var(--ink)]', badgeCls: 'bg-[var(--surface)] text-[var(--ink-soft)]', card: 'border-[var(--line)]',
+      dayCls: 'text-[var(--ink-soft)]', btn: 'bg-[var(--brand)] hover:bg-[var(--brand-hover)]',
     },
   ]
 

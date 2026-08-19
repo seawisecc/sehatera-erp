@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Pencil, Power, PowerOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
+import TombolIkon from '@/components/TombolIkon'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TR } from '@/lib/ui'
 
@@ -37,13 +39,14 @@ const FORM_KOSONG = { nama_supplier: '', jenis: 'PBF', alamat: '', telepon: '', 
 
 export default function HalamanSupplier() {
   const { t } = useLang()
-  const { kabar } = useUmpan()
+  const { kabar, konfirmasi } = useUmpan()
   const app = useApp()
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [memuat, setMemuat] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(FORM_KOSONG)
+  const [ubahId, setUbahId] = useState<string | null>(null)
   const [simpanan, setSimpanan] = useState(false)
 
   const muat = async () => {
@@ -62,11 +65,32 @@ export default function HalamanSupplier() {
       return
     }
     setSimpanan(true)
-    const { error } = await supabase.from('suppliers').insert([{ ...form, ...app.cid() }])
+    // Menyunting, bukan cuma menambah. Sampai sekarang halaman ini hanya bisa
+    // INSERT, jadi satu digit telepon yang salah ketik tidak pernah bisa
+    // dibetulkan, dan supplier yang berhenti berdagang tetap muncul di daftar
+    // pemesanan selamanya.
+    const { error } = ubahId
+      ? await supabase.from('suppliers').update(form).eq('id', ubahId)
+      : await supabase.from('suppliers').insert([{ ...form, ...app.cid() }])
     setSimpanan(false)
     if (error) { kabar(pesanError(error), 'galat'); return }
     setShowForm(false)
+    setUbahId(null)
     setForm(FORM_KOSONG)
+    kabar(ubahId ? t('Supplier diperbarui.', 'Supplier updated.') : t('Supplier ditambahkan.', 'Supplier added.'), 'ok')
+    muat()
+  }
+
+  const geserStatus = async (s: Supplier) => {
+    const jadi = s.status === 'aktif' ? 'nonaktif' : 'aktif'
+    if (jadi === 'nonaktif' && !await konfirmasi({
+      judul: t(`Nonaktifkan ${s.nama_supplier}?`, `Deactivate ${s.nama_supplier}?`),
+      pesan: t('Ia tidak akan muncul lagi saat membuat pesanan. Riwayat pembelian yang sudah ada tidak berubah.',
+               'It will no longer appear when creating orders. Existing purchase history is unchanged.'),
+      tombol: t('Nonaktifkan', 'Deactivate'),
+    })) return
+    const { error } = await supabase.from('suppliers').update({ status: jadi }).eq('id', s.id)
+    if (error) { kabar(pesanError(error), 'galat'); return }
     muat()
   }
 
@@ -80,7 +104,7 @@ export default function HalamanSupplier() {
           <p className="text-[var(--ink-soft)] text-sm">{t('Daftar PBF dan distributor apotek.', 'Pharmaceutical distributors and suppliers.')}</p>
         </div>
         <button
-          onClick={() => { setForm(FORM_KOSONG); setShowForm(true) }}
+          onClick={() => { setForm(FORM_KOSONG); setUbahId(null); setShowForm(true) }}
           className="shrink-0 bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition"
         >
           + {t('Tambah Supplier', 'Add Supplier')}
@@ -96,13 +120,14 @@ export default function HalamanSupplier() {
               <th className={TH_L}>{t('Jenis', 'Type')}</th>
               <th className={TH_L}>{t('Telepon', 'Phone')}</th>
               <th className={TH_C}>Status</th>
+              <th className={TH_C}>{t('Aksi', 'Action')}</th>
             </tr>
           </thead>
           <tbody>
             {memuat ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-[var(--ink-faint)]">{t('Memuat…', 'Loading…')}</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-[var(--ink-faint)]">{t('Memuat…', 'Loading…')}</td></tr>
             ) : suppliers.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-[var(--ink-faint)]">
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-[var(--ink-faint)]">
                 {t('Belum ada supplier. Tambahkan yang pertama lewat tombol di atas.', 'No suppliers yet. Add the first one with the button above.')}
               </td></tr>
             ) : suppliers.map(s => (
@@ -116,6 +141,28 @@ export default function HalamanSupplier() {
                     {s.status === 'aktif' ? t('Aktif', 'Active') : t('Nonaktif', 'Inactive')}
                   </span>
                 </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <TombolIkon label={t('Ubah data supplier', 'Edit supplier')}
+                      onClick={() => {
+                        setUbahId(s.id)
+                        setForm({
+                          nama_supplier: s.nama_supplier || '', jenis: s.jenis || 'PBF',
+                          telepon: s.telepon || '', email: (s as any).email || '',
+                          alamat: (s as any).alamat || '', status: s.status || 'aktif',
+                        } as any)
+                        setShowForm(true)
+                      }}>
+                      <Pencil size={14} />
+                    </TombolIkon>
+                    <TombolIkon
+                      label={s.status === 'aktif' ? t('Nonaktifkan', 'Deactivate') : t('Aktifkan kembali', 'Reactivate')}
+                      warna={s.status === 'aktif' ? 'bahaya' : 'netral'}
+                      onClick={() => geserStatus(s)}>
+                      {s.status === 'aktif' ? <PowerOff size={14} /> : <Power size={14} />}
+                    </TombolIkon>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -125,7 +172,9 @@ export default function HalamanSupplier() {
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
           <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-lg font-bold text-[var(--brand)] mb-4">{t('Tambah Supplier', 'Add Supplier')}</h2>
+            <h2 className="text-lg font-bold text-[var(--brand)] mb-4">
+              {ubahId ? t('Ubah Supplier', 'Edit Supplier') : t('Tambah Supplier', 'Add Supplier')}
+            </h2>
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Nama Supplier *', 'Supplier Name *')}</label>
@@ -156,7 +205,7 @@ export default function HalamanSupplier() {
               </div>
             </div>
             <div className="flex gap-3 mt-5">
-              <button onClick={() => setShowForm(false)} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
+              <button onClick={() => { setShowForm(false); setUbahId(null) }} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
                 {t('Batal', 'Cancel')}
               </button>
               <button onClick={simpan} disabled={simpanan}
