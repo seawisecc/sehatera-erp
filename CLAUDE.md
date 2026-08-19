@@ -88,6 +88,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0050_buang_daftar_kunjungan_lama` | Membuang `daftar_kunjungan` 6 argumen yang jadi ambigu |
 | `0051_pelunasan_per_penjamin` | `transactions.penjamin`, `diterima_tunai` vs `ditagihkan_penjamin`, `laporan_penjamin()` |
 | `0052_apply_transaction_jalur_admin` | Gerbang `apply_transaction` pindah ke `boleh_admin_platform()` supaya pembayaran bisa diuji |
+| `0053_laporan_penjamin_jalur_admin` | `laporan_penjamin()` menerima faskes: super admin melihat angka klien, bukan angka sendiri |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -482,7 +483,13 @@ satu jalur menutup semua keadaan dan laporan per penjamin keluar sendiri.
 **`supabase/uji/0049_satu_pasien_utuh.sql` adalah uji yang paling penting di
 folder ini.** Ia menjalankan SATU kunjungan melintasi seluruh modul:
 pendaftaran, panggil, tiba, diagnosis, tindakan, resep, penyiapan farmasi,
-kasir, penyerahan. Uji per migrasi tidak menggantikannya: bug obat-hilang-di-
+kasir, penyerahan. Sejak migrasi 0052 langkah kasirnya lewat
+`apply_transaction` yang sebenarnya, bukan insert langsung ke `transactions`:
+sebelum itu satu-satunya langkah yang menyentuh UANG dan STOK justru
+satu-satunya yang dilompati, karena gerbangnya membaca JWT yang tidak ada di
+SQL Editor. Keranjangnya dibangun dari `tagihan_kunjungan()` seperti yang
+dilakukan layar Kasir, bukan diketik ulang, supaya uji ini ikut gagal pada
+hari tagihannya berhenti membawa obat. Uji per migrasi tidak menggantikannya: bug obat-hilang-di-
 kasir lolos dari SELURUH uji lain karena tidak ada yang menyeberangi modul.
 **Tiap perubahan yang menyentuh kunjungan harus lulus di sini.**
 

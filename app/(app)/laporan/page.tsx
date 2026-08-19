@@ -27,13 +27,16 @@ import { bukaCetak, laporanSipnap, type BarisSipnap } from '@/lib/cetak'
 
 const METODE = ['Tunai', 'QRIS', 'Transfer', 'Debit', 'Kartu Kredit'] as const
 const IKON: Record<string, string> = { Tunai: '💵', QRIS: '📱', Transfer: '🏦', Debit: '💳', 'Kartu Kredit': '💳' }
+const LABEL_PENJAMIN: Record<string, string> = { umum: 'Umum', bpjs: 'BPJS', asuransi: 'Asuransi' }
 const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 
 export default function HalamanLaporan() {
   const { t } = useLang()
   const app = useApp()
 
-  const [tab, setTab] = useState<'penjualan' | 'metode' | 'sipnap'>('penjualan')
+  const [tab, setTab] = useState<'penjualan' | 'metode' | 'penjamin' | 'sipnap'>('penjualan')
+  const [penjamin, setPenjamin] = useState<any[]>([])
+  const [muatPenjamin, setMuatPenjamin] = useState(false)
   const [riwayat, setRiwayat] = useState<any[]>([])
   const [memuat, setMemuat] = useState(true)
 
@@ -64,12 +67,41 @@ export default function HalamanLaporan() {
 
   useEffect(() => { muat() }, [muat])
 
+  /**
+   * Rekap per penjamin dibaca lewat RPC, bukan dijumlahkan di peramban dari
+   * `riwayat`. Bukan soal kerapian: daftar itu diambil tanpa batas tanggal,
+   * jadi menjumlahkannya di layar berarti angka laporan bergantung pada berapa
+   * baris yang kebetulan sudah termuat. Uang tidak boleh begitu.
+   */
+  useEffect(() => {
+    if (tab !== 'penjamin') return
+    let batal = false
+    ;(async () => {
+      setMuatPenjamin(true)
+      const { data } = await supabase.rpc('laporan_penjamin', {
+        p_dari: dari || '1900-01-01',
+        p_sampai: sampai || '2999-12-31',
+        p_company: app.superViewCompany || null,
+      })
+      if (!batal) { setPenjamin((data as any[]) || []); setMuatPenjamin(false) }
+    })()
+    return () => { batal = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, dari, sampai, app.superViewCompany])
+
   useEffect(() => {
     if (!detail) return
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { setDetail(null); setDetailItems([]) } }
     window.addEventListener('keydown', esc)
     return () => window.removeEventListener('keydown', esc)
   }, [detail])
+
+  const totalPenjamin = useMemo(() => penjamin.reduce((a, r) => ({
+    tunai:  a.tunai  + Number(r.diterima_tunai || 0),
+    tagih:  a.tagih  + Number(r.ditagihkan || 0),
+    total:  a.total  + Number(r.total || 0),
+    jumlah: a.jumlah + Number(r.jumlah_transaksi || 0),
+  }), { tunai: 0, tagih: 0, total: 0, jumlah: 0 }), [penjamin])
 
   const tersaring = useMemo(() => riwayat.filter(x => {
     const d = (x.created_at || '').split('T')[0]
@@ -199,6 +231,7 @@ export default function HalamanLaporan() {
         {([
           { id: 'penjualan', label: t('Penjualan', 'Sales') },
           { id: 'metode', label: t('Metode Bayar', 'Payment Methods') },
+          ...(app.sektor !== 'apotek' ? [{ id: 'penjamin' as const, label: t('Penjamin', 'Payers') }] : []),
           { id: 'sipnap', label: 'SIPNAP' },
         ] as const).map(x => (
           <button key={x.id} onClick={() => setTab(x.id)}
@@ -208,7 +241,7 @@ export default function HalamanLaporan() {
         ))}
       </div>
 
-      {(tab === 'penjualan' || tab === 'metode') && (
+      {(tab === 'penjualan' || tab === 'metode' || tab === 'penjamin') && (
         <div className={`${KARTU} mb-5 flex flex-wrap items-end gap-3 p-3`}>
           <div>
             <label className="text-[11px] font-medium text-[var(--ink-soft)] mb-1 block uppercase tracking-wide">{t('Dari Tgl', 'From')}</label>
@@ -218,27 +251,92 @@ export default function HalamanLaporan() {
             <label className="text-[11px] font-medium text-[var(--ink-soft)] mb-1 block uppercase tracking-wide">{t('Sampai Tgl', 'To')}</label>
             <input type="date" value={sampai} onChange={e => setSampai(e.target.value)} className={inputCls} />
           </div>
-          <div>
+          {tab !== 'penjamin' && (<div>
             <label className="text-[11px] font-medium text-[var(--ink-soft)] mb-1 block uppercase tracking-wide">{t('Metode', 'Method')}</label>
             <select value={metode} onChange={e => setMetode(e.target.value)} className={inputCls}>
               <option value="">{t('Semua', 'All')}</option>
               {METODE.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
-          </div>
-          <div>
+          </div>)}
+          {tab !== 'penjamin' && (<div>
             <label className="text-[11px] font-medium text-[var(--ink-soft)] mb-1 block uppercase tracking-wide">Status</label>
             <select value={status} onChange={e => setStatus(e.target.value)} className={inputCls}>
               <option value="">{t('Semua', 'All')}</option>
               <option value="selesai">{t('Selesai', 'Completed')}</option>
               <option value="dibatalkan">{t('Dibatalkan', 'Cancelled')}</option>
             </select>
-          </div>
+          </div>)}
           {(dari || sampai || metode || status) && (
             <button onClick={() => { setDari(''); setSampai(''); setMetode(''); setStatus('') }}
               className="px-3 py-2 rounded-lg text-sm text-[var(--ink-soft)] border border-[var(--line)] hover:bg-[var(--surface-2)]">
               {t('Reset', 'Reset')}
             </button>
           )}
+        </div>
+      )}
+
+      {tab === 'penjamin' && (
+        <div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div className={`${KARTU} p-4`}>
+              <p className="text-xs font-semibold text-[var(--ink-soft)] uppercase tracking-wide mb-2">{t('Diterima tunai', 'Received in cash')}</p>
+              <p className="text-2xl font-bold text-[var(--ink)] num leading-none">{rupiah(totalPenjamin.tunai)}</p>
+              <p className="text-xs text-[var(--ink-faint)] mt-1.5">{t('Yang harus ada di laci', 'What should be in the till')}</p>
+            </div>
+            <div className={`${KARTU} p-4`}>
+              <p className="text-xs font-semibold text-[var(--ink-soft)] uppercase tracking-wide mb-2">{t('Ditagihkan ke penjamin', 'Billed to payers')}</p>
+              <p className="text-2xl font-bold text-[var(--accent)] num leading-none">{rupiah(totalPenjamin.tagih)}</p>
+              <p className="text-xs text-[var(--ink-faint)] mt-1.5">{t('Piutang, belum jadi uang', 'Receivable, not yet money')}</p>
+            </div>
+            <div className={`${KARTU} p-4`}>
+              <p className="text-xs font-semibold text-[var(--ink-soft)] uppercase tracking-wide mb-2">{t('Nilai pelayanan', 'Service value')}</p>
+              <p className="text-2xl font-bold text-[var(--ink)] num leading-none">{rupiah(totalPenjamin.total)}</p>
+              <p className="text-xs text-[var(--ink-faint)] mt-1.5">{angka(totalPenjamin.jumlah)} {t('transaksi', 'transactions')}</p>
+            </div>
+          </div>
+
+          <div className={TBL_WRAP}>
+            <table className={TBL}>
+              <thead className={THEAD}>
+                <tr>
+                  <th className={TH_L}>{t('Penjamin', 'Payer')}</th>
+                  <th className={TH_C}>{t('Jumlah Transaksi', 'Transactions')}</th>
+                  <th className={TH_R}>{t('Nilai Pelayanan', 'Service Value')}</th>
+                  <th className={TH_R}>{t('Diterima Tunai', 'Received in Cash')}</th>
+                  <th className={TH_R}>{t('Ditagihkan', 'Billed')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {muatPenjamin && (
+                  <tr><td className={TD + ' text-center text-[var(--ink-faint)]'} colSpan={5}>{t('Memuat...', 'Loading...')}</td></tr>
+                )}
+                {!muatPenjamin && penjamin.length === 0 && (
+                  <tr><td className={TD + ' text-center text-[var(--ink-faint)]'} colSpan={5}>
+                    {t('Belum ada transaksi pada rentang ini.', 'No transactions in this range.')}
+                  </td></tr>
+                )}
+                {penjamin.map((r, i) => (
+                  <tr key={i} className={TR}>
+                    <td className={TD + ' font-medium text-[var(--ink)]'}>
+                      {LABEL_PENJAMIN[r.penjamin] || r.penjamin}
+                      {r.asuransi && <span className="text-[var(--ink-soft)]"> &middot; {r.asuransi}</span>}
+                    </td>
+                    <td className={TD + ' text-center text-[var(--ink-soft)] num'}>{angka(r.jumlah_transaksi)}</td>
+                    <td className={TD + ' text-right text-[var(--ink-soft)] num'}>{rupiah(r.total)}</td>
+                    <td className={TD + ' text-right font-medium text-[var(--ink)] num'}>{rupiah(r.diterima_tunai)}</td>
+                    <td className={TD + ' text-right font-medium num ' + (Number(r.ditagihkan) > 0 ? 'text-[var(--accent)]' : 'text-[var(--ink-faint)]')}>
+                      {rupiah(r.ditagihkan)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="text-xs text-[var(--ink-faint)] mt-3 leading-relaxed">
+            {t('Yang ditagihkan ke penjamin belum menjadi uang. Kolom yang harus cocok dengan isi laci kasir adalah Diterima Tunai.',
+               'What is billed to a payer is not money yet. The column that must match the cash drawer is Received in Cash.')}
+          </p>
         </div>
       )}
 

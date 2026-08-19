@@ -23,6 +23,9 @@ declare
   v_trx   uuid;
   v_stat  text;
   v_tag   jsonb;
+  v_items jsonb;
+  v_total numeric;
+  v_tunai numeric;
   v_n     integer;
 begin
   select id into v_co from public.companies where sektor in ('klinik','rumah_sakit') limit 1;
@@ -108,8 +111,54 @@ begin
   -- ================================================================
   -- E. KASIR membayar
   -- ================================================================
-  insert into public.transactions (company_id, visit_id, total, bayar)
-  values (v_co, v_vis, 60000, 60000) returning id into v_trx;
+  -- Lewat `apply_transaction` sungguhan, bukan insert langsung ke
+  -- `transactions`. Sampai migrasi 0052 fungsi itu tidak bisa dipanggil dari
+  -- sini sama sekali (gerbangnya membaca JWT), jadi satu-satunya langkah yang
+  -- menyentuh UANG dan STOK adalah satu-satunya yang uji ini lompati. Persis
+  -- jenis lubang yang membuat bug obat-hilang-di-kasir bertahan.
+  --
+  -- Keranjangnya dibangun dari `tagihan_kunjungan()`, seperti yang dilakukan
+  -- layar Kasir, bukan diketik ulang di sini. Kalau diketik ulang, uji ini
+  -- akan tetap lulus pada hari tagihannya berhenti membawa obat.
+  v_tag := public.tagihan_kunjungan(v_vis);
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'product_id', null, 'is_jasa', true,
+           'nama_obat', c ->> 'nama',
+           'harga_jual', (c ->> 'harga')::numeric,
+           'jumlah', (c ->> 'jumlah')::numeric::integer)), '[]'::jsonb)
+    into v_items
+    from jsonb_array_elements(coalesce(v_tag -> 'biaya', '[]'::jsonb)) c;
+
+  select v_items || coalesce(jsonb_agg(jsonb_build_object(
+           'product_id', (o ->> 'product_id')::uuid,
+           'nama_obat', o ->> 'nama_obat',
+           'harga_jual', (o ->> 'harga_jual')::numeric,
+           'jumlah', (o ->> 'jumlah')::numeric::integer)), '[]'::jsonb)
+    into v_items
+    from jsonb_array_elements(coalesce(v_tag -> 'obat', '[]'::jsonb)) o
+   where (o ->> 'product_id') is not null
+     and (o ->> 'jumlah')::numeric > 0;
+
+  if jsonb_array_length(v_items) < 2 then
+    raise exception 'Tagihan kasir cuma berisi % baris. Tarif atau obatnya tidak sampai ke kasir.',
+      jsonb_array_length(v_items);
+  end if;
+
+  select coalesce(sum((x ->> 'harga_jual')::numeric * (x ->> 'jumlah')::numeric), 0)
+    into v_total from jsonb_array_elements(v_items) x;
+
+  -- Pasien BPJS: kasir menekan Proses dengan bayar NOL dan seluruhnya
+  -- ditagihkan. Yang menutup transaksi tetap kasir.
+  v_trx := (public.apply_transaction(
+    v_items, 0, 'Tunai', jsonb_build_object('visit_id', v_vis), v_co, 'bpjs', null, v_total
+  ) ->> 'id')::uuid;
+
+  select diterima_tunai into v_tunai from public.transactions where id = v_trx;
+  if v_tunai <> 0 then
+    raise exception 'Laci tercatat menerima % padahal seluruhnya ditagihkan ke BPJS.', v_tunai;
+  end if;
+
   perform public.tandai_kunjungan_dibayar(v_vis, v_trx);
   perform public.tandai_resep_dibayar(v_resep, v_trx);
 
