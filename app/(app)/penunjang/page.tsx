@@ -8,6 +8,7 @@ import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { boleh } from '@/lib/hak'
+import TarifPenunjang from '@/components/klinik/TarifPenunjang'
 import { jam } from '@/lib/format'
 
 /**
@@ -41,6 +42,8 @@ type Antre = {
   pasien_nama: string
   nomor_rm: string | null
   poli: string | null
+  cetakan?: any[]
+  hasil?: any[]
 }
 
 type BarisHasil = {
@@ -59,6 +62,10 @@ export default function HalamanPenunjang() {
   const app = useApp()
 
   const bolehIsi = boleh(app.currentRole, 'penunjang.hasil', app.isSuper)
+  // Tarif diubah oleh yang bertanggung jawab atas uangnya, bukan petugas lab
+  // yang memakai daftarnya sehari-hari. Database menegakkannya juga.
+  const bolehTarif = app.isSuper || ['pemilik', 'admin'].includes(app.currentRole || '')
+  const [tab, setTab] = useState<'antrean' | 'tarif'>('antrean')
 
   const [jenis, setJenis] = useState<'semua' | 'lab' | 'radiologi'>('semua')
   const [daftar, setDaftar] = useState<Antre[]>([])
@@ -89,9 +96,31 @@ export default function HalamanPenunjang() {
     return () => clearInterval(id)
   }, [muat, kerja])
 
+  /**
+   * Formulir hasil sudah terisi barisnya dari cetakan paketnya.
+   *
+   * Ini yang membuat modul lab benar-benar bisa dipakai: darah lengkap itu
+   * sepuluh parameter, dan mengetik ulang nama, satuan, serta rentang rujukan
+   * untuk tiap pasien adalah pekerjaan yang tidak ada gunanya. Lebih buruk:
+   * rentang yang diketik ulang berbeda-beda tergantung siapa yang jaga,
+   * sehingga penanda tinggi dan rendah berhenti berarti apa pun.
+   *
+   * Hasil yang SUDAH pernah disimpan menang atas cetakan: pemeriksaan yang
+   * diisi bertahap harus melanjutkan yang sudah ada, bukan mengosongkannya.
+   */
   const mulai = (a: Antre) => {
     setKerja(a)
-    setHasil([{ ...HASIL_KOSONG }])
+    const sudah = (a.hasil || []).map((h: any) => ({
+      nama: h.nama || '', kode_loinc: h.kode_loinc || '', nilai: h.nilai || '',
+      satuan: h.satuan || '', rujukan_bawah: h.rujukan_bawah ?? '',
+      rujukan_atas: h.rujukan_atas ?? '', penanda: h.penanda || 'normal',
+    }))
+    const cetakan = (a.cetakan || []).map((c: any) => ({
+      nama: c.nama || '', kode_loinc: c.kode_loinc || '', nilai: '',
+      satuan: c.satuan || '', rujukan_bawah: c.rujukan_bawah ?? '',
+      rujukan_atas: c.rujukan_atas ?? '', penanda: 'normal',
+    }))
+    setHasil(sudah.length > 0 ? sudah : cetakan.length > 0 ? cetakan : [{ ...HASIL_KOSONG }])
     setTemuan('')
     setKesan('')
   }
@@ -153,7 +182,7 @@ export default function HalamanPenunjang() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {(['semua', 'lab', 'radiologi'] as const).map(j => (
+          {tab === 'antrean' && (['semua', 'lab', 'radiologi'] as const).map(j => (
             <button key={j} onClick={() => setJenis(j)}
               className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition ${
                 jenis === j ? 'border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand)]'
@@ -162,17 +191,37 @@ export default function HalamanPenunjang() {
               {j === 'semua' ? t('Semua', 'All') : j === 'lab' ? t('Lab', 'Lab') : t('Radiologi', 'Imaging')}
             </button>
           ))}
-          <button onClick={muat} disabled={memuat}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--line)] text-xs text-[var(--ink-soft)] hover:bg-[var(--surface-2)] disabled:opacity-50">
-            <RefreshCw size={13} /> {t('Segarkan', 'Refresh')}
-          </button>
+          {tab === 'antrean' && (
+            <button onClick={muat} disabled={memuat}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--line)] text-xs text-[var(--ink-soft)] hover:bg-[var(--surface-2)] disabled:opacity-50">
+              <RefreshCw size={13} /> {t('Segarkan', 'Refresh')}
+            </button>
+          )}
         </div>
       </div>
 
-      {galat && (
+      <div className="flex gap-1 mb-5">
+        {([
+          { id: 'antrean' as const, label: t('Antrean kerja', 'Worklist') },
+          { id: 'tarif' as const,   label: t('Tarif & paket pemeriksaan', 'Tariffs & panels') },
+        ]).map(x => (
+          <button key={x.id} onClick={() => setTab(x.id)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
+              tab === x.id ? 'bg-[var(--brand)] text-[var(--on-brand)]'
+                           : 'text-[var(--ink-soft)] hover:bg-[var(--surface)]/60'
+            }`}>
+            {x.label}
+          </button>
+        ))}
+      </div>
+
+      {galat && tab === 'antrean' && (
         <p className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{galat}</p>
       )}
 
+      {tab === 'tarif' && <TarifPenunjang bolehUbah={bolehTarif} />}
+
+      {tab === 'antrean' && (
       <div className={`${KARTU} p-4`}>
         {memuat ? (
           <p className="text-sm text-[var(--ink-faint)] py-8 text-center">{t('Memuat…', 'Loading…')}</p>
@@ -220,6 +269,7 @@ export default function HalamanPenunjang() {
           </div>
         )}
       </div>
+      )}
 
       {kerja && (
         <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 pt-[6vh]" role="dialog" aria-modal="true">

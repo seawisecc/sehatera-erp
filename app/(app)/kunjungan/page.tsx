@@ -586,68 +586,89 @@ export default function HalamanKunjungan() {
                 </div>
               )}
 
-              {/* Yang dibuka DARI sini. Rekam medis sudah hidup; tiga sisanya
-                  tetap ditampilkan supaya bentuk kerjanya terbaca sekarang dan
-                  tidak berubah begitu modulnya datang. */}
-              <div className="mt-5 flex flex-wrap items-center gap-2">
+              {/*
+                Kartu tindakan, bukan deretan tombol seragam.
+
+                Sebelum ini kelimanya berbentuk pil abu-abu yang sama persis,
+                jadi tidak ada yang memberi tahu mana yang paling sering dipakai
+                maupun mana yang sudah dikerjakan. Dokter harus MEMBUKA rekam
+                medis untuk tahu apakah diagnosisnya sudah ditegakkan, dan
+                membuka resep untuk tahu apakah resepnya masih draf.
+
+                Sekarang tiap kartu membawa keadaannya sendiri di baris kedua,
+                dan yang sudah selesai diberi tanda hijau. Rekam medis dibuat
+                lebih menonjol karena itu memang pintu utama dokter; sisanya
+                setara dan diurutkan menurut urutan kerja, bukan abjad.
+              */}
+              <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {/* Disembunyikan untuk peran yang pasti ditolak database
                     (migrasi 0039). Yang menahan tetap di sana, bukan di sini:
                     ini cuma supaya petugas pendaftaran tidak menekan tombol
                     lalu ditolak tanpa tahu kenapa. */}
                 {bolehRekam && (
-                <button onClick={() => setBukaRekam(true)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-medium text-[var(--ink)] hover:border-[var(--brand)] transition">
-                  <Stethoscope size={14} className="text-[var(--brand)]" />
-                  {aktif.ada_catatan || aktif.jumlah_diagnosis > 0
-                    ? t('Buka rekam medis', 'Open medical record')
-                    : t('Isi rekam medis', 'Fill medical record')}
-                  {aktif.jumlah_diagnosis > 0 && (
-                    <Check size={13} className="text-emerald-600" />
-                  )}
-                </button>
+                  <KartuAksi
+                    utama
+                    ikon={<Stethoscope size={16} />}
+                    judul={aktif.ada_catatan || aktif.jumlah_diagnosis > 0
+                      ? t('Rekam medis', 'Medical record')
+                      : t('Isi rekam medis', 'Fill medical record')}
+                    kabar={aktif.jumlah_diagnosis > 0
+                      ? t(`${aktif.jumlah_diagnosis} diagnosis tercatat`, `${aktif.jumlah_diagnosis} diagnoses recorded`)
+                      : aktif.ada_catatan
+                        ? t('SOAP terisi, diagnosis belum', 'SOAP filled, no diagnosis yet')
+                        : t('Belum diisi', 'Not started')}
+                    selesai={aktif.jumlah_diagnosis > 0}
+                    onClick={() => setBukaRekam(true)}
+                  />
                 )}
+
                 {bolehResep && (
-                <button onClick={() => setBukaResep(true)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-medium text-[var(--ink)] hover:border-[var(--brand)] transition">
-                  <Pill size={14} className="text-[var(--brand)]" />
-                  {aktif.status_resep
-                    ? t('Buka resep', 'Open prescription')
-                    : t('Tulis resep', 'Write prescription')}
-                  {aktif.status_resep === 'draf' && (
-                    <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800">
-                      {t('DRAF', 'DRAFT')}
-                    </span>
-                  )}
-                  {(aktif.status_resep === 'final' || aktif.status_resep === 'dilayani') && (
-                    <Check size={13} className="text-emerald-600" />
-                  )}
-                </button>
+                  <KartuAksi
+                    ikon={<Pill size={16} />}
+                    judul={aktif.status_resep ? t('Resep', 'Prescription') : t('Tulis resep', 'Write prescription')}
+                    kabar={
+                      aktif.status_resep === 'draf' ? t('Masih draf, belum sampai ke farmasi', 'Draft, not sent to pharmacy')
+                      : aktif.status_resep === 'final' ? t('Sudah difinalkan', 'Finalised')
+                      : aktif.status_resep === 'disiapkan' ? t('Sedang disiapkan farmasi', 'Being prepared')
+                      : aktif.status_resep === 'siap' ? t('Siap diserahkan', 'Ready to hand over')
+                      : aktif.status_resep === 'dilayani' ? t('Sudah diserahkan', 'Handed over')
+                      : t('Belum ada', 'None yet')}
+                    peringatan={aktif.status_resep === 'draf'}
+                    selesai={['final', 'disiapkan', 'siap', 'dilayani'].includes(aktif.status_resep || '')}
+                    onClick={() => setBukaResep(true)}
+                  />
                 )}
-                <button onClick={() => setBukaTarif(true)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-medium text-[var(--ink)] hover:border-[var(--brand)] transition">
-                  <Receipt size={14} className="text-[var(--brand)]" />
-                  {t('Tarif & tindakan', 'Charges')}
-                  {aktif.nilai_biaya > 0 && (
-                    <span className="num text-[10px] font-bold text-[var(--brand)]">{rupiah(aktif.nilai_biaya)}</span>
-                  )}
-                </button>
+
+                <KartuAksi
+                  ikon={<Receipt size={16} />}
+                  judul={t('Tarif & tindakan', 'Charges')}
+                  kabar={aktif.nilai_biaya > 0
+                    ? rupiah(aktif.nilai_biaya)
+                    : t('Belum ada biaya', 'No charges yet')}
+                  selesai={aktif.nilai_biaya > 0}
+                  onClick={() => setBukaTarif(true)}
+                />
+
                 {bolehPenunjang && (
-                <button onClick={() => setBukaPenunjang(true)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-medium text-[var(--ink)] hover:border-[var(--brand)] transition">
-                  <FlaskRound size={14} className="text-[var(--brand)]" />
-                  {t('Lab & radiologi', 'Lab & imaging')}
-                </button>
+                  <KartuAksi
+                    ikon={<FlaskRound size={16} />}
+                    judul={t('Lab & radiologi', 'Lab & imaging')}
+                    kabar={t('Minta pemeriksaan, lihat hasil', 'Order tests, read results')}
+                    onClick={() => setBukaPenunjang(true)}
+                  />
                 )}
+
                 {/* Rujuk internal cuma muncul selama kunjungannya masih
                     berjalan. Merujuk kunjungan yang sudah ditutup ditolak
                     database; tombol yang tetap ada cuma membuat orang
                     menekannya lalu ditolak tanpa tahu kenapa. */}
                 {bolehRujuk && aktif.status !== 'selesai' && aktif.status !== 'batal' && (
-                <button onClick={() => setBukaRujuk(true)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-medium text-[var(--ink)] hover:border-[var(--brand)] transition">
-                  <Share2 size={14} className="text-[var(--brand)]" />
-                  {t('Rujuk ke poli lain', 'Refer to another unit')}
-                </button>
+                  <KartuAksi
+                    ikon={<Share2 size={16} />}
+                    judul={t('Rujuk ke poli lain', 'Refer to another unit')}
+                    kabar={t('Tetap satu kunjungan, satu tagihan', 'Still one visit, one bill')}
+                    onClick={() => setBukaRujuk(true)}
+                  />
                 )}
               </div>
 
@@ -1022,5 +1043,51 @@ export default function HalamanKunjungan() {
           onTutup={() => setFormPasien(undefined)} onSimpan={simpanPasien} />
       )}
     </div>
+  )
+}
+
+/**
+ * Satu tindakan di layar kunjungan.
+ *
+ * Baris kedua membawa KEADAANNYA, dan itu seluruh gunanya. Tanpa itu dokter
+ * harus membuka rekam medis untuk tahu apakah diagnosisnya sudah ditegakkan,
+ * dan membuka resep untuk tahu apakah resepnya masih draf: dua klik untuk
+ * pertanyaan yang jawabannya muat di satu baris.
+ */
+function KartuAksi({
+  ikon, judul, kabar, onClick, utama, selesai, peringatan,
+}: {
+  ikon: React.ReactNode
+  judul: string
+  kabar: string
+  onClick: () => void
+  utama?: boolean
+  selesai?: boolean
+  peringatan?: boolean
+}) {
+  return (
+    <button onClick={onClick}
+      className={`group text-left rounded-xl border px-3.5 py-3 transition ${
+        utama
+          ? 'border-[var(--brand)] bg-[var(--surface-2)] hover:bg-[var(--surface)]'
+          : peringatan
+            ? 'border-amber-300 bg-amber-50 hover:border-amber-400'
+            : 'border-[var(--line)] bg-[var(--surface)] hover:border-[var(--brand)] hover:bg-[var(--surface-2)]'
+      }`}>
+      <span className="flex items-center gap-2">
+        <span className={utama ? 'text-[var(--brand)]' : peringatan ? 'text-amber-700' : 'text-[var(--ink-soft)] group-hover:text-[var(--brand)]'}>
+          {ikon}
+        </span>
+        <span className={`text-sm truncate ${utama ? 'font-semibold text-[var(--ink)]' : 'font-medium text-[var(--ink)]'}`}>
+          {judul}
+        </span>
+        {selesai && <Check size={14} className="ml-auto shrink-0 text-emerald-600" />}
+      </span>
+      <span className={`block text-[11px] mt-0.5 truncate ${
+        peringatan ? 'text-amber-800' : 'text-[var(--ink-faint)]'
+      }`}>
+        {kabar}
+      </span>
+    </button>
   )
 }

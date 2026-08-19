@@ -79,14 +79,20 @@ export default function Penunjang({
 
   useEffect(() => { muat() }, [muat])
 
+  /**
+   * Yang ditawarkan hanya pemeriksaan, bukan seluruh katalog Layanan.
+   *
+   * Sebelumnya kotak ini menampilkan semua layanan termasuk jahit luka dan
+   * nebulisasi, jadi dokter yang mencari "Darah Lengkap" menggulung melewati
+   * dua puluh tindakan yang tidak ada hubungannya. Daftar yang berisi hal yang
+   * salah lebih lambat dipakai daripada daftar yang kosong.
+   */
   useEffect(() => {
     ;(async () => {
-      const { data } = await app.scope(
-        supabase.from('services').select('id,nama,harga').eq('status', 'aktif').order('nama'))
+      const { data } = await supabase.rpc('katalog_penunjang', { p_jenis: null })
       setLayanan((data as any[]) || [])
     })()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [app.superViewCompany])
+  }, [])
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onTutup() }
@@ -306,16 +312,19 @@ export default function Penunjang({
                   }}
                   className={I}>
                   <option value="">{t('Di luar katalog (tidak menagih)', 'Off catalogue (no charge)')}</option>
-                  {layanan.map(s => (
-                    <option key={s.id} value={s.id}>{s.nama} · {rupiah(s.harga)}</option>
+                  {layanan.filter(s => s.jenis === form.jenis).map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.nama} · {rupiah(s.harga)}
+                      {s.jenis === 'lab' && s.parameter?.length > 0 ? ` · ${s.parameter.length} parameter` : ''}
+                    </option>
                   ))}
                 </select>
                 <p className="text-[11px] text-[var(--ink-faint)] mt-1 leading-relaxed">
                   {svc
                     ? t(`Akan menagih ${rupiah(svc.harga)} ke tagihan kunjungan ini.`,
                         `Will add ${rupiah(svc.harga)} to this visit bill.`)
-                    : t('Pemeriksaan di luar katalog tetap tercatat, tapi tidak menagih apa pun. Tambahkan ke Layanan Jasa supaya ikut tertagih.',
-                        'Off-catalogue tests are still recorded but charge nothing. Add them to Services so they get billed.')}
+                    : t('Pemeriksaan di luar katalog tetap tercatat, tapi tidak menagih apa pun dan hasilnya diketik dari nol. Daftarkan di Lab & Radiologi > Tarif & paket pemeriksaan supaya ikut tertagih dan parameternya terisi sendiri.',
+                        'Off-catalogue tests are still recorded but charge nothing, and their results are typed from scratch. Register them under Lab & Imaging > Tariffs so they get billed and their parameters prefill.')}
                 </p>
               </div>
 

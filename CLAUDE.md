@@ -98,6 +98,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0060_rujukan_internal` | Satu kunjungan berpindah poli; SOAP & tarif konsultasi jadi per poli |
 | `0061_penunjang` | Lab & radiologi: `visit_penunjang`, `lab_results`, peran `analis` |
 | `0062_multi_outlet` | `company_groups`, `outlet_aktif`, `auth_company_id()` berurut & berpindah outlet |
+| `0063_tarif_penunjang` | `services.jenis_penunjang`, `service_lab_params`, cetakan ikut ke permintaan |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -830,6 +831,41 @@ pengirimannya sudah jalan. Layarnya mengatakan ini apa adanya.
 'antre'`), yang juga benar untuk baris yang sudah ada. Jawabannya ada di `found`
 sesudah `INSERT ... ON CONFLICT DO NOTHING`, tapi ia harus ditangkap ke variabel
 sebelum SELECT berikutnya menimpanya. Ditemukan uji, bukan saat membacanya.
+
+## Tarif penunjang: paket punya CETAKAN parameternya
+
+Migrasi 0063. Layanan yang berjenis `lab` atau `radiologi` muncul sebagai
+pilihan saat dokter meminta pemeriksaan; sisanya tidak. Daftar yang berisi hal
+yang salah lebih lambat dipakai daripada daftar yang kosong.
+
+**Paket lab menyimpan cetakan parameternya** (`service_lab_params`): nama,
+LOINC, satuan, dan rentang rujukan, diisi sekali lalu dituangkan ke formulir
+hasil. Tanpa itu, darah lengkap berarti sepuluh baris diketik ulang untuk tiap
+pasien, dan yang lebih buruk: rentang rujukan yang diketik ulang berbeda-beda
+tergantung siapa yang jaga, sehingga penanda "tinggi" dan "rendah" berhenti
+berarti apa pun.
+
+**Cetakannya disimpan sebagai CUPLIKAN di `visit_penunjang.cetakan`**, bukan
+dibaca ulang dari katalog saat hasilnya diisi. Alasannya sama dengan payload
+antrean kirim di 0056: paket yang diubah bulan depan tidak boleh mengubah
+bentuk pemeriksaan yang sudah diminta minggu lalu.
+
+Rentang rujukan tetap bisa diubah per hasil: rentang bayi berbeda dari dewasa,
+dan hemoglobin perempuan berbeda dari laki-laki. Cetakan adalah titik mulai,
+bukan palang.
+
+## Layar kunjungan: kartu tindakan yang membawa keadaannya
+
+Lima tombol seragam berbentuk pil tidak memberi tahu mana yang paling sering
+dipakai maupun mana yang sudah dikerjakan, jadi dokter harus MEMBUKA rekam
+medis untuk tahu apakah diagnosisnya sudah ditegakkan, dan membuka resep untuk
+tahu apakah resepnya masih draf: dua klik untuk pertanyaan yang jawabannya muat
+di satu baris.
+
+Sekarang tiap tindakan berbentuk kartu dengan baris kedua berisi keadaannya
+("2 diagnosis tercatat", "Masih draf, belum sampai ke farmasi", "Rp 70.000"),
+tanda hijau kalau sudah selesai, dan warna amber kalau ada yang menggantung.
+Rekam medis dibuat lebih menonjol karena itu pintu utama dokter.
 
 ## Multi outlet: tiap outlet tetap faskes tersendiri
 
