@@ -727,10 +727,19 @@ membaca, dan untuk rekam medis itu bukan kelalaian kecil.
 ### Data uji
 
 Ada satu klinik contoh di produksi, **Klinik Rexco 88**, sektor `klinik`, mode
-farmasi `instalasi`. Isinya 4 poli, 7 tenaga kesehatan, 25 obat dengan 32 batch
+farmasi `instalasi`, dan satu outlet kedua **Apotek Rexco Renon** dalam kelompok
+yang sama supaya pemilih outlet benar-benar muncul. Isinya 4 poli, 7 tenaga kesehatan, 25 obat dengan 32 batch
 (beberapa sengaja kadaluarsa dan hampir kadaluarsa), 8 layanan, 12 pasien, dan
 kunjungan hari ini yang tersebar di semua keadaan. Skrip pengisinya idempoten
-dan tidak menyentuh fasilitas lain.
+dan tidak menyentuh fasilitas lain: `supabase/seed_demo_klinik.sql` (data
+induk: asuransi, jadwal praktik, tarif lab & radiologi beserta cetakan
+parameternya, outlet kedua) lalu `supabase/seed_demo_klinik2.sql` (pasien
+beridentitas lengkap, reservasi besok, kunjungan hari ini termasuk satu yang
+dirujuk antar poli dan satu hasil lab bertanda kritis).
+
+**Data uji sengaja menyebar ke keadaan yang tidak menyenangkan** juga: cito
+yang belum dikerjakan, trombosit kritis, resep draf. Data uji yang semuanya
+rapi tidak pernah menunjukkan layar mana yang belum siap.
 
 ## Dua pelajaran yang mahal kalau diulang
 
@@ -866,6 +875,11 @@ Sekarang tiap tindakan berbentuk kartu dengan baris kedua berisi keadaannya
 ("2 diagnosis tercatat", "Masih draf, belum sampai ke farmasi", "Rp 70.000"),
 tanda hijau kalau sudah selesai, dan warna amber kalau ada yang menggantung.
 Rekam medis dibuat lebih menonjol karena itu pintu utama dokter.
+
+**Pemilih outlet menyembunyikan dirinya kalau outletnya cuma satu**, jadi
+selama Rexco 88 sendirian ia tidak pernah terlihat dan pemiliknya mengira
+fiturnya belum ada. Pintunya tetap **Pengaturan > Outlet & Cabang**, dan itu
+yang harus disebut kalau ada yang bertanya di mana menu gantinya.
 
 ## Multi outlet: tiap outlet tetap faskes tersendiri
 

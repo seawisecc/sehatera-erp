@@ -118,20 +118,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           className={`${sidebarCollapsed ? 'md:w-[64px]' : 'md:w-64'} w-64 bg-gradient-to-b from-[var(--brand)] via-[var(--brand-soft)] to-[var(--brand-hover)] flex flex-col shrink-0 fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 md:z-auto ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
           style={{ transition: 'transform var(--t-normal) var(--ease), width var(--t-normal) var(--ease)' }}
         >
-          {/* Tombol lipat di TEPI LUAR: di dalam sidebar posisinya bergeser
-              mengikuti lebar kolom, di tepi ia selalu di tempat yang sama. */}
-          <button
-            onClick={lipat}
-            title={sidebarCollapsed ? t('Perlebar sidebar', 'Expand sidebar') : t('Perkecil sidebar', 'Collapse sidebar')}
-            aria-label={sidebarCollapsed ? t('Perlebar sidebar', 'Expand sidebar') : t('Perkecil sidebar', 'Collapse sidebar')}
-            aria-expanded={!sidebarCollapsed}
-            className="hidden md:flex absolute -right-3.5 top-20 z-10 w-7 h-7 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--brand)] shadow-md border border-[var(--line)] hover:bg-[var(--surface-2)]"
-            style={{ transition: 'background-color var(--t-quick) var(--ease)' }}
-          >
-            <ChevronRight size={15} style={{ transform: sidebarCollapsed ? 'none' : 'rotate(180deg)', transition: 'transform var(--t-normal) var(--ease)' }} />
-          </button>
-
-          <div className={`${sidebarCollapsed ? 'px-2' : 'px-5'} py-5`}>
+          <div className={`${sidebarCollapsed ? 'px-2' : 'px-5'} pt-5 pb-3`}>
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
               {sidebarCollapsed
                 ? <Mark size={26} variant="mono" className="text-[var(--on-brand)]" />
@@ -142,7 +129,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <nav className={`flex-1 min-h-0 overflow-y-auto ${sidebarCollapsed ? 'px-2' : 'px-3'} py-2 space-y-1`}>
+          {/*
+            Tombol lipat duduk di ANTARA logo dan menu, bukan mengambang di
+            tepi luar sidebar.
+
+            Yang mengambang di tepi terlihat seperti tombol yang tidak punya
+            rumah: ia menindih isi halaman di sebelahnya, bergeser sendiri saat
+            sidebar dilipat, dan di layar sempit menempel pada teks. Di antara
+            logo dan menu ia jelas milik sidebar, dan garis pemisahnya sekalian
+            memisahkan identitas dari navigasi.
+          */}
+          <div className={`hidden md:flex ${sidebarCollapsed ? 'px-2 justify-center' : 'px-4 justify-end'} pb-2 border-b border-[var(--on-brand)]/15 mb-2`}>
+            <button
+              onClick={lipat}
+              title={sidebarCollapsed ? t('Perlebar sidebar', 'Expand sidebar') : t('Perkecil sidebar', 'Collapse sidebar')}
+              aria-label={sidebarCollapsed ? t('Perlebar sidebar', 'Expand sidebar') : t('Perkecil sidebar', 'Collapse sidebar')}
+              aria-expanded={!sidebarCollapsed}
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--on-brand-soft)] hover:text-[var(--on-brand)] hover:bg-[var(--on-brand)]/10"
+              style={{ transition: 'background-color var(--t-quick) var(--ease), color var(--t-quick) var(--ease)' }}
+            >
+              <ChevronRight size={16} style={{ transform: sidebarCollapsed ? 'none' : 'rotate(180deg)', transition: 'transform var(--t-normal) var(--ease)' }} />
+            </button>
+          </div>
+
+          <nav className={`flex-1 min-h-0 overflow-y-auto ${sidebarCollapsed ? 'px-2' : 'px-3'} pb-2 space-y-1`}>
             {nav.map(item => <ItemNav key={item.id} item={item} aktif={menuAktif(pathname, item)} ciut={sidebarCollapsed} lang={lang} />)}
           </nav>
         </div>
