@@ -238,6 +238,7 @@ export default function HalamanPengaturan() {
   const roleLabels: Record<string, string> = {
     pemilik: t('Pemilik', 'Owner'), apoteker: t('Apoteker', 'Pharmacist'),
     asisten_apoteker: t('Asisten Apoteker', 'Pharmacist Assistant'),
+    analis:           t('Analis Lab & Radiologi', 'Lab & Imaging Technician'),
     kasir: t('Kasir', 'Cashier'), admin: 'Admin',
     dokter: t('Dokter', 'Doctor'), perawat: t('Perawat', 'Nurse'),
     pendaftaran: t('Pendaftaran', 'Front desk'),
@@ -705,6 +706,7 @@ export default function HalamanPengaturan() {
                                 <option value="admin">Admin</option>
                                 <option value="apoteker">{t('Apoteker', 'Pharmacist')}</option>
                                 <option value="asisten_apoteker">{t('Asisten Apoteker', 'Pharmacist Assistant')}</option>
+                                <option value="analis">{t('Analis Lab & Radiologi', 'Lab & Imaging Technician')}</option>
                                 <option value="kasir">{t('Kasir', 'Cashier')}</option>
                                 {app.sektor !== 'apotek' && (
                                   <>
@@ -751,6 +753,7 @@ export default function HalamanPengaturan() {
                                 <option value="admin">Admin</option>
                                 <option value="apoteker">{t('Apoteker', 'Pharmacist')}</option>
                                 <option value="asisten_apoteker">{t('Asisten Apoteker', 'Pharmacist Assistant')}</option>
+                                <option value="analis">{t('Analis Lab & Radiologi', 'Lab & Imaging Technician')}</option>
                                 <option value="kasir">{t('Kasir', 'Cashier')}</option>
                                 {app.sektor !== 'apotek' && (
                                   <>

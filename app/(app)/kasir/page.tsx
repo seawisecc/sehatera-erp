@@ -29,7 +29,7 @@ import { bukaCetak, strukPenjualan } from '@/lib/cetak'
  * cepat atau tidaknya antrean bergerak.
  */
 
-const URUT_KELOMPOK = ['administrasi', 'konsultasi', 'tindakan', 'obat', 'lainnya'] as const
+const URUT_KELOMPOK = ['administrasi', 'konsultasi', 'tindakan', 'penunjang', 'obat', 'lainnya'] as const
 
 const METODE = ['Tunai', 'QRIS', 'Transfer', 'Debit', 'Kartu Kredit'] as const
 const GOLONGAN = ['narkotika', 'psikotropika', 'prekursor']
@@ -419,6 +419,7 @@ export default function HalamanKasir() {
     administrasi: t('Administrasi', 'Administration'),
     konsultasi:   t('Konsultasi', 'Consultation'),
     tindakan:     t('Tindakan & layanan', 'Procedures & services'),
+    penunjang:    t('Lab & radiologi', 'Lab & imaging'),
     obat:         t('Obat & farmasi', 'Medicines & pharmacy'),
     lainnya:      t('Lainnya', 'Other'),
   }

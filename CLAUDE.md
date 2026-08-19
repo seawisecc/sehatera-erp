@@ -95,6 +95,8 @@ memasang lubang keamanan yang sudah ditutup.
 | `0057_antre_kirim_penanda_baru` | `found` ditangkap sebelum SELECT menimpanya |
 | `0058_draf_tidak_menahan_kunjungan` | Resep `draf` tidak menahan penutupan; reservasi kembar bicara SH004 |
 | `0059_identitas_pasien_lengkap` | NIK & telepon wajib dengan pintu darurat berjejak, kerabat, alamat berkolom |
+| `0060_rujukan_internal` | Satu kunjungan berpindah poli; SOAP & tarif konsultasi jadi per poli |
+| `0061_penunjang` | Lab & radiologi: `visit_penunjang`, `lab_results`, peran `analis` |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -827,6 +829,68 @@ pengirimannya sudah jalan. Layarnya mengatakan ini apa adanya.
 'antre'`), yang juga benar untuk baris yang sudah ada. Jawabannya ada di `found`
 sesudah `INSERT ... ON CONFLICT DO NOTHING`, tapi ia harus ditangkap ke variabel
 sebelum SELECT berikutnya menimpanya. Ditemukan uji, bukan saat membacanya.
+
+## Rujukan internal: SATU kunjungan yang berpindah poli
+
+Migrasi 0060. Pasien yang diperiksa dokter umum lalu dirujuk ke spesialis di
+klinik yang sama, dalam satu hari.
+
+**Bukan dua kunjungan.** Tiga alasan: pasiennya membayar SEKALI di ujung, dan
+dua kunjungan berarti dua tagihan serta dua kali antre di kasir untuk satu
+kedatangan; `uq_visits_terbuka` menahan dua kunjungan terbuka per pasien per
+hari dan melubanginya untuk rujukan berarti melubanginya untuk salah ketik
+juga; dan aturan "satu tagihan per kunjungan" dari 0024 tetap utuh.
+
+Yang berubah: hal yang selama ini SATU per kunjungan jadi satu per POLI.
+
+- **`visit_notes` unik per (kunjungan, poli)**, bukan per kunjungan. Kalau
+  tidak, dokter spesialis menimpa tulisan dokter yang merujuk, dan yang hilang
+  justru alasan pasien itu dikirim kepadanya. `rekam_medis()` mengembalikan
+  `soap` (poli yang sedang memeriksa) dan `soap_lain` (poli sebelumnya).
+- **Tarif konsultasi unik per (kunjungan, jenis, poli).** Mundur-maju di rel
+  pada poli yang sama tetap sekali, yang justru alasan indeks itu ada sejak
+  0024. Biaya administrasi TETAP sekali per kunjungan.
+- Merujuk menerbitkan **nomor antrean baru** untuk poli tujuan dan
+  mengembalikan kunjungan ke `terdaftar`: pasiennya memang menunggu lagi.
+  Penanda panggilan dinolkan, kalau tidak papan menganggapnya sudah dipanggil
+  di poli yang baru.
+
+**`on conflict (visit_id)` di `simpan_rekam_medis` WAJIB ikut diperbarui di
+migrasi yang sama.** Ia menunjuk indeks unik yang dibuang; kalau tertinggal,
+menyimpan rekam medis gagal untuk SEMUA kunjungan, bukan cuma yang dirujuk.
+
+Diagnosis sengaja tidak dipecah per poli: satu kunjungan tetap satu diagnosis
+primer, dan itu yang dituntut BPJS dan SatuSehat.
+
+## Penunjang: lab berkolom, radiologi naratif
+
+Migrasi 0061.
+
+- **Hasil lab adalah BARIS BERKOLOM berkode LOINC**, aturan yang sama dengan
+  tanda vital di 0018. "Hb 11,2" di kotak bebas tidak bisa dipetakan ke
+  Observation tanpa menebak, tidak bisa dibandingkan dengan hasil bulan lalu,
+  dan tidak bisa ditandai di luar rentang oleh siapa pun kecuali mata manusia.
+- **Radiologi TIDAK dipaksa berkolom.** Bacaannya memang naratif: temuan dan
+  kesan. Memaksanya jadi angka membuat orang mengisi kolom yang tidak ada
+  isinya.
+- **Permintaan menagih sendiri lewat katalog Layanan.** Yang di luar katalog
+  tetap boleh diminta tapi tidak menagih, dan itu dikatakan di layar.
+  Dibatalkan berarti biayanya ikut dicabut: pemeriksaan yang tidak jadi
+  dikerjakan tidak boleh ditagihkan. Yang sudah selesai tidak bisa dibatalkan.
+- **`penunjang.minta` dan `penunjang.hasil` sengaja beda peran.** Hasil yang
+  diisi oleh yang memintanya bukan hasil pemeriksaan. Peran baru `analis`
+  lahir untuk ini, dan ia hanya diberi Beranda dan Lab & Radiologi.
+- `cito` menentukan URUTAN antrean lab, bukan sekadar penanda. Kalau
+  antreannya tetap menurut waktu, menandai cito cuma jadi hiasan.
+- Penanda `kritis` berarti dokternya dikabari SEKARANG. Layar penunjang
+  menyebutnya lebih dulu dan mewarnainya merah: trombosit 84.000 yang terselip
+  di baris keenam dari sepuluh adalah cara paling mudah melewatkan pasien yang
+  seharusnya dirujuk hari itu juga.
+
+**Nilai `jenis` baru di `visit_charges` (`penunjang`)** berarti memeriksa tiap
+tempat yang menyebut nilai lama: constraint, urutan di `tagihan_kunjungan`
+(memakai `else`, aman), indeks unik administrasi/konsultasi (tidak menyentuh
+nilai baru), dan pengelompokan keranjang di layar Kasir.
 
 ## Identitas pasien: wajib, tapi palangnya punya pintu
 

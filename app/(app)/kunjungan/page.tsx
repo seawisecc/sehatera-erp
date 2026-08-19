@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle, ArrowLeft, ArrowRight, Check, FileText, Pill, Receipt, Search,
-  Stethoscope, UserPlus, Volume2, X,
+  FlaskRound, Share2, Stethoscope, UserPlus, Volume2, X,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
@@ -15,6 +15,8 @@ import RekamMedis from '@/components/klinik/RekamMedis'
 import { boleh } from '@/lib/hak'
 import Resep from '@/components/klinik/Resep'
 import TarifKunjungan from '@/components/klinik/TarifKunjungan'
+import Penunjang from '@/components/klinik/Penunjang'
+import RujukInternal from '@/components/klinik/RujukInternal'
 
 /**
  * Kunjungan: satu layar kerja untuk seluruh hari.
@@ -100,6 +102,8 @@ export default function HalamanKunjungan() {
   const [bukaRekam, setBukaRekam] = useState(false)
   const [bukaResep, setBukaResep] = useState(false)
   const [bukaTarif, setBukaTarif] = useState(false)
+  const [bukaPenunjang, setBukaPenunjang] = useState(false)
+  const [bukaRujuk, setBukaRujuk] = useState(false)
   const [poli, setPoli] = useState<Poli[]>([])
   const [poliDipilih, setPoliDipilih] = useState<string | null>(null)
   const [dokter, setDokter] = useState<Dokter[]>([])
@@ -265,6 +269,8 @@ export default function HalamanKunjungan() {
 
   const bolehRekam = boleh(app.currentRole, 'rekam_medis.baca', app.isSuper)
   const bolehResep = boleh(app.currentRole, 'resep.baca', app.isSuper)
+  const bolehPenunjang = boleh(app.currentRole, 'penunjang.baca', app.isSuper)
+  const bolehRujuk = boleh(app.currentRole, 'diagnosis.tulis', app.isSuper)
 
   const pindah = async (status: string, alasan?: string) => {
     if (!aktif) return
@@ -623,15 +629,24 @@ export default function HalamanKunjungan() {
                     <span className="num text-[10px] font-bold text-[var(--brand)]">{rupiah(aktif.nilai_biaya)}</span>
                   )}
                 </button>
-                {[
-                  t('Serahkan obat', 'Dispense'),
-                ].map((x, i) => (
-                  <span key={i}
-                    title={t('Belum tersedia. Menyusul di tahap berikutnya.', 'Not available yet. Coming in the next stage.')}
-                    className="px-3 py-1.5 rounded-lg border border-dashed border-[var(--line)] text-xs text-[var(--ink-faint)]">
-                    {x}
-                  </span>
-                ))}
+                {bolehPenunjang && (
+                <button onClick={() => setBukaPenunjang(true)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-medium text-[var(--ink)] hover:border-[var(--brand)] transition">
+                  <FlaskRound size={14} className="text-[var(--brand)]" />
+                  {t('Lab & radiologi', 'Lab & imaging')}
+                </button>
+                )}
+                {/* Rujuk internal cuma muncul selama kunjungannya masih
+                    berjalan. Merujuk kunjungan yang sudah ditutup ditolak
+                    database; tombol yang tetap ada cuma membuat orang
+                    menekannya lalu ditolak tanpa tahu kenapa. */}
+                {bolehRujuk && aktif.status !== 'selesai' && aktif.status !== 'batal' && (
+                <button onClick={() => setBukaRujuk(true)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-medium text-[var(--ink)] hover:border-[var(--brand)] transition">
+                  <Share2 size={14} className="text-[var(--brand)]" />
+                  {t('Rujuk ke poli lain', 'Refer to another unit')}
+                </button>
+                )}
               </div>
 
               {/* Tanda kesiapan, dipasang di sini dan bukan disembunyikan sampai
@@ -972,6 +987,23 @@ export default function HalamanKunjungan() {
           tertutup={aktif.status === 'selesai' || aktif.status === 'batal'}
           onTutup={() => setBukaResep(false)}
           onSimpan={muat} />
+      )}
+
+      {bukaPenunjang && aktif && (
+        <Penunjang
+          visitId={aktif.id}
+          tertutup={aktif.status === 'selesai' || aktif.status === 'batal'}
+          onTutup={() => { setBukaPenunjang(false); muat() }}
+        />
+      )}
+
+      {bukaRujuk && aktif && (
+        <RujukInternal
+          visitId={aktif.id}
+          unitSekarang={aktif.unit_id || null}
+          onTutup={() => setBukaRujuk(false)}
+          onSelesai={() => { setBukaRujuk(false); muat() }}
+        />
       )}
 
       {bukaTarif && aktif && (

@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Pill, ShoppingCart, PackageOpen, BarChart2, Settings, Truck,
   ClipboardList, Receipt, HeartPulse, Building2, Stethoscope, UsersRound, FlaskConical,
-  CalendarClock,
+  CalendarClock, FlaskRound,
 } from 'lucide-react'
 
 /**
@@ -50,6 +50,9 @@ export const menuItems: MenuItem[] = [
   // barang yang ada di rak. Dua menu berturut-turut dengan ikon sama membuat
   // orang mengklik yang salah dan menyalahkan dirinya sendiri.
   { id: 'farmasi',      href: '/farmasi',       label: 'Farmasi',           en: 'Pharmacy',         icon: FlaskConical },
+  // Penunjang berdiri sendiri, bukan menumpang Farmasi: yang mengerjakannya
+  // orang lain, di ruangan lain, dan antreannya tidak pernah bercampur.
+  { id: 'penunjang',    href: '/penunjang',     label: 'Lab & Radiologi',   en: 'Lab & Imaging',    icon: FlaskRound },
   { id: 'produk',       href: '/produk',        label: 'Produk & Stok',     en: 'Products & Stock', icon: Pill },
   { id: 'transaksi',    href: '/kasir',         label: 'Transaksi',         en: 'Sales',            icon: ShoppingCart },
   { id: 'layanan',      href: '/layanan',       label: 'Layanan Jasa',      en: 'Services',         icon: HeartPulse },
@@ -68,8 +71,8 @@ export const menuSuper: MenuItem[] = [
 
 /** Halaman yang boleh dibuka tiap peran, kalau pemilik tidak mengatur sendiri. */
 export const ROLE_PAGES: Record<string, string[]> = {
-  pemilik:          ['dashboard','reservasi','kunjungan','pasien','farmasi','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
-  admin:            ['dashboard','reservasi','kunjungan','pasien','farmasi','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
+  pemilik:          ['dashboard','reservasi','kunjungan','pasien','farmasi','penunjang','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
+  admin:            ['dashboard','reservasi','kunjungan','pasien','farmasi','penunjang','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
   apoteker:         ['dashboard','kunjungan','farmasi','produk','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan'],
   asisten_apoteker: ['dashboard','farmasi','produk','transaksi','layanan','tindaklanjut','laporan'],
   // Kasir melihat antrean farmasi supaya tahu obat sudah siap sebelum
@@ -79,9 +82,13 @@ export const ROLE_PAGES: Record<string, string[]> = {
   // Peran klinik. Pembagiannya mengikuti siapa memegang apa, bukan siapa lebih
   // senior: pendaftaran memegang identitas dan antrean tapi TIDAK boleh
   // membuka rekam medis, dokter memegang pemeriksaan tapi tidak perlu kasir.
-  dokter:           ['dashboard','reservasi','kunjungan','pasien','laporan'],
-  perawat:          ['dashboard','reservasi','kunjungan','pasien'],
+  dokter:           ['dashboard','reservasi','kunjungan','pasien','penunjang','laporan'],
+  perawat:          ['dashboard','reservasi','kunjungan','pasien','penunjang'],
   pendaftaran:      ['dashboard','reservasi','kunjungan','pasien','transaksi'],
+  // Analis tidak diberi Kunjungan maupun Pasien: yang ia butuhkan cuma
+  // antrean pemeriksaan, dan tiap menu yang tidak dipakai membuat menu yang
+  // dipakai lebih sulit ditemukan.
+  analis:           ['dashboard','penunjang'],
 }
 
 export const ROLE_LABELS: Record<string, string> = {
