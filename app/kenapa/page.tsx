@@ -14,19 +14,26 @@ import DaftarPaket from '../../components/DaftarPaket'
 import { useLang, LangToggle } from '../../lib/i18n'
 
 const CSS = `
-:root { --sw-green:#1e3a2c; --sw-rust:#c2632f; --sw-ink:#1c2620; }
+/* Latar halaman memakai resep yang SAMA dengan .sw-ambient di globals.css:
+   tiga radial dari gradien identitas tema, di atas --paper. Versi sebelumnya
+   menanam hijau dan krem sebagai hex, warisan TokoKu, jadi halaman jualan
+   berdiri di atas warna yang tidak ada di aplikasinya. Pada tema bawaan yang
+   maroon, hasilnya dua sistem warna dalam satu layar. */
 .kn-ambient {
   background:
-    radial-gradient(1100px 560px at 8% -8%, #d9e4d3 0%, rgba(217,228,211,0) 55%),
-    radial-gradient(1000px 520px at 102% -4%, #f1ded0 0%, rgba(241,222,208,0) 52%),
-    radial-gradient(900px 720px at 104% 60%, #e7d4c2 0%, rgba(231,212,194,0) 55%),
-    #f3f1ea;
+    radial-gradient(1100px 560px at 8% -8%, var(--grad-1) 0%, transparent 55%),
+    radial-gradient(1000px 520px at 102% -4%, var(--grad-2) 0%, transparent 52%),
+    radial-gradient(900px 720px at 104% 60%, var(--grad-3) 0%, transparent 55%),
+    var(--paper);
 }
-.kn-dark { background: linear-gradient(160deg,#16281d 0%,#1e3a2c 45%,#3a3320 100%); }
-.reveal { opacity:0; transform: translateY(30px); transition: opacity .8s cubic-bezier(.22,.61,.36,1), transform .8s cubic-bezier(.22,.61,.36,1); }
+/* Bagian gelap mengikuti keluarga --brand, bukan hijau tetap. Teks di atasnya
+   memakai --on-brand, bukan putih, karena --brand tema Clean Slate jauh lebih
+   terang daripada tema lain. */
+.kn-dark { background: linear-gradient(160deg, var(--brand-hover) 0%, var(--brand) 52%, var(--brand-soft) 100%); }
+.reveal { opacity:0; transform: translateY(18px); transition: opacity .45s cubic-bezier(.22,.61,.36,1), transform .45s cubic-bezier(.22,.61,.36,1); }
 .reveal.in { opacity:1; transform:none; }
 .kn-nav { backdrop-filter: saturate(160%) blur(12px); -webkit-backdrop-filter: saturate(160%) blur(12px); }
-.kn-win { box-shadow: 0 40px 90px -30px rgba(20,40,29,.55); }
+.kn-win { box-shadow: 0 40px 90px -30px rgba(0,0,0,.42); }
 .kn-headline { letter-spacing:-0.02em; line-height:1.02; }
 @media (prefers-reduced-motion: reduce){ .reveal{ opacity:1; transform:none; transition:none; } }
 /* Rel bab di bawah nav. Batang gulungnya disembunyikan: ia muncul di tengah
@@ -34,17 +41,20 @@ const CSS = `
 .kn-rail{ scrollbar-width:none; -ms-overflow-style:none; }
 .kn-rail::-webkit-scrollbar{ display:none; }
 
-/* ── Device showcase (MacBook Pro + iPhone Pro) ── */
+/* ── Panggung perangkat (MacBook Pro + iPhone Pro) ──
+   Warna BODI perangkatnya sengaja tetap hex abu gelap: laptop dan ponsel
+   sungguhan tidak ikut berganti tema. Yang ada DI DALAM layarnya memakai
+   token, karena itu memang aplikasinya. */
 .dev-stage{ position:relative; max-width:720px; margin:0 auto; padding-bottom:1%; }
 .macbook{ position:relative; width:80%; }
-.mb-lid{ background:#0a0b0d; border:1px solid #34373c; border-radius:11px 11px 5px 5px; padding:0.85% 0.85% 1.5%; box-shadow:0 46px 86px -32px rgba(20,40,29,.5); }
+.mb-lid{ background:#0a0b0d; border:1px solid #34373c; border-radius:11px 11px 5px 5px; padding:0.85% 0.85% 1.5%; box-shadow:0 46px 86px -32px rgba(0,0,0,.38); }
 .mb-cam{ display:block; width:4px; height:4px; margin:0 auto 0.6%; border-radius:50%; background:#141619; box-shadow:inset 0 0 0 1px #2c2f34; }
-.mb-screen{ border-radius:5px; overflow:hidden; background:#0f1a14; aspect-ratio:16/10.2; }
-.mb-deck{ position:relative; width:113%; margin-left:-6.5%; height:clamp(11px,2.1vw,22px); background:linear-gradient(180deg,#4a4d53 0%,#303338 42%,#191a1d 100%); border-radius:3px 3px 11px 11px; box-shadow:0 22px 30px -14px rgba(20,40,29,.34); }
+.mb-screen{ border-radius:5px; overflow:hidden; background:var(--paper); aspect-ratio:16/10.2; }
+.mb-deck{ position:relative; width:113%; margin-left:-6.5%; height:clamp(11px,2.1vw,22px); background:linear-gradient(180deg,#4a4d53 0%,#303338 42%,#191a1d 100%); border-radius:3px 3px 11px 11px; box-shadow:0 22px 30px -14px rgba(0,0,0,.26); }
 .mb-deck::before{ content:''; position:absolute; left:0; right:0; top:0; height:1.5px; background:rgba(255,255,255,.22); border-radius:3px 3px 0 0; }
 .mb-groove{ position:absolute; top:0; left:50%; transform:translateX(-50%); width:13%; height:46%; background:#141619; border-radius:0 0 9px 9px; }
-.iphone{ position:absolute; right:0; bottom:-9%; width:22.5%; min-width:134px; background:linear-gradient(150deg,#3b3e43 0%,#141518 62%); border-radius:26px; padding:1.4%; box-shadow:0 38px 62px -18px rgba(20,40,29,.55); z-index:5; }
-.iphone-inner{ position:relative; background:#e9ede7; border-radius:22px; overflow:hidden; aspect-ratio:9/19.5; }
+.iphone{ position:absolute; right:0; bottom:-9%; width:22.5%; min-width:134px; background:linear-gradient(150deg,#3b3e43 0%,#141518 62%); border-radius:26px; padding:1.4%; box-shadow:0 38px 62px -18px rgba(0,0,0,.42); z-index:5; }
+.iphone-inner{ position:relative; background:var(--paper); border-radius:22px; overflow:hidden; aspect-ratio:9/19.5; }
 .ip-island{ position:absolute; z-index:6; top:3.4%; left:50%; transform:translateX(-50%); width:30%; height:3%; background:#000; border-radius:20px; }
 .ip-side{ position:absolute; background:#25272b; border-radius:2px; }
 .ip-pw{ right:-2px; top:27%; width:2.5px; height:12%; }
@@ -55,21 +65,62 @@ const CSS = `
 @media (max-width:560px){ .macbook{ width:90%; } .iphone{ width:30%; right:-4%; bottom:-11%; } }
 `
 
-// Mini mockup jendela aplikasi (memakai tema asli)
-function AppWindow({ children }: { children: React.ReactNode }) {
+/**
+ * Rangka layar aplikasi, dipakai SETIAP mokup di halaman ini.
+ *
+ * Sebelumnya tiap mokup punya rangkanya sendiri: sebagian memakai titik-titik
+ * jendela macOS, sebagian tidak punya rangka sama sekali, dan ikon di rel
+ * kirinya selalu empat ikon yang sama tidak peduli modul apa yang sedang
+ * ditunjukkan. Hasilnya tujuh belas gambar yang tidak terlihat berasal dari
+ * satu aplikasi, dan calon klien yang menggulung halaman ini tidak pernah
+ * mengenali satu bentuk pun.
+ *
+ * Rangka ini menyalin bentuk `AppShell` yang sebenarnya: rel ikon sempit
+ * bergradasi --brand seperti sidebar yang sedang dilipat, baris judul setinggi
+ * topbar, isi di atas --paper. Menu yang aktif memakai --grad dan --on-grad,
+ * persis aturan yang dipakai `ItemNav`.
+ */
+const REL: Ikon[] = [
+  LayoutDashboard, CalendarClock, Stethoscope, UsersRound, FlaskConical,
+  Microscope, Pill, ShoppingCart, BarChart2, Settings,
+]
+
+function AppWindow({ judul, sub, aktif = 0, children }: {
+  judul: string
+  sub?: string
+  aktif?: number
+  children: React.ReactNode
+}) {
   return (
-    <div className="kn-win rounded-2xl overflow-hidden border border-black/5 bg-[var(--surface)]/80 backdrop-blur-sm w-full">
-      <div className="h-9 flex items-center gap-2 px-4 bg-[var(--paper)] border-b border-black/5">
-        <span className="w-3 h-3 rounded-full bg-[var(--brand-soft)]" />
-        <span className="w-3 h-3 rounded-full bg-[var(--accent)]" />
-        <span className="w-3 h-3 rounded-full bg-[var(--brand-soft)]" />
-      </div>
-      <div className="flex min-h-[240px]">
-        <div className="w-16 sm:w-20 shrink-0 bg-gradient-to-b from-[var(--brand)] to-[var(--brand-hover)] flex flex-col items-center py-4 gap-4">
-          <div className="w-8 h-8 rounded-xl bg-[var(--surface)]/10 flex items-center justify-center"><Mark size={16} variant="mono" className="text-[var(--on-brand)]" /></div>
-          {[Pill, ShoppingCart, ClipboardList, BarChart2].map((I, i) => <I key={i} size={16} className="text-[var(--on-brand-soft)]" />)}
+    <div className="kn-win rounded-2xl overflow-hidden border border-[var(--line)] bg-[var(--surface)] w-full">
+      <div className="flex items-stretch min-h-[236px]">
+        {/* Rel ikon. Ini bentuk sidebar aplikasi saat dilipat, bukan hiasan. */}
+        <div className="w-[52px] shrink-0 relative overflow-hidden bg-gradient-to-b from-[var(--brand)] via-[var(--brand-soft)] to-[var(--brand-hover)]">
+         <div className="absolute inset-0 flex flex-col items-center py-2.5 gap-0.5">
+          <span className="w-8 h-8 rounded-xl bg-[var(--on-brand)]/15 flex items-center justify-center mb-1.5 shrink-0">
+            <Mark size={16} variant="mono" className="text-[var(--on-brand)]" />
+          </span>
+          {REL.map((I, i) => (
+            <span key={i}
+              className={`w-8 h-8 shrink-0 rounded-xl flex items-center justify-center ${i === aktif ? 'shadow-sm' : 'text-[var(--on-brand-soft)]'}`}
+              style={i === aktif ? { background: 'var(--grad)', color: 'var(--on-grad)' } : undefined}>
+              <I size={15} />
+            </span>
+          ))}
+         </div>
         </div>
-        <div className="flex-1 p-5">{children}</div>
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* Baris judul, sepadan dengan topbar aplikasi. */}
+          <div className="h-11 shrink-0 flex items-center gap-2 px-4 border-b border-[var(--line)] bg-[var(--surface)]">
+            <p className="text-[13px] font-semibold text-[var(--ink)] truncate">{judul}</p>
+            {sub && <>
+              <span className="text-[var(--ink-faint)] text-[12px]">/</span>
+              <p className="text-[12px] text-[var(--ink-soft)] truncate">{sub}</p>
+            </>}
+            <span className="ml-auto shrink-0 w-7 h-7 rounded-full bg-[var(--surface-2)] text-[var(--brand)] text-[10px] font-bold flex items-center justify-center">AB</span>
+          </div>
+          <div className="flex-1 p-4 bg-[var(--paper)]">{children}</div>
+        </div>
       </div>
     </div>
   )
@@ -131,7 +182,7 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
               {/* Stat cards */}
               <div className="grid grid-cols-4 gap-[2.2%] mb-[3%] shrink-0">
                 {stats.map(([Ic, chip, label, val], i) => (
-                  <div key={i} className="bg-[var(--surface)]/80 border border-white/70 rounded-lg px-[8%] py-[7%]">
+                  <div key={i} className="bg-[var(--surface)]/80 border border-[var(--line-soft)] rounded-lg px-[8%] py-[7%]">
                     <div className={`rounded-md flex items-center justify-center mb-[12%] ${chip}`} style={{ width: 'clamp(14px,1.7vw,28px)', height: 'clamp(14px,1.7vw,28px)' }}><Ic className="w-1/2 h-1/2" /></div>
                     <p className="text-[var(--ink-soft)] uppercase tracking-wide leading-tight" style={{ fontSize: 'clamp(4.5px,0.6vw,8px)' }}>{label}</p>
                     <p className="font-bold text-[var(--ink)] leading-tight mt-0.5" style={{ fontSize: 'clamp(7px,1vw,14px)' }}>{val}</p>
@@ -140,7 +191,7 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
               </div>
               {/* Chart + Best sellers */}
               <div className="grid grid-cols-3 gap-[2.2%] flex-1 min-h-0">
-                <div className="col-span-2 bg-[var(--surface)]/80 border border-white/70 rounded-lg p-[3.2%] flex flex-col min-h-0">
+                <div className="col-span-2 bg-[var(--surface)]/80 border border-[var(--line-soft)] rounded-lg p-[3.2%] flex flex-col min-h-0">
                   <div className="flex items-center justify-between mb-[2%] shrink-0">
                     <div>
                       <p className="font-bold text-[var(--ink)]" style={{ fontSize: 'clamp(6px,0.85vw,12px)' }}>Sales, Last 7 Days</p>
@@ -149,13 +200,13 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
                     <p className="font-bold text-[var(--brand)]" style={{ fontSize: 'clamp(6px,0.9vw,13px)' }}>Rp 10.095.000</p>
                   </div>
                   <svg viewBox="0 0 260 92" preserveAspectRatio="xMidYMid meet" className="w-full flex-1 min-h-0">
-                    {[0, 0.5, 1].map((g, i) => <line key={i} x1="8" x2="252" y1={78 - g * 62} y2={78 - g * 62} stroke="#eceae3" strokeWidth="1" />)}
-                    {bars.map((h, i) => { const bh = (h / 62) * 62; return <rect key={i} x={14 + i * 34} y={78 - bh} width="17" height={bh} rx="3" fill="#1e3a2c" /> })}
-                    <path d="M22,75 L56,75 L90,75 L124,75 L158,75 L192,77 L226,16" fill="none" stroke="#c2632f" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                    {[[22, 75], [56, 75], [90, 75], [124, 75], [158, 75], [192, 77], [226, 16]].map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="2.6" fill="#fff" stroke="#c2632f" strokeWidth="1.8" />)}
+                    {[0, 0.5, 1].map((g, i) => <line key={i} x1="8" x2="252" y1={78 - g * 62} y2={78 - g * 62} stroke="var(--line-soft)" strokeWidth="1" />)}
+                    {bars.map((h, i) => { const bh = (h / 62) * 62; return <rect key={i} x={14 + i * 34} y={78 - bh} width="17" height={bh} rx="3" fill="var(--brand)" /> })}
+                    <path d="M22,75 L56,75 L90,75 L124,75 L158,75 L192,77 L226,16" fill="none" stroke="var(--accent)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                    {[[22, 75], [56, 75], [90, 75], [124, 75], [158, 75], [192, 77], [226, 16]].map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="2.6" fill="var(--surface)" stroke="var(--accent)" strokeWidth="1.8" />)}
                   </svg>
                 </div>
-                <div className="bg-[var(--surface)]/80 border border-white/70 rounded-lg p-[6%] min-h-0 overflow-hidden">
+                <div className="bg-[var(--surface)]/80 border border-[var(--line-soft)] rounded-lg p-[6%] min-h-0 overflow-hidden">
                   <p className="font-bold text-[var(--ink)] mb-[9%]" style={{ fontSize: 'clamp(6px,0.85vw,12px)' }}>Best Sellers</p>
                   <div className="space-y-[10%]">
                     {sellers.map(([nm, q], i) => (
@@ -184,7 +235,7 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
           <div className="px-[6%] py-[5%]">
             <p className="font-bold text-[var(--ink)]" style={{ fontSize: 'clamp(9px,2vw,15px)' }}>Cashier</p>
             <p className="text-[var(--ink-soft)] mb-[5%]" style={{ fontSize: 'clamp(5px,1.1vw,9px)' }}>Medicine sales transactions</p>
-            <div className="bg-[var(--surface)]/80 border border-white/70 rounded-lg p-[4%]">
+            <div className="bg-[var(--surface)]/80 border border-[var(--line-soft)] rounded-lg p-[4%]">
               <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 mb-[4%] text-[var(--ink)]" style={{ fontSize: 'clamp(6px,1.3vw,10px)' }}>Para</div>
               {cashItems.map(([nm, sub, pr], i) => (
                 <div key={i} className="flex items-center justify-between py-[3%] border-b border-[var(--line-soft)] last:border-0">
@@ -193,7 +244,7 @@ function DeviceShowcase({ t }: { t: (id: string, en: string) => string }) {
                 </div>
               ))}
             </div>
-            <div className="bg-[var(--surface)]/80 border border-white/70 rounded-lg p-[5%] mt-[5%]">
+            <div className="bg-[var(--surface)]/80 border border-[var(--line-soft)] rounded-lg p-[5%] mt-[5%]">
               <p className="font-bold text-[var(--ink)] mb-[5%]" style={{ fontSize: 'clamp(6px,1.4vw,11px)' }}>Transaction Summary</p>
               <div className="flex justify-between text-[var(--ink-soft)] mb-1" style={{ fontSize: 'clamp(5.5px,1.2vw,10px)' }}><span>Total Items</span><span>0 items</span></div>
               <div className="flex justify-between font-semibold text-[var(--ink)] border-t border-[var(--line-soft)] pt-1" style={{ fontSize: 'clamp(5.5px,1.2vw,10px)' }}><span>Total</span><span>Rp 0</span></div>
@@ -284,7 +335,7 @@ export default function Kenapa() {
   useEffect(() => {
     const io = new IntersectionObserver((entries) => {
       entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in') })
-    }, { threshold: 0.12 })
+    }, { threshold: 0, rootMargin: '0px 0px -8% 0px' })
     document.querySelectorAll('.reveal').forEach(el => io.observe(el))
     return () => io.disconnect()
   }, [sektor, tanya])
@@ -362,12 +413,12 @@ export default function Kenapa() {
       body: t('Grafik penjualan interaktif, batang omzet dipadu garis jumlah transaksi, bisa ganti rentang 7 atau 30 hari. Di bawahnya: produk terlaris, stok yang menipis, barang segera kadaluarsa, dan tagihan yang akan jatuh tempo. Semua langsung dari data hari itu, tanpa perlu membuka laporan.',
               'An interactive sales chart, revenue bars paired with a transaction count line, switchable between 7 or 30 days. Below it: best sellers, low stock, items expiring soon, and invoices coming due. Straight from today data, no report needed.'),
       Icon: TrendingUp,
-      visual: (<AppWindow><div className="space-y-3">
+      visual: (<AppWindow judul={t('Beranda', 'Home')} aktif={0}><div className="space-y-3">
         <div className="grid grid-cols-3 gap-1.5">
-          {[[t('Omzet','Revenue'),'Rp8,4jt'],[t('Kunjungan','Visits'),'34'],[t('Produk','Products'),'1.240']].map((c,i)=>(<div key={i} className="rounded-lg border border-[var(--line-soft)] p-2"><p className="text-[8px] text-[var(--ink-faint)] uppercase tracking-wide">{c[0]}</p><p className="text-[11px] font-bold text-[var(--ink)]">{c[1]}</p></div>))}
+          {[[t('Omzet','Revenue'),'Rp8,4jt'],[t('Kunjungan','Visits'),'34'],[t('Produk','Products'),'1.240']].map((c,i)=>(<div key={i} className="rounded-lg border border-[var(--line-soft)] p-2"><p className="text-[10px] text-[var(--ink-faint)] uppercase tracking-wide">{c[0]}</p><p className="text-[13px] font-bold text-[var(--ink)]">{c[1]}</p></div>))}
         </div>
         <div className="rounded-lg border border-[var(--line-soft)] p-2.5">
-          <div className="flex items-center justify-between mb-1"><span className="text-[9px] font-semibold text-[var(--ink)]">{t('Penjualan 7 Hari','Sales, 7 Days')}</span><div className="flex gap-1.5 text-[7px]"><span className="text-[var(--brand-soft)]">▉ {t('Omzet','Revenue')}</span><span className="text-[var(--accent)]">━ {t('Transaksi','Trx')}</span></div></div>
+          <div className="flex items-center justify-between mb-1"><span className="text-[11px] font-semibold text-[var(--ink)]">{t('Penjualan 7 Hari','Sales, 7 Days')}</span><div className="flex gap-1.5 text-[9px]"><span className="text-[var(--brand-soft)]">▉ {t('Omzet','Revenue')}</span><span className="text-[var(--accent)]">━ {t('Transaksi','Trx')}</span></div></div>
           <svg viewBox="0 0 240 74" className="w-full">
             {[24,40,32,54,46,66,58].map((h,i)=>(<rect key={i} x={12+i*32} y={68-h} width="16" height={h} rx="3" fill="var(--brand)" />))}
             <path d="M20,42 C36,34 40,32 52,30 C68,27 72,40 84,38 C100,35 104,24 116,22 C132,20 136,32 148,30 C164,27 168,16 180,15 C196,14 200,22 212,24" fill="none" stroke="var(--accent)" strokeWidth="2.4" strokeLinecap="round" />
@@ -375,8 +426,8 @@ export default function Kenapa() {
           </svg>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
-          <div className="rounded-lg border border-[var(--line-soft)] p-2"><p className="text-[8px] text-[var(--ink-faint)] mb-0.5">{t('Stok Minim','Low Stock')}</p><p className="text-[10px] text-[var(--ink)]">Amoxicillin <span className="text-red-600 font-semibold">2/10</span></p></div>
-          <div className="rounded-lg border border-[var(--line-soft)] p-2"><p className="text-[8px] text-[var(--ink-faint)] mb-0.5">{t('Jatuh Tempo','Due')}</p><p className="text-[10px] text-[var(--ink)]">PBF Sehat <span className="text-amber-700 font-semibold">3 {t('hari','d')}</span></p></div>
+          <div className="rounded-lg border border-[var(--line-soft)] p-2"><p className="text-[10px] text-[var(--ink-faint)] mb-0.5">{t('Stok Minim','Low Stock')}</p><p className="text-[12px] text-[var(--ink)]">Amoxicillin <span className="text-red-600 font-semibold">2/10</span></p></div>
+          <div className="rounded-lg border border-[var(--line-soft)] p-2"><p className="text-[10px] text-[var(--ink-faint)] mb-0.5">{t('Jatuh Tempo','Due')}</p><p className="text-[12px] text-[var(--ink)]">PBF Sehat <span className="text-amber-700 font-semibold">3 {t('hari','d')}</span></p></div>
         </div>
       </div></AppWindow>) },
 
@@ -385,14 +436,14 @@ export default function Kenapa() {
       body: t('Jadwal praktik berbentuk SESI, bukan slot lima belas menit, karena klinik pratama memang tidak bekerja begitu: pasien datang di rentang jam praktik dan dilayani berurutan. Kuota per sesi ditegakkan database dengan mengunci baris jadwalnya, jadi dua petugas yang menekan Simpan bersamaan tidak akan sama-sama berhasil pada kursi terakhir. Reservasi kemarin yang tidak pernah hadir dihanguskan sendiri.',
               'Practice schedules are SESSIONS, not fifteen minute slots, because primary clinics do not work that way: patients arrive within practice hours and are served in order. The per session quota is enforced in the database by locking the schedule row, so two staff pressing Save at once cannot both take the last seat. Yesterday no shows expire on their own.'),
       Icon: CalendarClock,
-      visual: (<AppWindow><div className="space-y-2">
-        <div className="flex items-center justify-between text-[10px] text-[var(--ink-soft)]"><span className="font-semibold text-[var(--ink)]">{t('Sabtu, 23 Agustus','Saturday, 23 August')}</span><span>{t('Sisa kuota','Seats left')} 4/20</span></div>
+      visual: (<AppWindow judul={t('Reservasi', 'Appointments')} aktif={1}><div className="space-y-2">
+        <div className="flex items-center justify-between text-[12px] text-[var(--ink-soft)]"><span className="font-semibold text-[var(--ink)]">{t('Sabtu, 23 Agustus','Saturday, 23 August')}</span><span>{t('Sisa kuota','Seats left')} 4/20</span></div>
         {[['08.00 - 11.00','dr. Andi, Poli Umum','16'],['09.00 - 12.00','drg. Rina, Poli Gigi','7'],['16.00 - 19.00','dr. Sari, KIA','3']].map((r,i)=>(
           <div key={i} className="rounded-lg border border-[var(--line-soft)] px-2.5 py-2 flex items-center justify-between">
-            <div><p className="text-[10px] font-semibold text-[var(--ink)]">{r[1]}</p><p className="text-[9px] text-[var(--ink-faint)]">{r[0]}</p></div>
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--paper)] text-[var(--brand-soft)]">{r[2]} {t('terisi','booked')}</span>
+            <div><p className="text-[12px] font-semibold text-[var(--ink)]">{r[1]}</p><p className="text-[11px] text-[var(--ink-faint)]">{r[0]}</p></div>
+            <span className="text-[11px] px-1.5 py-0.5 rounded bg-[var(--paper)] text-[var(--brand-soft)]">{r[2]} {t('terisi','booked')}</span>
           </div>))}
-        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1.5 text-[9px] text-[var(--ink-soft)]">{t('Hadir? Satu klik jadi kunjungan, nomor antrean dan biaya administrasi ikut sendiri.','Arrived? One click becomes a visit, queue number and admin fee follow along.')}</div>
+        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1.5 text-[11px] text-[var(--ink-soft)]">{t('Hadir? Satu klik jadi kunjungan, nomor antrean dan biaya administrasi ikut sendiri.','Arrived? One click becomes a visit, queue number and admin fee follow along.')}</div>
       </div></AppWindow>) },
 
     { tag: t('ANTREAN & LAYAR RUANG TUNGGU', 'QUEUE & WAITING ROOM SCREEN'),
@@ -400,21 +451,30 @@ export default function Kenapa() {
       body: t('Antrean bernomor per poli, dan sebuah layar untuk televisi ruang tunggu yang dibuka lewat tautan bertoken, TANPA login staf. Itu keputusan keamanan: sesi yang hidup di ruangan publik adalah sesi milik semua orang yang lewat. Nama pasien disamarkan di database, bukan di peramban, jadi nama lengkapnya tidak pernah sampai ke televisi itu. Suaranya dibangkitkan peramban, jadi nomor apa pun bisa diucapkan tanpa menyiapkan ratusan potongan rekaman.',
               'Numbered queues per unit, plus a waiting room TV screen opened by a tokenized link with NO staff login. That is a security decision: a session left running in a public room belongs to everyone who walks past. Patient names are masked in the database, not in the browser, so the full name never reaches that TV. The voice is generated by the browser, so any number can be spoken without recording hundreds of clips.'),
       Icon: Tv,
-      visual: (<div className="kn-win rounded-2xl overflow-hidden border border-black/5 bg-[var(--brand)] text-[var(--on-brand)] p-5">
-        <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-[var(--on-brand-soft)] mb-3">
-          <span>Klinik Rexco 88</span>
-          <span className="inline-flex items-center gap-1"><Volume2 size={12} /> {t('Suara aktif','Voice on')}</span>
+      // Ini SATU-SATUNYA mokup yang bukan layar staf, jadi rangkanya sengaja
+      // beda: bingkai televisi dengan kaki, bukan rel ikon dan topbar. Yang
+      // dilihat di sini memang layar yang menempel di dinding ruang tunggu.
+      visual: (<div>
+        <div className="kn-win rounded-[18px] p-2.5 bg-[var(--ink)]">
+          <div className="rounded-xl overflow-hidden bg-[var(--brand)] text-[var(--on-brand)] p-5">
+            <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-[var(--on-brand-soft)] mb-3">
+              <span>Klinik Rexco 88</span>
+              <span className="inline-flex items-center gap-1.5"><Volume2 size={13} /> {t('Suara aktif','Voice on')}</span>
+            </div>
+            <div className="rounded-xl bg-[var(--on-brand)]/12 py-7 text-center mb-3">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--on-brand-soft)]">{t('Nomor dipanggil','Now calling')}</p>
+              <p className="text-6xl font-bold leading-none mt-2 tracking-tight">A-014</p>
+              <p className="text-base mt-2.5">Nyoman R. <span className="text-[var(--on-brand-soft)]">· Poli Umum</span></p>
+            </div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--on-brand-soft)] mb-2">{t('Sedang dipanggil','Also calling')}</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[['B-007','Poli Gigi'],['C-003','KIA'],['A-013','Poli Umum']].map((r,i)=>(
+                <div key={i} className="rounded-lg bg-[var(--on-brand)]/12 px-2.5 py-2"><p className="text-lg font-bold leading-none">{r[0]}</p><p className="text-[11px] text-[var(--on-brand-soft)] mt-1.5">{r[1]}</p></div>))}
+            </div>
+          </div>
         </div>
-        <div className="rounded-xl bg-white/10 py-7 text-center mb-3">
-          <p className="text-[10px] uppercase tracking-widest text-[var(--on-brand-soft)]">{t('Nomor dipanggil','Now calling')}</p>
-          <p className="text-5xl font-bold leading-none mt-1.5">A-014</p>
-          <p className="text-sm mt-2">Nyoman R. <span className="text-[var(--on-brand-soft)]">· Poli Umum</span></p>
-        </div>
-        <p className="text-[10px] uppercase tracking-widest text-[var(--on-brand-soft)] mb-1.5">{t('Sedang dipanggil','Also calling')}</p>
-        <div className="grid grid-cols-3 gap-1.5">
-          {[['B-007','Poli Gigi'],['C-003','KIA'],['A-013','Poli Umum']].map((r,i)=>(
-            <div key={i} className="rounded-lg bg-white/10 px-2 py-1.5"><p className="text-sm font-bold leading-none">{r[0]}</p><p className="text-[9px] text-[var(--on-brand-soft)] mt-1">{r[1]}</p></div>))}
-        </div>
+        <div className="mx-auto w-24 h-1.5 rounded-b-lg bg-[var(--ink)]/70" />
+        <div className="mx-auto w-40 h-1 rounded-full bg-[var(--ink)]/25 mt-0.5" />
       </div>) },
 
     { tag: t('PASIEN & IDENTITAS', 'PATIENTS & IDENTITY'),
@@ -422,14 +482,14 @@ export default function Kenapa() {
       body: t('NIK dan telepon wajib, ditegakkan di database bukan cuma di formulir, karena impor CSV menembak tabelnya langsung. Tapi ada pintu darurat yang MENUNTUT alasan, dan alasannya masuk jejak audit: pasien yang datang tidak sadarkan diri tidak memegang KTP, dan petugas yang tidak bisa mendaftarkannya akan mengarang enam belas angka. NIK karangan lebih berbahaya daripada NIK kosong, karena ia terlihat seperti data. Alamat dipecah berkolom sampai kelurahan, mengikuti syarat SatuSehat.',
               'National ID and phone are required, enforced in the database rather than only in the form, because a CSV import hits the table directly. But there is an emergency door that DEMANDS a reason, and the reason lands in the audit trail: an unconscious patient carries no ID card, and staff who cannot register them will invent sixteen digits. An invented ID is more dangerous than a blank one, because it looks like data. Addresses are split into columns down to the village, following SatuSehat requirements.'),
       Icon: BadgeCheck,
-      visual: (<AppWindow><div className="space-y-2">
+      visual: (<AppWindow judul={t('Pasien', 'Patients')} aktif={3}><div className="space-y-2">
         {[[t('Nama lengkap','Full name'),'I Wayan Sudiarta'],['NIK','5171 •••• •••• 0042'],[t('Telepon','Phone'),'0812 •••• 4471'],[t('Kerabat','Next of kin'),'Ni Made Ayu · 0813 •••• 2210']].map((r,i)=>(
-          <div key={i} className="flex items-center justify-between rounded-lg border border-[var(--line-soft)] px-2.5 py-1.5"><span className="text-[9px] text-[var(--ink-faint)]">{r[0]}</span><span className="text-[10px] text-[var(--ink)] font-medium">{r[1]}</span></div>))}
+          <div key={i} className="flex items-center justify-between rounded-lg border border-[var(--line-soft)] px-2.5 py-1.5"><span className="text-[11px] text-[var(--ink-faint)]">{r[0]}</span><span className="text-[12px] text-[var(--ink)] font-medium">{r[1]}</span></div>))}
         <div className="grid grid-cols-2 gap-1.5">
           {[[t('Kelurahan','Village'),'Renon'],[t('Kecamatan','District'),'Denpasar Selatan'],[t('Kota','City'),'Denpasar'],[t('Provinsi','Province'),'Bali']].map((r,i)=>(
-            <div key={i} className="rounded-lg border border-[var(--line-soft)] px-2 py-1.5"><p className="text-[8px] text-[var(--ink-faint)]">{r[0]}</p><p className="text-[10px] text-[var(--ink)]">{r[1]}</p></div>))}
+            <div key={i} className="rounded-lg border border-[var(--line-soft)] px-2 py-1.5"><p className="text-[10px] text-[var(--ink-faint)]">{r[0]}</p><p className="text-[12px] text-[var(--ink)]">{r[1]}</p></div>))}
         </div>
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[9px] text-amber-800">{t('Tanpa NIK? Wajib menulis alasan, dan alasannya tercatat di jejak audit.','No ID number? A reason is required, and it is recorded in the audit trail.')}</div>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800">{t('Tanpa NIK? Wajib menulis alasan, dan alasannya tercatat di jejak audit.','No ID number? A reason is required, and it is recorded in the audit trail.')}</div>
       </div></AppWindow>) },
 
     { bab: ['02', t('Ruang periksa', 'The examination room'), t('Yang ditulis dokter hari ini harus masih bisa dibaca, dibandingkan, dan dikirim tahun depan.', 'What the doctor writes today must still be readable, comparable, and sendable next year.')] as const,
@@ -438,19 +498,19 @@ export default function Kenapa() {
       body: t('Tanda vital bukan satu kotak catatan, melainkan kolom berjenis yang masing-masing membawa kode LOINC, karena "TD 120/80" di kotak bebas tidak bisa dipetakan ke standar apa pun tanpa menebak. Diagnosis memakai daftar ICD-10 RESMI Kemenkes, 18.543 kode, yang persis sama dengan yang dipakai INA-CBG menilai klaim. Kunjungan tidak bisa ditutup tanpa diagnosis, dan rekam medis yang sudah ditutup hanya bisa ditambahi adendum, bukan disunting diam-diam. Keduanya ditegakkan database.',
               'Vitals are not one free text box but typed columns each carrying its LOINC code, because "BP 120/80" in a free box cannot be mapped to any standard without guessing. Diagnoses use the OFFICIAL Ministry of Health ICD-10 list, 18,543 codes, the very list INA-CBG uses to assess claims. A visit cannot close without a diagnosis, and a closed record can only receive an addendum, never a silent edit. Both are enforced in the database.'),
       Icon: Stethoscope,
-      visual: (<AppWindow><div className="space-y-2">
+      visual: (<AppWindow judul={t('Kunjungan', 'Visits')} sub={t('Rekam Medis', 'Medical Record')} aktif={2}><div className="space-y-2">
         <div className="grid grid-cols-4 gap-1.5">
           {[['TD','120/80','mmHg'],['Nadi','88','/mnt'],['Suhu','37,8','°C'],['SpO₂','97','%']].map((v,i)=>(
-            <div key={i} className="rounded-lg border border-[var(--line-soft)] p-1.5 text-center"><p className="text-[8px] text-[var(--ink-faint)]">{v[0]}</p><p className="text-[11px] font-bold text-[var(--ink)] leading-tight">{v[1]}</p><p className="text-[7px] text-[var(--ink-faint)]">{v[2]}</p></div>))}
+            <div key={i} className="rounded-lg border border-[var(--line-soft)] p-1.5 text-center"><p className="text-[10px] text-[var(--ink-faint)]">{v[0]}</p><p className="text-[13px] font-bold text-[var(--ink)] leading-tight">{v[1]}</p><p className="text-[9px] text-[var(--ink-faint)]">{v[2]}</p></div>))}
         </div>
         {[['S', t('Demam 3 hari, nyeri menelan','Fever 3 days, sore throat')],['O', t('Faring hiperemis, tonsil T1-T1','Pharynx hyperaemic, tonsils T1-T1')]].map((r,i)=>(
-          <div key={i} className="rounded-lg border border-[var(--line-soft)] px-2.5 py-1.5 flex gap-2"><span className="text-[9px] font-bold text-[var(--brand-soft)]">{r[0]}</span><span className="text-[10px] text-[var(--ink)]">{r[1]}</span></div>))}
+          <div key={i} className="rounded-lg border border-[var(--line-soft)] px-2.5 py-1.5 flex gap-2"><span className="text-[11px] font-bold text-[var(--brand-soft)]">{r[0]}</span><span className="text-[12px] text-[var(--ink)]">{r[1]}</span></div>))}
         <div className="rounded-lg border border-[var(--line-soft)] p-2">
-          <p className="text-[8px] text-[var(--ink-faint)] mb-1">{t('Cari: "faringitis"','Search: "pharyngitis"')}</p>
-          <div className="flex items-center justify-between text-[10px] text-[var(--ink)] py-0.5"><span><span className="font-mono text-[var(--brand-soft)]">J02.9</span> Acute pharyngitis, unspecified</span><span className="text-[8px] px-1.5 py-0.5 rounded bg-[var(--brand)] text-[var(--on-brand)]">{t('Primer','Primary')}</span></div>
-          <div className="flex items-center justify-between text-[10px] text-[var(--ink-soft)] py-0.5"><span><span className="font-mono">J03.9</span> Acute tonsillitis, unspecified</span></div>
+          <p className="text-[10px] text-[var(--ink-faint)] mb-1">{t('Cari: "faringitis"','Search: "pharyngitis"')}</p>
+          <div className="flex items-center justify-between text-[12px] text-[var(--ink)] py-0.5"><span><span className="font-mono text-[var(--brand-soft)]">J02.9</span> Acute pharyngitis, unspecified</span><span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--brand)] text-[var(--on-brand)]">{t('Primer','Primary')}</span></div>
+          <div className="flex items-center justify-between text-[12px] text-[var(--ink-soft)] py-0.5"><span><span className="font-mono">J03.9</span> Acute tonsillitis, unspecified</span></div>
         </div>
-        <p className="text-[9px] text-[var(--ink-faint)]">{t('Diketik Indonesia, ketemu nama resmi Inggris. 162 pasang kata dan 81 kata kerja tindakan menjembataninya.','Typed in Indonesian, matched to the official English name. 162 word pairs and 81 procedure verbs bridge the gap.')}</p>
+        <p className="text-[11px] text-[var(--ink-faint)]">{t('Diketik Indonesia, ketemu nama resmi Inggris. 162 pasang kata dan 81 kata kerja tindakan menjembataninya.','Typed in Indonesian, matched to the official English name. 162 word pairs and 81 procedure verbs bridge the gap.')}</p>
       </div></AppWindow>) },
 
     { tag: t('LAB & RADIOLOGI', 'LAB & IMAGING'),
@@ -458,17 +518,17 @@ export default function Kenapa() {
       body: t('Paket pemeriksaan menyimpan CETAKAN parameternya: nama, kode LOINC, satuan, dan rentang rujukan, diisi sekali lalu dituangkan ke formulir hasil. Tanpa itu, darah lengkap berarti sepuluh baris diketik ulang tiap pasien, dan rentang rujukan yang diketik ulang berbeda-beda tergantung siapa yang jaga sehingga penanda tinggi dan rendah berhenti berarti apa pun. Radiologi sengaja TIDAK dipaksa berkolom: bacaannya memang temuan dan kesan. Cito menentukan urutan antrean, bukan sekadar penanda.',
               'A test package stores a TEMPLATE of its parameters: name, LOINC code, unit, and reference range, entered once then poured into the result form. Without it, a full blood count means ten rows retyped per patient, and retyped ranges differ by whoever is on shift until high and low flags mean nothing. Imaging is deliberately NOT forced into columns: its reading really is findings and impression. Urgent orders set queue order, not just a badge.'),
       Icon: Microscope,
-      visual: (<AppWindow><div className="space-y-1.5">
-        <div className="flex items-center justify-between mb-1"><span className="text-[10px] font-semibold text-[var(--ink)]">{t('Darah Lengkap','Full Blood Count')}</span><span className="text-[8px] px-1.5 py-0.5 rounded bg-red-600 text-white font-semibold">CITO</span></div>
+      visual: (<AppWindow judul={t('Lab & Radiologi', 'Lab & Imaging')} aktif={5}><div className="space-y-1.5">
+        <div className="flex items-center justify-between mb-1"><span className="text-[12px] font-semibold text-[var(--ink)]">{t('Darah Lengkap','Full Blood Count')}</span><span className="text-[10px] px-1.5 py-0.5 rounded bg-red-600 text-white font-semibold">CITO</span></div>
         {[['Hemoglobin','11,2','g/dL','12,0 - 16,0','amber',t('RENDAH','LOW')],['Leukosit','9.400','/µL','4.000 - 11.000','hijau',t('NORMAL','NORMAL')],['Trombosit','84.000','/µL','150.000 - 450.000','merah',t('KRITIS','CRITICAL')]].map((r,i)=>(
           <div key={i} className="flex items-center gap-2 rounded-lg border border-[var(--line-soft)] px-2.5 py-1.5">
-            <span className="text-[10px] text-[var(--ink)] flex-1 truncate">{r[0]}</span>
-            <span className="text-[10px] font-bold text-[var(--ink)]">{r[1]}</span>
-            <span className="text-[8px] text-[var(--ink-faint)] w-14 truncate">{r[2]}</span>
-            <span className="text-[8px] text-[var(--ink-faint)] hidden sm:inline w-24 truncate">{r[3]}</span>
+            <span className="text-[12px] text-[var(--ink)] flex-1 truncate">{r[0]}</span>
+            <span className="text-[12px] font-bold text-[var(--ink)]">{r[1]}</span>
+            <span className="text-[10px] text-[var(--ink-faint)] w-14 truncate">{r[2]}</span>
+            <span className="text-[10px] text-[var(--ink-faint)] hidden sm:inline w-24 truncate">{r[3]}</span>
             <Tingkat warna={r[4] as 'merah' | 'amber' | 'hijau'}>{r[5]}</Tingkat>
           </div>))}
-        <div className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[9px] text-red-700">{t('Ditandai kritis. Dokter pengirim dikabari hari ini juga.','Flagged critical. The ordering doctor is informed today.')}</div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] text-red-700">{t('Ditandai kritis. Dokter pengirim dikabari hari ini juga.','Flagged critical. The ordering doctor is informed today.')}</div>
       </div></AppWindow>) },
 
     { tag: t('E-RESEP', 'E-PRESCRIPTION'),
@@ -476,18 +536,18 @@ export default function Kenapa() {
       body: t('Dosis, frekuensi, dan rute jadi kolom terpisah, karena "3x1 sesudah makan" yang terlanjur satu kalimat tidak bisa dibelah kembali, dan yang tidak bisa dibelah tidak bisa dicetak dengan benar maupun dikirim ke SatuSehat. Dokter juga boleh menulis PERMINTAAN TERBUKA tanpa memilih produk, misalnya "antihistamin oral, 10 tablet", lalu farmasi yang mengisinya. Kata-kata dokter pindah ke kolom sendiri dan tidak pernah ditimpa, jadi rekamnya selalu terbaca: dokter meminta X, farmasi mengisi Y, oleh siapa, jam berapa.',
               'Dose, frequency, and route are separate columns, because "3x1 after meals" written as one sentence cannot be split back, and what cannot be split cannot be printed correctly or sent to SatuSehat. Doctors may also write an OPEN REQUEST without picking a product, say "oral antihistamine, 10 tablets", and pharmacy fills it. The doctor original wording moves to its own column and is never overwritten, so the record always reads: the doctor asked for X, pharmacy filled Y, by whom, at what time.'),
       Icon: FileText,
-      visual: (<AppWindow><div className="space-y-1.5">
+      visual: (<AppWindow judul={t('Kunjungan', 'Visits')} sub={t('Resep', 'Prescription')} aktif={2}><div className="space-y-1.5">
         {[['Amoxicillin 500 mg','1 tablet','3x sehari','Oral','30'],['Paracetamol 500 mg','1 tablet','3x sehari bila demam','Oral','10']].map((r,i)=>(
           <div key={i} className="rounded-lg border border-[var(--line-soft)] px-2.5 py-2">
-            <p className="text-[10px] font-semibold text-[var(--ink)] mb-1">{r[0]} <span className="text-[var(--ink-faint)] font-normal">· {r[4]}</span></p>
+            <p className="text-[12px] font-semibold text-[var(--ink)] mb-1">{r[0]} <span className="text-[var(--ink-faint)] font-normal">· {r[4]}</span></p>
             <div className="flex gap-1.5">{[[t('Dosis','Dose'),r[1]],[t('Frekuensi','Frequency'),r[2]],[t('Rute','Route'),r[3]]].map((c,j)=>(
-              <span key={j} className="text-[8px] rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-[var(--ink-soft)]"><span className="text-[var(--ink-faint)]">{c[0]}: </span>{c[1]}</span>))}</div>
+              <span key={j} className="text-[10px] rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-[var(--ink-soft)]"><span className="text-[var(--ink-faint)]">{c[0]}: </span>{c[1]}</span>))}</div>
           </div>))}
         <div className="rounded-lg border border-dashed border-[var(--line)] px-2.5 py-2">
-          <p className="text-[10px] text-[var(--ink)]">{t('Antihistamin oral, 10 tablet','Oral antihistamine, 10 tablets')}</p>
-          <p className="text-[8px] text-[var(--accent)] mt-0.5">{t('Permintaan terbuka. Produk dipilih farmasi.','Open request. Product chosen by pharmacy.')}</p>
+          <p className="text-[12px] text-[var(--ink)]">{t('Antihistamin oral, 10 tablet','Oral antihistamine, 10 tablets')}</p>
+          <p className="text-[10px] text-[var(--accent)] mt-0.5">{t('Permintaan terbuka. Produk dipilih farmasi.','Open request. Product chosen by pharmacy.')}</p>
         </div>
-        <p className="text-[9px] text-[var(--ink-faint)]">{t('Pemeriksaan interaksi obat sengaja TIDAK dibuat, dan itu dikatakan di layar. Yang setengah benar lebih berbahaya daripada tidak ada.','Drug interaction checking is deliberately NOT built, and the screen says so. Half correct is more dangerous than absent.')}</p>
+        <p className="text-[11px] text-[var(--ink-faint)]">{t('Pemeriksaan interaksi obat sengaja TIDAK dibuat, dan itu dikatakan di layar. Yang setengah benar lebih berbahaya daripada tidak ada.','Drug interaction checking is deliberately NOT built, and the screen says so. Half correct is more dangerous than absent.')}</p>
       </div></AppWindow>) },
 
     { bab: ['03', t('Farmasi dan kasir', 'Pharmacy and cashier'), t('Uang dan penyerahan obat adalah dua kejadian terpisah, dan dicatat terpisah.', 'Money and handover are two separate events, and are recorded separately.')] as const,
@@ -496,27 +556,27 @@ export default function Kenapa() {
       body: t('Dulu kasir memanggil penandaan "sudah dilayani" saat pembayaran, jadi database mencatat obat sudah diserahkan pada detik uang diterima. Pasien yang membayar lalu pulang tanpa mengambil obatnya tercatat sudah menerima, dan untuk narkotika serta psikotropika itu catatan bertanda tangan apoteker yang isinya salah. Sekarang resep punya rel keadaan sendiri, dan tiap perpindahan ditulis oleh yang benar-benar mengerjakannya. Etiket dicetak dari layar Farmasi: putih untuk obat dalam, biru untuk obat luar, konvensi apotek Indonesia yang jadi pengaman terakhir sebelum obat masuk mulut.',
               'The cashier used to mark "dispensed" at payment, so the database recorded handover the second money arrived. A patient who paid then left without collecting was recorded as having received it, and for narcotics and psychotropics that is a pharmacist signed record that is simply wrong. Now prescriptions have their own state rail, and each move is written by whoever actually did the work. Labels print from the Pharmacy screen: white for internal, blue for external, the Indonesian pharmacy convention that is the last safeguard before a medicine reaches a mouth.'),
       Icon: FlaskConical,
-      visual: (<AppWindow><div className="space-y-2">
+      visual: (<AppWindow judul={t('Farmasi', 'Pharmacy')} sub={t('Antrean Resep', 'Prescription Queue')} aktif={4}><div className="space-y-2">
         <div className="flex items-center gap-1">
           {[[t('Draf','Draft'),t('dokter','doctor')],[t('Final','Final'),t('dokter','doctor')],[t('Disiapkan','Preparing'),t('farmasi','pharmacy')],[t('Siap','Ready'),t('farmasi','pharmacy')],[t('Diserahkan','Handed over'),t('farmasi','pharmacy')]].map((s,i)=>(
             <div key={i} className="flex-1 text-center">
               <div className={`h-1 rounded-full mb-1 ${i<=2?'bg-[var(--brand)]':'bg-[var(--line-soft)]'}`} />
-              <p className={`text-[8px] font-semibold ${i<=2?'text-[var(--ink)]':'text-[var(--ink-faint)]'}`}>{s[0]}</p>
-              <p className="text-[7px] text-[var(--ink-faint)]">{s[1]}</p>
+              <p className={`text-[10px] font-semibold ${i<=2?'text-[var(--ink)]':'text-[var(--ink-faint)]'}`}>{s[0]}</p>
+              <p className="text-[9px] text-[var(--ink-faint)]">{s[1]}</p>
             </div>))}
         </div>
         <div className="grid grid-cols-2 gap-2 pt-1">
           <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2">
-            <p className="text-[8px] text-[var(--ink-faint)] mb-1">{t('Etiket obat dalam','Internal use label')}</p>
-            <p className="text-[9px] font-bold text-[var(--ink)]">I Wayan Sudiarta</p>
-            <p className="text-[8px] text-[var(--ink-soft)]">Amoxicillin 500 mg</p>
-            <p className="text-[9px] font-semibold text-[var(--ink)] mt-1">{t('3x sehari 1 tablet','3x daily, 1 tablet')}</p>
+            <p className="text-[10px] text-[var(--ink-faint)] mb-1">{t('Etiket obat dalam','Internal use label')}</p>
+            <p className="text-[11px] font-bold text-[var(--ink)]">I Wayan Sudiarta</p>
+            <p className="text-[10px] text-[var(--ink-soft)]">Amoxicillin 500 mg</p>
+            <p className="text-[11px] font-semibold text-[var(--ink)] mt-1">{t('3x sehari 1 tablet','3x daily, 1 tablet')}</p>
           </div>
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-2">
-            <p className="text-[8px] text-blue-700 mb-1">{t('Etiket obat luar','External use label')}</p>
-            <p className="text-[9px] font-bold text-blue-900">I Wayan Sudiarta</p>
-            <p className="text-[8px] text-blue-800">Gentamicin salep mata</p>
-            <p className="text-[9px] font-semibold text-blue-900 mt-1">{t('3x sehari, mata kanan','3x daily, right eye')}</p>
+            <p className="text-[10px] text-blue-700 mb-1">{t('Etiket obat luar','External use label')}</p>
+            <p className="text-[11px] font-bold text-blue-900">I Wayan Sudiarta</p>
+            <p className="text-[10px] text-blue-800">Gentamicin salep mata</p>
+            <p className="text-[11px] font-semibold text-blue-900 mt-1">{t('3x sehari, mata kanan','3x daily, right eye')}</p>
           </div>
         </div>
       </div></AppWindow>) },
@@ -526,16 +586,16 @@ export default function Kenapa() {
       body: t('Biaya administrasi masuk saat kunjungan dibuka, tarif konsultasi masuk saat pasien benar-benar diperiksa, bukan saat mendaftar, karena pasien yang pulang dari ruang tunggu sebelum diperiksa tidak boleh ditagih konsultasi. Tindakan, penunjang, dan obat menyusul ke tagihan yang sama. Kasir mengambil semuanya lewat SATU panggilan, bukan dua: kalau terpisah, ada jeda di mana kasir sudah melihat tarifnya tapi obatnya belum sampai, lalu menekan Proses, dan struk yang kurang satu baris baru ketahuan saat pasien sudah pulang. Lencana SIAP DITAGIH dinyatakan dokter, bukan ditebak layar.',
               'The admin fee enters when the visit opens, the consultation fee when the patient is actually examined rather than at registration, because someone who leaves the waiting room before being seen must not be charged for a consultation. Procedures, ancillaries, and drugs join the same bill. The cashier pulls all of it in ONE call, not two: split apart, there is a window where the cashier sees the fees but the drugs have not landed, presses Process, and the missing line is discovered after the patient has gone. The READY TO BILL badge is declared by the doctor, never guessed by the screen.'),
       Icon: Wallet,
-      visual: (<AppWindow><div className="space-y-1.5">
-        <div className="flex items-center justify-between mb-1"><span className="text-[10px] font-semibold text-[var(--ink)]">A-014 · I Wayan Sudiarta</span><span className="text-[8px] px-1.5 py-0.5 rounded bg-green-600 text-white font-semibold">{t('SIAP DITAGIH','READY TO BILL')}</span></div>
+      visual: (<AppWindow judul={t('Kasir', 'Cashier')} sub={t('Tagihan Kunjungan', 'Visit Bill')} aktif={7}><div className="space-y-1.5">
+        <div className="flex items-center justify-between mb-1"><span className="text-[12px] font-semibold text-[var(--ink)]">A-014 · I Wayan Sudiarta</span><span className="text-[10px] px-1.5 py-0.5 rounded bg-green-600 text-white font-semibold">{t('SIAP DITAGIH','READY TO BILL')}</span></div>
         {[[t('Administrasi','Admin fee'),'Rp 15.000'],[t('Konsultasi, Poli Umum','Consultation, General'),'Rp 50.000'],[t('Tindakan: jahit luka','Procedure: wound suture'),'Rp 150.000'],[t('Lab: darah lengkap','Lab: full blood count'),'Rp 85.000'],[t('Obat, 3 baris resep','Drugs, 3 prescription lines'),'Rp 62.000']].map((r,i)=>(
-          <div key={i} className="flex items-center justify-between text-[10px] border-b border-[var(--line-soft)] pb-1"><span className="text-[var(--ink-soft)]">{r[0]}</span><span className="text-[var(--ink)]">{r[1]}</span></div>))}
-        <div className="flex items-center justify-between pt-1"><span className="text-[11px] font-bold text-[var(--ink)]">Total</span><span className="text-[13px] font-bold text-[var(--brand)]">Rp 362.000</span></div>
+          <div key={i} className="flex items-center justify-between text-[12px] border-b border-[var(--line-soft)] pb-1"><span className="text-[var(--ink-soft)]">{r[0]}</span><span className="text-[var(--ink)]">{r[1]}</span></div>))}
+        <div className="flex items-center justify-between pt-1"><span className="text-[13px] font-bold text-[var(--ink)]">Total</span><span className="text-[15px] font-bold text-[var(--brand)]">Rp 362.000</span></div>
         <div className="grid grid-cols-2 gap-1.5 pt-1">
-          <div className="rounded-lg bg-[var(--surface-2)] px-2 py-1.5"><p className="text-[8px] text-[var(--ink-faint)]">{t('Diterima tunai','Cash received')}</p><p className="text-[10px] font-semibold text-[var(--ink)]">Rp 62.000</p></div>
-          <div className="rounded-lg bg-[var(--surface-2)] px-2 py-1.5"><p className="text-[8px] text-[var(--ink-faint)]">{t('Ditagihkan BPJS','Billed to BPJS')}</p><p className="text-[10px] font-semibold text-[var(--accent)]">Rp 300.000</p></div>
+          <div className="rounded-lg bg-[var(--surface-2)] px-2 py-1.5"><p className="text-[10px] text-[var(--ink-faint)]">{t('Diterima tunai','Cash received')}</p><p className="text-[12px] font-semibold text-[var(--ink)]">Rp 62.000</p></div>
+          <div className="rounded-lg bg-[var(--surface-2)] px-2 py-1.5"><p className="text-[10px] text-[var(--ink-faint)]">{t('Ditagihkan BPJS','Billed to BPJS')}</p><p className="text-[12px] font-semibold text-[var(--accent)]">Rp 300.000</p></div>
         </div>
-        <p className="text-[9px] text-[var(--ink-faint)]">{t('Piutang penjamin tidak dihitung sebagai uang masuk. Kalau ikut, laci kasir tidak akan pernah cocok saat tutup buku.','Payer receivables are not counted as cash in. If they were, the drawer would never balance at close.')}</p>
+        <p className="text-[11px] text-[var(--ink-faint)]">{t('Piutang penjamin tidak dihitung sebagai uang masuk. Kalau ikut, laci kasir tidak akan pernah cocok saat tutup buku.','Payer receivables are not counted as cash in. If they were, the drawer would never balance at close.')}</p>
       </div></AppWindow>) },
 
     { tag: t('KASIR & BARCODE', 'POS & BARCODE'),
@@ -543,14 +603,14 @@ export default function Kenapa() {
       body: t('Yang paling berguna dari barcode bukan mencetak label sendiri, melainkan menyimpan barcode yang SUDAH tercetak di dus pabriknya supaya kasir tinggal memindainya. Barcode dijaga unik per faskes, karena dua produk berbarcode sama membuat pemindaian ambigu dan yang terpilih saat ambigu adalah yang kebetulan lebih dulu. Di kasir, cocokan barcode PERSIS selalu menang atas hasil teratas pencarian teks: pemindai mengetik angkanya lalu menekan Enter sendiri, dan satu digit yang beririsan cukup untuk memasukkan obat yang salah.',
               'The most useful thing about barcodes is not printing your own labels but storing the one ALREADY printed on the manufacturer box so the cashier can just scan it. Barcodes are kept unique per facility, because two products sharing one code make scanning ambiguous and the winner is whichever happens to come first. At the register an EXACT barcode match always beats the top text search hit: a scanner types the digits then presses Enter itself, and one overlapping digit is enough to ring up the wrong medicine.'),
       Icon: ScanLine,
-      visual: (<AppWindow><div className="space-y-2">
-        <div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2"><ScanLine size={14} className="text-[var(--brand-soft)]" /><span className="text-[11px] font-mono text-[var(--ink)]">8992222212106</span></div>
+      visual: (<AppWindow judul={t('Kasir', 'Cashier')} aktif={7}><div className="space-y-2">
+        <div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2"><ScanLine size={14} className="text-[var(--brand-soft)]" /><span className="text-[13px] font-mono text-[var(--ink)]">8992222212106</span></div>
         <div className="rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 flex items-center justify-between">
-          <div><p className="text-[10px] font-semibold text-green-900">Sanmol Tablet 500 mg</p><p className="text-[8px] text-green-700">{t('Rak A3 · Stok 300 · Batch BT-2408','Shelf A3 · Stock 300 · Batch BT-2408')}</p></div>
-          <span className="text-[10px] font-bold text-green-900">Rp 3.000</span>
+          <div><p className="text-[12px] font-semibold text-green-900">Sanmol Tablet 500 mg</p><p className="text-[10px] text-green-700">{t('Rak A3 · Stok 300 · Batch BT-2408','Shelf A3 · Stock 300 · Batch BT-2408')}</p></div>
+          <span className="text-[12px] font-bold text-green-900">Rp 3.000</span>
         </div>
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[9px] text-amber-800">⚠ {t('Golongan narkotika: identitas pasien dan nomor resep wajib terisi. Ditolak database, bukan cuma oleh formulir.','Narcotic class: patient identity and prescription number required. Refused by the database, not just the form.')}</div>
-        <div className="grid grid-cols-3 gap-1.5">{[t('Tunai','Cash'),'QRIS',t('Transfer','Transfer')].map(m=><div key={m} className="text-[10px] text-center py-1.5 rounded-lg bg-[var(--brand)] text-[var(--on-brand)]">{m}</div>)}</div>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800">⚠ {t('Golongan narkotika: identitas pasien dan nomor resep wajib terisi. Ditolak database, bukan cuma oleh formulir.','Narcotic class: patient identity and prescription number required. Refused by the database, not just the form.')}</div>
+        <div className="grid grid-cols-3 gap-1.5">{[t('Tunai','Cash'),'QRIS',t('Transfer','Transfer')].map(m=><div key={m} className="text-[12px] text-center py-1.5 rounded-lg bg-[var(--brand)] text-[var(--on-brand)]">{m}</div>)}</div>
       </div></AppWindow>) },
 
     { bab: ['04', t('Uang yang bisa dipertanggungjawabkan', 'Money you can account for'), t('Yang ditagihkan ke penjamin bukan uang yang diterima, dan keduanya tidak boleh dicampur.', 'What is billed to a payer is not cash received, and the two must never be mixed.')] as const,
@@ -559,17 +619,17 @@ export default function Kenapa() {
       body: t('Faktur yang cuma dicetak tanpa meninggalkan catatan berarti klinik tidak bisa menjawab tiga pertanyaan yang pasti ditanyakan: klaim mana yang sudah dikirim, berapa yang belum dibayar, dan transaksi ini sudah masuk klaim yang mana. Yang tidak tercatat akan ditagihkan dua kali, dan menagih penjamin dua kali untuk pelayanan yang sama adalah cara tercepat kehilangan kerja sama. Rincian klaim disimpan sebagai CUPLIKAN: klaim yang sudah di tangan verifikator tidak boleh berubah isinya karena satu transaksi dibatalkan minggu depan. Yang berubah muncul sebagai selisih.',
               'An invoice printed without leaving a record means the clinic cannot answer three questions it will certainly be asked: which claims were sent, how much is unpaid, and which claim this transaction belongs to. What is not recorded gets billed twice, and billing a payer twice for the same service is the fastest way to lose the contract. Claim details are stored as a SNAPSHOT: a claim already with the verifier must not change because one transaction is voided next week. Changes surface as a difference.'),
       Icon: FileCheck,
-      visual: (<AppWindow><div className="space-y-2">
+      visual: (<AppWindow judul={t('Laporan', 'Reports')} sub={t('Klaim Penjamin', 'Payer Claims')} aktif={8}><div className="space-y-2">
         <div className="flex items-center gap-1.5">
           {[t('Draf','Draft'),t('Dikirim','Sent'),t('Dibayar','Paid')].map((s,i)=>(
-            <div key={i} className="flex items-center gap-1.5 flex-1"><span className={`w-4 h-4 rounded-full text-[8px] flex items-center justify-center ${i<=1?'bg-[var(--brand)] text-[var(--on-brand)]':'bg-[var(--line-soft)] text-[var(--ink-faint)]'}`}>{i+1}</span><span className="text-[8px] text-[var(--ink-soft)]">{s}</span>{i<2&&<div className="flex-1 h-px bg-[var(--line-soft)]" />}</div>))}
+            <div key={i} className="flex items-center gap-1.5 flex-1"><span className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center ${i<=1?'bg-[var(--brand)] text-[var(--on-brand)]':'bg-[var(--line-soft)] text-[var(--ink-faint)]'}`}>{i+1}</span><span className="text-[10px] text-[var(--ink-soft)]">{s}</span>{i<2&&<div className="flex-1 h-px bg-[var(--line-soft)]" />}</div>))}
         </div>
         {[['KLM/2026/08/001','BPJS Kesehatan','1 - 15 Agu','Rp 18.450.000','hijau',t('Dibayar','Paid')],['KLM/2026/08/002','Allianz','1 - 20 Agu','Rp 4.120.000','amber',t('Dikirim','Sent')],['KLM/2026/08/003','Mandiri Inhealth','1 - 22 Agu','Rp 2.870.000','merah',t('Draf','Draft')]].map((r,i)=>(
           <div key={i} className="rounded-lg border border-[var(--line-soft)] px-2.5 py-2">
-            <div className="flex items-center justify-between"><span className="text-[9px] font-mono text-[var(--ink-soft)]">{r[0]}</span><Tingkat warna={r[4] as 'merah'|'amber'|'hijau'}>{r[5]}</Tingkat></div>
-            <div className="flex items-center justify-between mt-0.5"><span className="text-[10px] font-semibold text-[var(--ink)]">{r[1]} <span className="font-normal text-[var(--ink-faint)]">· {r[2]}</span></span><span className="text-[10px] font-bold text-[var(--ink)]">{r[3]}</span></div>
+            <div className="flex items-center justify-between"><span className="text-[11px] font-mono text-[var(--ink-soft)]">{r[0]}</span><Tingkat warna={r[4] as 'merah'|'amber'|'hijau'}>{r[5]}</Tingkat></div>
+            <div className="flex items-center justify-between mt-0.5"><span className="text-[12px] font-semibold text-[var(--ink)]">{r[1]} <span className="font-normal text-[var(--ink-faint)]">· {r[2]}</span></span><span className="text-[12px] font-bold text-[var(--ink)]">{r[3]}</span></div>
           </div>))}
-        <p className="text-[9px] text-[var(--ink-faint)]">{t('Fakturnya membawa nomor kartu penjamin dan diagnosis primer per baris, karena itu yang diperiksa verifikator satu per satu.','The printed invoice carries the payer card number and primary diagnosis per line, because that is what the verifier checks one by one.')}</p>
+        <p className="text-[11px] text-[var(--ink-faint)]">{t('Fakturnya membawa nomor kartu penjamin dan diagnosis primer per baris, karena itu yang diperiksa verifikator satu per satu.','The printed invoice carries the payer card number and primary diagnosis per line, because that is what the verifier checks one by one.')}</p>
       </div></AppWindow>) },
 
     { tag: t('PEMBELIAN & PEMBAYARAN FAKTUR', 'PURCHASING & INVOICE PAYMENTS'),
@@ -577,9 +637,9 @@ export default function Kenapa() {
       body: t('Buat pesanan ke supplier, terima barang beserta batch dan tanggal kadaluarsanya, lalu kelola pembayaran faktur yang diurutkan menurut jatuh tempo, lengkap dengan penanda yang sudah lewat tempo dan bukti pembayaran yang bisa dicetak. Penerimaan barang memakai delta relatif dan menggabungkan batch yang sama, jadi kiriman yang datang bertahap tidak melahirkan batch kembar yang membuat kartu stok tidak terbaca.',
               'Create purchase orders, receive goods along with their batch and expiry, then manage invoice payments sorted by due date, with overdue flags and printable payment receipts. Goods receipt uses relative deltas and merges identical batches, so a shipment arriving in parts does not spawn duplicate batches that make the stock card unreadable.'),
       Icon: Receipt,
-      visual: (<AppWindow><div className="space-y-1.5">{[['INV/0087','PBF Sehat Sentosa',t('Jatuh tempo 3 hari','Due in 3 days'),'amber'],['INV/0091','PT Kimia Farma',t('Terlambat 6 hari','6 days overdue'),'merah'],['INV/0080','PBF Anugerah',t('Lunas','Settled'),'hijau']].map((r,i)=>(
+      visual: (<AppWindow judul={t('Pembayaran Faktur', 'Invoice Payments')} aktif={8}><div className="space-y-1.5">{[['INV/0087','PBF Sehat Sentosa',t('Jatuh tempo 3 hari','Due in 3 days'),'amber'],['INV/0091','PT Kimia Farma',t('Terlambat 6 hari','6 days overdue'),'merah'],['INV/0080','PBF Anugerah',t('Lunas','Settled'),'hijau']].map((r,i)=>(
         <div key={i} className="flex items-center justify-between bg-[var(--surface)]/70 border border-[var(--line-soft)] rounded-lg px-3 py-2">
-          <div><p className="text-[10px] font-mono text-[var(--ink)]">{r[0]}</p><p className="text-[9px] text-[var(--ink-faint)]">{r[1]}</p></div>
+          <div><p className="text-[12px] font-mono text-[var(--ink)]">{r[0]}</p><p className="text-[11px] text-[var(--ink-faint)]">{r[1]}</p></div>
           <Tingkat warna={r[3] as 'merah'|'amber'|'hijau'}>{r[2]}</Tingkat>
         </div>))}</div></AppWindow>) },
 
@@ -588,7 +648,7 @@ export default function Kenapa() {
       body: t('Narkotika, Psikotropika, dan Prekursor per periode: penerimaan diambil dari pembelian, pengeluaran lengkap dengan data pasien dan nomor resep, siap cetak dengan tanda tangan penanggung jawab. Di sebelahnya ada laporan penjualan, rekap metode bayar, laporan per penjamin yang memisahkan uang diterima dari yang masih ditagihkan, dan kartu stok per batch. SIPNAP ada di semua paket, termasuk yang paling murah.',
               'Narcotics, psychotropics, and precursors per period: receipts pulled from purchases, dispensing complete with patient data and prescription number, ready to print with the responsible pharmacist signature. Alongside it: sales reports, payment method recaps, a per payer report separating cash received from amounts still billed, and per batch stock cards. SIPNAP is in every plan, including the cheapest.'),
       Icon: BarChart2,
-      visual: (<AppWindow><div className="text-center"><p className="text-[11px] font-bold text-[var(--ink)]">LAPORAN PENGGUNAAN NARKOTIKA</p><p className="text-[9px] text-[var(--ink-faint)] mb-2">{t('Periode: Bulan berjalan','Period: current month')}</p><div className="border border-[var(--line)] rounded overflow-hidden"><div className="grid grid-cols-5 text-[8px] bg-[var(--surface-2)] text-[var(--ink-soft)]">{[t('Sediaan','Item'),t('Awal','Open'),t('Masuk','In'),t('Keluar','Out'),t('Sisa','Left')].map((h,i)=><span key={i} className={`p-1 ${i<4?'border-r border-[var(--line)]':''}`}>{h}</span>)}</div>{[['Codein 10 mg','12','20','5','27'],['Pethidin 50 ml','4','10','2','12']].map((r,i)=>(<div key={i} className="grid grid-cols-5 text-[8px] border-t border-[var(--line-soft)]">{r.map((c,j)=><span key={j} className={`p-1 text-[var(--ink)] ${j<4?'border-r border-[var(--line-soft)]':''}`}>{c}</span>)}</div>))}</div><p className="text-[8px] text-[var(--ink-faint)] mt-2">apt. Anessa Beckham, S.Farm · SIPA 4471/SIPA/2024</p></div></AppWindow>) },
+      visual: (<AppWindow judul={t('Laporan', 'Reports')} sub={t('SIPNAP', 'SIPNAP')} aktif={8}><div className="text-center"><p className="text-[13px] font-bold text-[var(--ink)]">LAPORAN PENGGUNAAN NARKOTIKA</p><p className="text-[11px] text-[var(--ink-faint)] mb-2">{t('Periode: Bulan berjalan','Period: current month')}</p><div className="border border-[var(--line)] rounded overflow-hidden"><div className="grid grid-cols-5 text-[10px] bg-[var(--surface-2)] text-[var(--ink-soft)]">{[t('Sediaan','Item'),t('Awal','Open'),t('Masuk','In'),t('Keluar','Out'),t('Sisa','Left')].map((h,i)=><span key={i} className={`p-1 ${i<4?'border-r border-[var(--line)]':''}`}>{h}</span>)}</div>{[['Codein 10 mg','12','20','5','27'],['Pethidin 50 ml','4','10','2','12']].map((r,i)=>(<div key={i} className="grid grid-cols-5 text-[10px] border-t border-[var(--line-soft)]">{r.map((c,j)=><span key={j} className={`p-1 text-[var(--ink)] ${j<4?'border-r border-[var(--line-soft)]':''}`}>{c}</span>)}</div>))}</div><p className="text-[10px] text-[var(--ink-faint)] mt-2">apt. Anessa Beckham, S.Farm · SIPA 4471/SIPA/2024</p></div></AppWindow>) },
 
     { bab: ['05', t('Barang di rak', 'Stock on the shelf'), t('Obat punya batch dan tanggal kadaluarsa. Sistem yang hanya menghitung jumlah tidak cukup.', 'Medicines have batches and expiry dates. A system that only counts quantity is not enough.')] as const,
       tag: t('STOK, BATCH & KADALUARSA', 'STOCK, BATCHES & EXPIRY'),
@@ -596,9 +656,9 @@ export default function Kenapa() {
       body: t('"Sudah lewat" dan "25 hari lagi" dulu satu kelompok merah, jadi seluruh layar jadi dinding merah dan tidak ada yang menonjol. Padahal keduanya menuntut hal BERLAWANAN: yang sudah lewat harus ditarik dari rak dan tidak boleh dijual sama sekali, yang 25 hari lagi justru harus didahulukan dijual. Warna yang sama untuk dua perintah yang berlawanan membuat keduanya diabaikan. Setelah itu ada tindak lanjutnya: musnahkan dengan Berita Acara resmi, atau retur ke supplier. Stok berkurang hanya setelah dikonfirmasi.',
               '"Already expired" and "25 days left" used to share one red, so the whole screen became a red wall and nothing stood out. Yet the two demand OPPOSITE actions: expired stock must be pulled from the shelf and never sold, while stock with 25 days left must be sold first. One colour for two opposite orders gets both ignored. Then comes the follow up: destroy with an official report, or return to the supplier. Stock only drops after confirmation.'),
       Icon: CalendarClock,
-      visual: (<AppWindow><table className="w-full text-[10px]"><thead><tr className="text-[var(--ink-faint)] text-[8px]"><th className="text-left font-medium pb-1">{t('Produk','Product')}</th><th className="text-left font-medium pb-1">Batch</th><th className="text-left font-medium pb-1">{t('Kadaluarsa','Expiry')}</th><th className="text-right font-medium pb-1">{t('Aksi','Action')}</th></tr></thead><tbody>
+      visual: (<AppWindow judul={t('Produk & Stok', 'Products & Stock')} aktif={6}><table className="w-full text-[12px]"><thead><tr className="text-[var(--ink-faint)] text-[10px]"><th className="text-left font-medium pb-1">{t('Produk','Product')}</th><th className="text-left font-medium pb-1">Batch</th><th className="text-left font-medium pb-1">{t('Kadaluarsa','Expiry')}</th><th className="text-right font-medium pb-1">{t('Aksi','Action')}</th></tr></thead><tbody>
         {[['Amoxicillin 500','BT-2312',t('Lewat 12 hari','12 days past'),'merah',t('Musnahkan','Destroy')],['Cetirizine 10','BT-2401',t('25 hari lagi','25 days left'),'amber',t('Jual dulu','Sell first')],['Sanmol 500','BT-2408',t('Aman','Safe'),'hijau',t('Retur','Return')]].map((r,i)=>(
-          <tr key={i} className="border-t border-[var(--line-soft)]"><td className="py-1.5 text-[var(--ink)]">{r[0]}</td><td className="py-1.5 font-mono text-[var(--ink-soft)]">{r[1]}</td><td className="py-1.5"><Tingkat warna={r[3] as 'merah'|'amber'|'hijau'}>{r[2]}</Tingkat></td><td className="py-1.5 text-right"><span className="text-[9px] px-2 py-0.5 rounded bg-[var(--brand)] text-[var(--on-brand)]">{r[4]}</span></td></tr>))}
+          <tr key={i} className="border-t border-[var(--line-soft)]"><td className="py-1.5 text-[var(--ink)]">{r[0]}</td><td className="py-1.5 font-mono text-[var(--ink-soft)]">{r[1]}</td><td className="py-1.5"><Tingkat warna={r[3] as 'merah'|'amber'|'hijau'}>{r[2]}</Tingkat></td><td className="py-1.5 text-right"><span className="text-[11px] px-2 py-0.5 rounded bg-[var(--brand)] text-[var(--on-brand)]">{r[4]}</span></td></tr>))}
       </tbody></table></AppWindow>) },
 
     { tag: t('ORDER TERPANDU', 'GUIDED ORDER'),
@@ -606,10 +666,10 @@ export default function Kenapa() {
       body: t('Satu klik, sistem mengumpulkan semua barang yang mencapai stok minimum, menyarankan jumlah order, lalu otomatis membagi ke distributor masing-masing. Tinggal review, dan pesanan langsung terpecah menjadi satu PO per supplier, siap kirim. Tidak perlu lagi memeriksa kartu stok satu per satu, dan tidak ada lagi barang yang baru diingat setelah pasien menanyakannya.',
               'One click, the system gathers every item at minimum stock, suggests order quantities, then assigns each to its distributor. Review it, and the order splits into one PO per supplier, ready to send. No more checking stock cards one by one, and no more remembering an item only after a patient asks for it.'),
       Icon: Wand2,
-      visual: (<AppWindow><div className="space-y-2">
-        <div className="flex items-center gap-1.5 mb-1">{[t('Pilih','Select'),t('Bagi','Assign'),t('Buat','Create')].map((s,i)=>(<div key={i} className="flex items-center gap-1.5 flex-1"><span className={`w-4 h-4 rounded-full text-[8px] flex items-center justify-center ${i===0?'bg-[var(--brand)] text-[var(--on-brand)]':'bg-[var(--line-soft)] text-[var(--ink-faint)]'}`}>{i+1}</span><span className="text-[8px] text-[var(--ink-soft)]">{s}</span>{i<2&&<div className="flex-1 h-px bg-[var(--line-soft)]" />}</div>))}</div>
-        {[['Amoxicillin 500','2/10','PBF Sehat'],['Paracetamol 500','5/20','PBF Sehat'],['Vitamin C 500','3/15','PT Kimia']].map((r,i)=>(<div key={i} className="flex items-center justify-between text-[10px] rounded-lg border border-[var(--line-soft)] px-2.5 py-1.5"><span className="text-[var(--ink)]">{r[0]}</span><span className="text-red-600">{r[1]}</span><span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--paper)] text-[var(--brand-soft)]">{r[2]}</span></div>))}
-        <div className="text-[9px] text-center text-[var(--brand-soft)] font-medium">→ 2 PO {t('siap kirim','ready to send')}</div>
+      visual: (<AppWindow judul={t('Pembelian', 'Purchasing')} sub={t('Order Terpandu', 'Guided Order')} aktif={6}><div className="space-y-2">
+        <div className="flex items-center gap-1.5 mb-1">{[t('Pilih','Select'),t('Bagi','Assign'),t('Buat','Create')].map((s,i)=>(<div key={i} className="flex items-center gap-1.5 flex-1"><span className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center ${i===0?'bg-[var(--brand)] text-[var(--on-brand)]':'bg-[var(--line-soft)] text-[var(--ink-faint)]'}`}>{i+1}</span><span className="text-[10px] text-[var(--ink-soft)]">{s}</span>{i<2&&<div className="flex-1 h-px bg-[var(--line-soft)]" />}</div>))}</div>
+        {[['Amoxicillin 500','2/10','PBF Sehat'],['Paracetamol 500','5/20','PBF Sehat'],['Vitamin C 500','3/15','PT Kimia']].map((r,i)=>(<div key={i} className="flex items-center justify-between text-[12px] rounded-lg border border-[var(--line-soft)] px-2.5 py-1.5"><span className="text-[var(--ink)]">{r[0]}</span><span className="text-red-600">{r[1]}</span><span className="text-[11px] px-1.5 py-0.5 rounded bg-[var(--paper)] text-[var(--brand-soft)]">{r[2]}</span></div>))}
+        <div className="text-[11px] text-center text-[var(--brand-soft)] font-medium">→ 2 PO {t('siap kirim','ready to send')}</div>
       </div></AppWindow>) },
 
     { bab: ['06', t('Yang mengelola faskesnya', 'Running the facility'), t('Hak akses, cabang, dan izin praktik. Bagian yang tidak dilihat pasien, tapi yang ditanya auditor.', 'Permissions, branches, and practice licences. The part patients never see, and auditors always ask about.')] as const,
@@ -618,23 +678,23 @@ export default function Kenapa() {
       body: t('Menyembunyikan menu saja berarti petugas pendaftaran yang mengetik alamatnya, atau memanggil fungsinya lewat kunci yang memang ada di dalam peramban tiap pengguna, tetap bisa membaca SOAP dan diagnosis siapa pun di kliniknya. Untuk rekam medis itu bukan kelalaian kecil. Sekarang penjaganya dipanggil dari dalam sepuluh fungsi medis, dan matriksnya ada di SATU tempat. Pendaftaran memegang identitas dan antrean tanpa membuka rekam medis; perawat menambah tanda vital tanpa menulis diagnosis; farmasi melihat resep dan alergi tanpa membuka SOAP; kasir melihat tagihan tanpa membuka apa pun yang medis.',
               'Hiding a menu only means a registration clerk who types the address, or calls the function with the key that sits inside every user browser anyway, can still read anyone SOAP notes and diagnoses. For medical records that is not a small oversight. The guard now runs inside ten clinical functions, and the matrix lives in ONE place. Registration holds identity and queues without opening records; nurses add vitals without writing diagnoses; pharmacy sees prescriptions and allergies without SOAP; the cashier sees the bill without anything clinical.'),
       Icon: Lock,
-      visual: (<AppWindow><div className="overflow-hidden"><table className="w-full text-[9px]"><thead><tr className="text-[var(--ink-faint)] text-[8px]"><th className="text-left font-medium pb-1.5">{t('Peran','Role')}</th>{[t('Identitas','Identity'),'SOAP',t('Diagnosis','Dx'),t('Resep','Rx'),t('Tagihan','Bill')].map(h=><th key={h} className="font-medium pb-1.5">{h}</th>)}</tr></thead><tbody>
+      visual: (<AppWindow judul={t('Pengaturan', 'Settings')} sub={t('Pengguna & Peran', 'Users & Roles')} aktif={9}><div className="overflow-hidden"><table className="w-full text-[11px]"><thead><tr className="text-[var(--ink-faint)] text-[10px]"><th className="text-left font-medium pb-1.5">{t('Peran','Role')}</th>{[t('Identitas','Identity'),'SOAP',t('Diagnosis','Dx'),t('Resep','Rx'),t('Tagihan','Bill')].map(h=><th key={h} className="font-medium pb-1.5">{h}</th>)}</tr></thead><tbody>
         {[[t('Pendaftaran','Registration'),1,0,0,0,0],[t('Perawat','Nurse'),1,1,0,0,0],[t('Dokter','Doctor'),1,1,1,1,0],[t('Farmasi','Pharmacy'),1,0,0,1,0],[t('Kasir','Cashier'),1,0,0,0,1]].map((r,i)=>(
           <tr key={i} className="border-t border-[var(--line-soft)]"><td className="py-1.5 text-[var(--ink)]">{r[0]}</td>{(r.slice(1) as number[]).map((c,j)=>(<td key={j} className="py-1.5 text-center">{c?<Check size={12} className="inline text-green-600" />:<X size={12} className="inline text-[var(--ink-faint)]" />}</td>))}</tr>))}
-      </tbody></table></div><p className="text-[9px] text-[var(--ink-faint)] mt-2">{t('Pemilik dan admin sengaja mendapat semuanya. Mengunci pemilik dari datanya sendiri akan membuat semua orang dibuatkan akun pemilik.','Owners and admins deliberately get everything. Locking an owner out of their own data just gets everyone an owner account.')}</p></AppWindow>) },
+      </tbody></table></div><p className="text-[11px] text-[var(--ink-faint)] mt-2">{t('Pemilik dan admin sengaja mendapat semuanya. Mengunci pemilik dari datanya sendiri akan membuat semua orang dibuatkan akun pemilik.','Owners and admins deliberately get everything. Locking an owner out of their own data just gets everyone an owner account.')}</p></AppWindow>) },
 
     { tag: t('MULTI OUTLET', 'MULTIPLE OUTLETS'),
       title: t('Tiap cabang tetap fasilitas tersendiri.', 'Each branch stays its own facility.'),
       body: t('Bukan jalan pintas: tiap cabang apotek punya izin dan penanggung jawabnya sendiri, stoknya sendiri, dan SIPNAP-nya dilaporkan per outlet. Menyatukan stok beberapa cabang di satu badan usaha justru membuat laporan wajibnya salah. Yang dibagi cuma langganannya: outlet baru mewarisi paket dan masa aktif, tidak melahirkan tagihan kedua. Satu orang boleh punya akses ke beberapa outlet DENGAN PERAN BERBEDA, karena memaksanya satu peran membuat pemilik memberi hak lebih tinggi daripada yang dibutuhkan, dan hak yang dinaikkan demi kenyamanan tidak pernah diturunkan lagi.',
               'Not a shortcut: each branch has its own licence and person in charge, its own stock, and its own mandatory reporting. Merging several branches stock under one entity actively breaks those reports. Only the subscription is shared: a new outlet inherits the plan and validity rather than creating a second bill. One person may hold access to several outlets WITH DIFFERENT ROLES, because forcing a single role makes owners grant more than needed, and permissions raised for convenience are never lowered again.'),
       Icon: Building2,
-      visual: (<AppWindow><div className="space-y-2">
+      visual: (<AppWindow judul={t('Pengaturan', 'Settings')} sub={t('Outlet & Cabang', 'Outlets & Branches')} aktif={9}><div className="space-y-2">
         {[['Klinik Rexco 88',t('Klinik · Denpasar','Clinic · Denpasar'),t('Outlet aktif','Active outlet'),true],['Apotek Rexco Renon',t('Apotek · Renon','Pharmacy · Renon'),t('Pindah ke sini','Switch here'),false]].map((r,i)=>(
           <div key={i} className={`rounded-lg border px-2.5 py-2 flex items-center justify-between ${r[3]?'border-[var(--brand)] bg-[var(--surface-2)]':'border-[var(--line-soft)]'}`}>
-            <div><p className="text-[10px] font-semibold text-[var(--ink)]">{r[0]}</p><p className="text-[9px] text-[var(--ink-faint)]">{r[1]}</p></div>
-            <span className={`text-[8px] px-1.5 py-0.5 rounded ${r[3]?'bg-[var(--brand)] text-[var(--on-brand)]':'bg-[var(--surface-2)] text-[var(--ink-soft)]'}`}>{r[2]}</span>
+            <div><p className="text-[12px] font-semibold text-[var(--ink)]">{r[0]}</p><p className="text-[11px] text-[var(--ink-faint)]">{r[1]}</p></div>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded ${r[3]?'bg-[var(--brand)] text-[var(--on-brand)]':'bg-[var(--surface-2)] text-[var(--ink-soft)]'}`}>{r[2]}</span>
           </div>))}
-        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1.5 text-[9px] text-[var(--ink-soft)]">{t('Stok, kasir, dan laporan mengikuti outlet yang sedang dibuka. Satu langganan, kuota cabang mengikuti paket.','Stock, register, and reports follow the open outlet. One subscription, branch quota follows the plan.')}</div>
+        <div className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1.5 text-[11px] text-[var(--ink-soft)]">{t('Stok, kasir, dan laporan mengikuti outlet yang sedang dibuka. Satu langganan, kuota cabang mengikuti paket.','Stock, register, and reports follow the open outlet. One subscription, branch quota follows the plan.')}</div>
       </div></AppWindow>) },
 
     { tag: t('PERIZINAN TENAGA KESEHATAN', 'PRACTITIONER LICENCES'),
@@ -642,13 +702,13 @@ export default function Kenapa() {
       body: t('Klinik punya lebih dari satu dokter, dan resep yang dicetak harus membawa nomor izin DOKTER YANG MENULISNYA. Resep bernomor izin orang lain bukan dokumen yang kurang rapi, ia dokumen yang salah. Izin praktik juga ada masa berlakunya: SIP yang habis berarti prakteknya tidak sah hari itu juga, dan tanggal yang tidak disimpan tidak bisa diingatkan. Sisa harinya dihitung di server, bukan di peramban, karena komputer klinik yang jamnya meleset dua bulan benar-benar terjadi.',
               'A clinic has more than one doctor, and a printed prescription must carry the licence number of THE DOCTOR WHO WROTE IT. A prescription bearing someone else licence is not untidy, it is wrong. Licences also expire: a lapsed practice permit means practice is unlawful that same day, and a date you never stored cannot be a reminder. Days remaining are computed on the server, not in the browser, because a clinic PC whose clock is two months off genuinely happens.'),
       Icon: Award,
-      visual: (<AppWindow><div className="space-y-1.5">
+      visual: (<AppWindow judul={t('Pengaturan', 'Settings')} sub={t('Tenaga Kesehatan', 'Clinical Staff')} aktif={9}><div className="space-y-1.5">
         {[['dr. Andi Wirawan','STR 3311/2023','SIP 4471/2024',t('Lewat 9 hari','9 days past'),'merah'],['drg. Rina Kusuma','STR 2210/2024','SIP 5512/2025',t('54 hari lagi','54 days left'),'amber'],['apt. Anessa Beckham','STR 1180/2025','SIPA 4471/2026',t('318 hari lagi','318 days left'),'hijau']].map((r,i)=>(
           <div key={i} className="rounded-lg border border-[var(--line-soft)] px-2.5 py-2">
-            <div className="flex items-center justify-between"><span className="text-[10px] font-semibold text-[var(--ink)]">{r[0]}</span><Tingkat warna={r[4] as 'merah'|'amber'|'hijau'}>{r[3]}</Tingkat></div>
-            <p className="text-[8px] text-[var(--ink-faint)] mt-0.5 font-mono">{r[1]} · {r[2]}</p>
+            <div className="flex items-center justify-between"><span className="text-[12px] font-semibold text-[var(--ink)]">{r[0]}</span><Tingkat warna={r[4] as 'merah'|'amber'|'hijau'}>{r[3]}</Tingkat></div>
+            <p className="text-[10px] text-[var(--ink-faint)] mt-0.5 font-mono">{r[1]} · {r[2]}</p>
           </div>))}
-        <p className="text-[9px] text-[var(--ink-faint)]">{t('Tiga tingkat, bukan dua: yang sudah lewat menuntut berhenti praktik, yang 60 hari lagi menuntut mengurus perpanjangan.','Three tiers, not two: lapsed demands stopping practice, sixty days out demands starting the renewal.')}</p>
+        <p className="text-[11px] text-[var(--ink-faint)]">{t('Tiga tingkat, bukan dua: yang sudah lewat menuntut berhenti praktik, yang 60 hari lagi menuntut mengurus perpanjangan.','Three tiers, not two: lapsed demands stopping practice, sixty days out demands starting the renewal.')}</p>
       </div></AppWindow>) },
   ]
 
@@ -832,7 +892,7 @@ export default function Kenapa() {
             )
           })}
         </div>
-        <div className="reveal bg-[var(--surface)]/70 border border-white/60 shadow-sm rounded-3xl p-6 sm:p-9">
+        <div className="reveal bg-[var(--surface)]/70 border border-[var(--line)] shadow-sm rounded-3xl p-6 sm:p-9">
           <div className="grid md:grid-cols-2 gap-8">
             <div>
               <div className="w-12 h-12 rounded-2xl bg-[var(--surface-2)] text-[var(--brand-soft)] flex items-center justify-center mb-4"><S.Icon size={22} /></div>
@@ -853,7 +913,7 @@ export default function Kenapa() {
       </section>
 
       {/* Masalah (gelap) */}
-      <section className="kn-dark text-white py-20 sm:py-24">
+      <section className="kn-dark text-[var(--on-brand)] py-20 sm:py-24">
         <div className="max-w-5xl mx-auto px-5 text-center">
           <h2 className="reveal kn-headline text-3xl sm:text-5xl font-bold mb-6">{t('Yang menggerus untung, diam-diam.', 'What quietly eats the margin.')}</h2>
           <p className="reveal text-[var(--on-brand-soft)] text-lg max-w-2xl mx-auto mb-12" style={{ transitionDelay: '.05s' }}>{t('Enam kebocoran yang tidak pernah dilaporkan sebagai keluhan, karena tidak ada yang menyadarinya sampai audit atau tutup buku.', 'Six leaks nobody reports as a complaint, because nobody notices until the audit or the monthly close.')}</p>
@@ -866,7 +926,7 @@ export default function Kenapa() {
               [t('Tagihan pasien kurang satu baris', 'A bill missing one line'), t('Tindakan yang belum dimasukkan saat kasir menagih tidak pernah tertagih lagi.', 'A procedure not yet entered when the cashier bills is never billed at all.')],
               [t('Klaim penjamin tidak terlacak', 'Untracked payer claims'), t('Tidak ada yang tahu klaim mana sudah dikirim dan berapa yang belum dibayar.', 'Nobody knows which claims were sent or how much is still unpaid.')],
             ].map((p, i) => (
-              <div key={i} className="reveal bg-white/[0.06] border border-white/10 rounded-2xl p-6" style={{ transitionDelay: `${(i % 3) * .07}s` }}>
+              <div key={i} className="reveal bg-[var(--on-brand)]/[0.08] border border-[var(--on-brand)]/15 rounded-2xl p-6" style={{ transitionDelay: `${(i % 3) * .07}s` }}>
                 <p className="font-semibold text-lg mb-1.5">{p[0]}</p>
                 <p className="text-[var(--on-brand-soft)] text-sm leading-relaxed">{p[1]}</p>
               </div>
@@ -883,7 +943,7 @@ export default function Kenapa() {
         </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {alur.map((a, i) => (
-            <div key={i} className="reveal relative bg-[var(--surface)]/70 border border-white/60 shadow-sm rounded-2xl p-5 pl-6" style={{ transitionDelay: `${(i % 3) * .06}s` }}>
+            <div key={i} className="reveal relative bg-[var(--surface)]/70 border border-[var(--line)] shadow-sm rounded-2xl p-5 pl-6" style={{ transitionDelay: `${(i % 3) * .06}s` }}>
               <span className="absolute left-0 top-6 bottom-6 w-1 rounded-full bg-[var(--brand-soft)]/40" />
               <div className="flex items-center gap-2 mb-2.5">
                 <span className="w-8 h-8 rounded-xl bg-[var(--surface-2)] text-[var(--brand-soft)] flex items-center justify-center shrink-0"><a.Icon size={16} /></span>
@@ -927,7 +987,7 @@ export default function Kenapa() {
               <p className="reveal text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ink-faint)] mb-4">{k.judul}</p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {k.items.map(([Ic, judul, d], i) => (
-                  <div key={i} className="reveal bg-[var(--surface)]/70 border border-white/60 shadow-sm rounded-2xl p-5" style={{ transitionDelay: `${(i % 3) * .05}s` }}>
+                  <div key={i} className="reveal bg-[var(--surface)]/70 border border-[var(--line)] shadow-sm rounded-2xl p-5" style={{ transitionDelay: `${(i % 3) * .05}s` }}>
                     <div className="w-10 h-10 rounded-xl bg-[var(--surface-2)] text-[var(--brand-soft)] flex items-center justify-center mb-3"><Ic size={18} /></div>
                     <p className="font-bold mb-1">{judul}</p>
                     <p className="text-[var(--ink-soft)] text-sm leading-relaxed">{d}</p>
@@ -940,7 +1000,7 @@ export default function Kenapa() {
       </section>
 
       {/* Yang ditegakkan database */}
-      <section id="aturan" className="kn-dark text-white py-20 sm:py-24 scroll-mt-28">
+      <section id="aturan" className="kn-dark text-[var(--on-brand)] py-20 sm:py-24 scroll-mt-28">
         <div className="max-w-5xl mx-auto px-5">
           <div className="text-center mb-12">
             <p className="reveal text-[var(--on-brand-soft)] text-xs font-semibold uppercase tracking-[0.2em] mb-4">{t('Yang ditegakkan, bukan diingatkan', 'Enforced, not reminded')}</p>
@@ -952,14 +1012,14 @@ export default function Kenapa() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
             {aturan.map(([kode, judul, d], i) => (
-              <div key={i} className="reveal bg-white/[0.06] border border-white/10 rounded-2xl p-5" style={{ transitionDelay: `${(i % 3) * .06}s` }}>
-                <span className="inline-block font-mono text-[10px] tracking-widest text-[var(--accent)] border border-white/15 rounded px-1.5 py-0.5 mb-2.5">{kode}</span>
+              <div key={i} className="reveal bg-[var(--on-brand)]/[0.08] border border-[var(--on-brand)]/15 rounded-2xl p-5" style={{ transitionDelay: `${(i % 3) * .06}s` }}>
+                <span className="inline-block font-mono text-[10px] tracking-widest text-[var(--accent)] border border-[var(--on-brand)]/20 rounded px-1.5 py-0.5 mb-2.5">{kode}</span>
                 <p className="font-semibold mb-1">{judul}</p>
                 <p className="text-[var(--on-brand-soft)] text-sm leading-relaxed">{d}</p>
               </div>
             ))}
           </div>
-          <div className="reveal bg-white/[0.06] border border-white/10 rounded-2xl p-6">
+          <div className="reveal bg-[var(--on-brand)]/[0.08] border border-[var(--on-brand)]/15 rounded-2xl p-6">
             <p className="font-semibold mb-4">{t('Enam aturan medis yang tidak bisa diakali dari layar mana pun', 'Six clinical rules no screen can talk its way around')}</p>
             <div className="grid sm:grid-cols-2 gap-x-8 gap-y-2.5">
               {aturanMedis.map((a, i) => (
@@ -1004,7 +1064,7 @@ export default function Kenapa() {
 
       {/* SatuSehat & BPJS, apa adanya */}
       <section className="max-w-5xl mx-auto px-5 pb-20">
-        <div className="reveal bg-[var(--surface)]/70 border border-white/60 shadow-sm rounded-3xl p-7 sm:p-10">
+        <div className="reveal bg-[var(--surface)]/70 border border-[var(--line)] shadow-sm rounded-3xl p-7 sm:p-10">
           <p className="text-[var(--accent)] text-xs font-semibold uppercase tracking-[0.18em] mb-3">{t('Jalan ke sistem nasional', 'The road to national systems')}</p>
           <h2 className="kn-headline text-2xl sm:text-3xl font-bold mb-4">{t('Bentuk datanya sudah menuruti SatuSehat dan BPJS. Pengirimannya belum menyala.', 'The data already follows SatuSehat and BPJS. The sending is not switched on yet.')}</h2>
           <p className="text-[var(--ink-mid)] leading-relaxed mb-7 max-w-3xl">
@@ -1038,7 +1098,7 @@ export default function Kenapa() {
           dulu memasang dua angka yang tidak ada di database dan tidak pernah
           ditagihkan; siapa pun yang membacanya lalu mendaftar akan menemukan
           harga yang sama sekali lain begitu masuk. */}
-      <section id="harga" className="kn-dark text-white py-20 sm:py-28 scroll-mt-28">
+      <section id="harga" className="kn-dark text-[var(--on-brand)] py-20 sm:py-28 scroll-mt-28">
         <div className="max-w-5xl mx-auto px-5">
           <div className="text-center mb-10">
             <p className="reveal text-[var(--on-brand-soft)] text-xs font-semibold uppercase tracking-[0.2em] mb-4">{t('Harga', 'Pricing')}</p>
@@ -1058,7 +1118,7 @@ export default function Kenapa() {
               [t('Kuota benar-benar ditegakkan', 'Quotas genuinely enforced'), t('Produk, pengguna, dan cabang dibatasi paket lewat trigger database, jadi angkanya bukan sekadar tulisan di halaman ini.', 'Products, users, and branches are capped by plan through database triggers, so these numbers are not just words on this page.')],
               [t('Klinik dan rumah sakit', 'Clinics and hospitals'), t('Modul kliniknya sudah utuh, tapi harganya per penawaran karena kewajiban hukum dan pemasangannya berbeda tiap faskes. Hubungi tim Seawise.', 'The clinical modules are complete, but pricing is by quotation because legal duties and setup differ per facility. Talk to the Seawise team.')],
             ].map((c, i) => (
-              <div key={i} className="bg-white/[0.06] border border-white/10 rounded-2xl p-5">
+              <div key={i} className="bg-[var(--on-brand)]/[0.08] border border-[var(--on-brand)]/15 rounded-2xl p-5">
                 <p className="font-semibold mb-1">{c[0]}</p>
                 <p className="text-[var(--on-brand-soft)] leading-relaxed">{c[1]}</p>
               </div>
@@ -1070,7 +1130,7 @@ export default function Kenapa() {
             </a>
             <a href={wa(t('Halo Seawise, saya ingin penawaran Sehatera untuk klinik atau rumah sakit.', 'Hello Seawise, I would like a Sehatera quotation for a clinic or hospital.'))}
                target="_blank" rel="noopener noreferrer"
-               className="inline-flex items-center gap-2 border border-white/25 text-white px-7 py-3.5 rounded-xl font-bold hover:bg-white/10 transition">
+               className="inline-flex items-center gap-2 border border-[var(--on-brand)]/25 text-[var(--on-brand)] px-7 py-3.5 rounded-xl font-bold hover:bg-[var(--on-brand)]/10 transition">
               <MessageCircle size={18} /> {t('Minta Penawaran Klinik', 'Request a Clinic Quote')}
             </a>
           </div>
@@ -1083,7 +1143,7 @@ export default function Kenapa() {
         <p className="reveal text-center text-[var(--ink-mid)] text-lg mb-10" style={{ transitionDelay: '.05s' }}>{t('Termasuk yang jawabannya belum enak, karena itu yang menentukan apakah kami layak dipercaya.', 'Including the ones with uncomfortable answers, because those decide whether we are worth trusting.')}</p>
         <div className="space-y-3">
           {faq.map(([q, a], i) => (
-            <div key={i} className="reveal bg-[var(--surface)]/70 border border-white/60 shadow-sm rounded-2xl overflow-hidden">
+            <div key={i} className="reveal bg-[var(--surface)]/70 border border-[var(--line)] shadow-sm rounded-2xl overflow-hidden">
               <button onClick={() => setTanya(tanya === i ? null : i)}
                 className="w-full flex items-center justify-between gap-4 text-left px-5 py-4 hover:bg-[var(--surface)] transition">
                 <span className="font-semibold text-[15px]">{q}</span>
@@ -1099,7 +1159,7 @@ export default function Kenapa() {
 
       {/* Penutup */}
       <section className="max-w-4xl mx-auto px-5 pb-24 text-center">
-        <div className="reveal bg-[var(--surface)]/70 border border-white/60 shadow-sm rounded-3xl px-6 py-14 sm:px-12">
+        <div className="reveal bg-[var(--surface)]/70 border border-[var(--line)] shadow-sm rounded-3xl px-6 py-14 sm:px-12">
           <h2 className="kn-headline text-3xl sm:text-5xl font-bold mb-5">{t('Siap membuat faskes lebih tenang?', 'Ready for a calmer facility?')}</h2>
           <p className="text-[var(--ink-mid)] text-lg mb-8 max-w-2xl mx-auto">
             {t('Mulai hari ini dengan masa coba. Aktivasi, impor data awal, pengaturan poli dan tarif, sampai pembagian peran staf dibantu langsung oleh tim Seawise.',
