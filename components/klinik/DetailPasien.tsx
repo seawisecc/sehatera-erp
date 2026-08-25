@@ -81,6 +81,16 @@ export default function DetailPasien({
                 {pasien.jenis_kelamin && <> · {KELAMIN[pasien.jenis_kelamin]?.[lang === 'en' ? 1 : 0]}</>}
                 {umur !== null && <> · <span className="num">{umur}</span> {t('th', 'y')}</>}
               </p>
+              {/* Nomor IHS SatuSehat. Ditampilkan karena tanpa ini tidak ada
+                  satu pun layar yang memberi tahu bahwa pencocokan ke SatuSehat
+                  sudah berhasil, dan yang tidak terlihat dianggap belum
+                  dikerjakan. */}
+              {(pasien as { ihs_id?: string | null }).ihs_id && (
+                <p className="text-[11px] text-green-700 mt-0.5">
+                  {t('IHS SatuSehat', 'SatuSehat IHS')}{' '}
+                  <span className="num">{(pasien as { ihs_id?: string | null }).ihs_id}</span>
+                </p>
+              )}
             </div>
             <button onClick={onTutup} className="shrink-0 text-[var(--ink-faint)] hover:text-[var(--ink)]" aria-label={t('Tutup', 'Close')}>
               <X size={18} />

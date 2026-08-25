@@ -28,6 +28,7 @@ type Poli = {
   nama: string
   kode: string
   kode_bpjs: string | null
+  ihs_location_id: string | null
   tarif_konsultasi: number
   urutan: number
   aktif: boolean
@@ -35,7 +36,7 @@ type Poli = {
 
 type Anggota = { id: string; nama: string | null; email: string; role: string }
 
-const KOSONG = { nama: '', kode: '', kode_bpjs: '', tarif_konsultasi: '' }
+const KOSONG = { nama: '', kode: '', kode_bpjs: '', tarif_konsultasi: '', ihs_location_id: '' }
 
 export default function PengaturanPoli() {
   const { t } = useLang()
@@ -80,6 +81,7 @@ export default function PengaturanPoli() {
         nama: form.nama,
         kode: form.kode,
         kode_bpjs: form.kode_bpjs,
+        ihs_location_id: form.ihs_location_id,
         tarif_konsultasi: form.tarif_konsultasi,
       },
     })
@@ -152,11 +154,13 @@ export default function PengaturanPoli() {
                     {t('Antrean', 'Queue')} <span className="num">{p.kode}-001</span>
                     {p.tarif_konsultasi > 0 && <> · {t('konsultasi', 'consult')} <span className="num">{rupiah(p.tarif_konsultasi)}</span></>}
                     {p.kode_bpjs && <> · {t('kode BPJS', 'BPJS code')} <span className="num">{p.kode_bpjs}</span></>}
+                    {p.ihs_location_id && <> · {t('IHS', 'IHS')} <span className="num">{p.ihs_location_id}</span></>}
                   </p>
                 </div>
                 <button onClick={() => { setUbahId(p.id); setForm({
                   nama: p.nama, kode: p.kode, kode_bpjs: p.kode_bpjs || '',
                   tarif_konsultasi: p.tarif_konsultasi ? String(p.tarif_konsultasi) : '',
+                  ihs_location_id: p.ihs_location_id || '',
                 }) }}
                   className="shrink-0 p-2 rounded-lg text-[var(--ink-faint)] hover:bg-[var(--surface-2)] hover:text-[var(--brand)]"
                   aria-label={t('Ubah', 'Edit')}>
@@ -240,6 +244,22 @@ export default function PengaturanPoli() {
                   <input value={form.kode_bpjs} onChange={e => setForm({ ...form, kode_bpjs: e.target.value })}
                     className={`${I} num`} />
                 </div>
+              </div>
+
+              {/* Location SatuSehat per poli. Satu Location untuk seluruh
+                  faskes akan menaruh kunjungan Poli Gigi di ruangan Poli
+                  Umum, dan itu bukan data yang kurang rapi melainkan
+                  kunjungan yang tercatat terjadi di tempat yang salah. */}
+              <div className="mt-3">
+                <label className={L}>{t('ID Location SatuSehat', 'SatuSehat Location ID')}</label>
+                <input value={form.ihs_location_id}
+                  onChange={e => setForm({ ...form, ihs_location_id: e.target.value })}
+                  placeholder={t('Dari portal SatuSehat, sesudah poli ini didaftarkan', 'From the SatuSehat portal, after this unit is registered')}
+                  className={`${I} num`} />
+                <p className="text-[11px] text-[var(--ink-faint)] mt-1 leading-relaxed">
+                  {t('Diisi sesudah poli ini didaftarkan sebagai Location di portal SatuSehat. Boleh dikosongkan: yang kosong cuma berarti kunjungan poli ini belum bisa dikirim.',
+                     'Filled in after this unit is registered as a Location in the SatuSehat portal. May be left empty: empty only means visits for this unit cannot be sent yet.')}
+                </p>
               </div>
             </div>
 

@@ -163,6 +163,18 @@ export default function HalamanPasien() {
                         mengubah tanggal lahir orang tanpa sadar. */}
                     <button onClick={() => setLihat(p)} className="text-left">
                       <span className="font-medium text-[var(--ink)] hover:underline underline-offset-4">{p.nama}</span>
+                      {/* Penanda bahwa pasien ini sudah punya nomor IHS, jadi
+                          kunjungannya bisa dikirim ke SatuSehat. Sengaja
+                          sekadar lencana, bukan nomornya: nomor IHS tidak
+                          pernah dibutuhkan mata orang yang sedang mencari
+                          pasien, dan daftar yang penuh angka panjang jadi
+                          lebih lambat dibaca. Nomornya ada di Detail. */}
+                      {p.ihs_id && (
+                        <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700 align-middle"
+                          title={`SatuSehat ${p.ihs_id}`}>
+                          {t('SATUSEHAT', 'SATUSEHAT')}
+                        </span>
+                      )}
                       {p.alergi && (
                         <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700 align-middle">
                           {t('ALERGI', 'ALLERGY')}

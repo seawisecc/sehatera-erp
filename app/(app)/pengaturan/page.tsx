@@ -322,7 +322,7 @@ export default function HalamanPengaturan() {
           </a>
         </div>
 
-        <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-[var(--line)] shadow-sm rounded-2xl p-6">
+        <div className="min-w-0 bg-[var(--surface)]/70 backdrop-blur-sm border border-[var(--line)] shadow-sm rounded-2xl p-6">
                   {tab === 'jejak' && (
                     <div>
                       <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Jejak Audit', 'Audit Trail')}</h2>

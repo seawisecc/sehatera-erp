@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Supabase CLI: menyimpan ref project dan sisa sesi, bukan milik repo.
+supabase/.temp/

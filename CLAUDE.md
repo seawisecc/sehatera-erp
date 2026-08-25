@@ -106,9 +106,41 @@ memasang lubang keamanan yang sudah ditutup.
 | `0068_siap_tagih` | `visits.siap_tagih_pada`, `siapkan_tagihan()`, lencana kasir punya isi |
 | `0069_barcode_dan_rak` | `products.barcode` (unik per faskes) & `rak`, `produk_by_barcode()` |
 | `0070_perizinan_tenaga_kesehatan` | STR & SIP di `app_users`, `tenaga_kesehatan()`, `resep_untuk_cetak()` |
+| `0071_ihs_poli_dan_satu_kolom_praktisi` | `clinic_units.ihs_location_id`; `app_users.ihs_id` yang kembar dibuang |
+| `0072_antrean_kirim_per_faskes` | `ambil_antrean_kirim()` menerima `p_company` |
+| `0073_jejak_kirim_satusehat` | `ihs_dicari_pada`, `ihs_condition_id`, `ihs_final_pada` |
+| `0074_nik_tenaga_kesehatan` | NIK nakes bisa diisi lewat `simpan_perizinan()` |
+| `0075_antre_ulang_yang_ditinggalkan` | `antre_kirim()` membangkitkan yang `ditinggalkan` |
+| `0076_procedure_ke_satusehat` | `visit_charges.ihs_procedure_id` |
+| `0077_kode_kfa_obat` | `products.kode_kfa` beserta constraint bentuknya |
+| `0078_resep_ke_satusehat` | `prescription_items.ihs_medicationrequest_id` |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
+
+### Menjalankan migrasi: `supabase db push`, bukan lagi tempel tangan
+
+Sejak 25 Agustus 2026 project ini **tertaut ke Supabase CLI** dan riwayat
+migrasinya sudah benar. Migrasi baru dijalankan dengan:
+
+```bash
+export SUPABASE_ACCESS_TOKEN=$(grep '^SUPABASE_ACCESS_TOKEN=' .env.local | cut -d= -f2-)
+supabase db push
+```
+
+Sebelumnya seluruh 77 migrasi dijalankan tangan lewat SQL Editor, jadi tabel
+`supabase_migrations.schema_migrations` **tidak pernah ada isinya, dan pada
+database ini tabelnya bahkan belum pernah dibuat**. Itu yang membuat
+`supabase migration repair` gagal dengan `failed to update migration table`: ia
+menulis ke tabel yang belum ada. `supabase/perbaikan_riwayat_migrasi.sql`
+membuat tabelnya lalu mencatat ketujuh puluh tujuh versi sebagai sudah
+terpasang, dijalankan sekali lewat SQL Editor.
+
+**Berkas itu disimpan sebagai catatan, bukan untuk dijalankan lagi.**
+
+`SUPABASE_ACCESS_TOKEN` di `.env.local`, diambil dari
+supabase.com/dashboard/account/tokens. Tanpa awalan `NEXT_PUBLIC_`, alasan yang
+sama dengan service role key.
 
 **Migrasi yang sudah dijalankan tidak boleh disunting.** Perbaikan selalu jadi
 migrasi baru: file dan database harus tetap sama isinya, dan itulah seluruh
@@ -121,7 +153,8 @@ berbunyi "SEMUA UJI LULUS". Tempelkan sesudah migrasinya dijalankan.
 
 Migrasi 0026 sampai 0029 isinya data, bukan skema, dan berukuran 214 sampai
 338 KB per berkas. Ukuran itu disengaja: satu tempelan 1 MB membuat SQL Editor
-Supabase tersendat, dan jalur menjalankan SQL di project ini memang lewat sana.
+Supabase tersendat, dan jalur menjalankan SQL di project ini dulu memang lewat
+sana.
 Isinya satu pernyataan `insert ... select from unnest(string_to_array(...))`
 berpembatas "|", bukan puluhan ribu tuple VALUES, dan `on conflict do update`
 membuatnya aman dijalankan ulang.
@@ -366,18 +399,59 @@ sudah dipakai memutuskan bentuk tabel di migrasi 0025:
   dulu, baru resource klinis. Patient harus lewat pencocokan MPI, bukan
   dibuat sendiri.
 
-**Alamat endpoint dan alur OAuth2 di bawah ini BELUM diverifikasi ke
-dokumen resmi**, sumbernya pustaka pihak ketiga dan tulisan orang. Jangan
-dipakai menulis kode sebelum dicocokkan sendiri ke dokumen resmi saat
-kredensialnya sudah ada:
+### Endpoint dan OAuth2: SUDAH diverifikasi, 25 Agustus 2026
 
-- token: `POST {base}/oauth2/v1/accesstoken?grant_type=client_credentials`
-- FHIR: `{base}/fhir-r4/v1/{Resource}`
-- base produksi `https://api-satusehat.kemkes.go.id`, sandbox
-  `https://api-satusehat-dev.dto.kemkes.go.id`
+Dibaca langsung dari `satusehat.kemkes.go.id/platform/docs`, halaman
+Katalog ReST API > Autentikasi > Akses Token, dan halaman Interoperabilitas.
+Sebelumnya blok ini berlabel BELUM diverifikasi dan sumbernya pustaka orang,
+dan **satu alamatnya memang salah**:
 
-Yang menahan pekerjaan ini bukan lagi bentuk data, melainkan kredensial
-per faskes dan tempat menyimpannya terenkripsi.
+- token: `POST https://api-satusehat-stg.dto.kemkes.go.id/oauth2/v1/accesstoken?grant_type=client_credentials`
+- FHIR sandbox: `https://api-satusehat-stg.dto.kemkes.go.id/fhir-r4/v1`
+- FHIR produksi: `https://api-satusehat.kemkes.go.id/fhir-r4/v1`
+
+**Sandbox itu `-stg`, BUKAN `-dev`.** Tebakan lama menulis
+`api-satusehat-dev.dto.kemkes.go.id`, dan host itu tidak dipakai di dokumen
+mana pun. Kalau sempat ditulis ke kode, kegagalannya berbentuk DNS, bukan 401,
+jadi orang akan mengira kredensialnya yang salah.
+
+Bentuk permintaan tokennya tidak biasa dan mudah salah kalau ditulis dari
+ingatan: `grant_type` ada di **query string**, sedangkan `client_id` dan
+`client_secret` ada di **body** ber-`Content-Type:
+application/x-www-form-urlencoded`. Jawabannya membawa `access_token`,
+`token_type: BearerToken`, dan `expires_in` 3599 detik.
+
+**Ada rate limit yang menghukum kegagalan: 1 permintaan per menit sesudah
+percobaan yang gagal**, per client_id. Ini menyentuh langsung mundur berlipat
+di `outbound_messages` (0056): jeda pertama tidak boleh lebih pendek dari satu
+menit, kalau tidak pengirim yang salah kredensial akan memukul dirinya sendiri
+ke dalam rate limit dan tidak pernah keluar. Galatnya sendiri berbentuk FHIR
+`OperationOutcome`, bukan JSON galat biasa.
+
+**Kredensialnya TIGA, bukan dua**: Organization ID, Client ID, Client Secret.
+Satu Client ID hanya sah untuk SATU Organization ID; memakai pasangan yang
+tertukar dijawab `resource cannot be accessed due to business rule`. Ini juga
+yang menutup keraguan lama soal `settings.ihs_organization_id`: organization id
+sandbox dan produksi memang BERBEDA, jadi kolom tunggal di `settings` tidak
+bisa menampung keduanya dan yang benar tetap di kredensial.
+
+**Tipe Kode Akses API menentukan resource apa yang boleh dikirim**, dipilih di
+portal SSP dan bisa diubah lewat tombol Ubah Tipe Akses. Dua yang relevan:
+
+- **Fasyankes**: akunnya memegang kredensial produksi untuk dirinya sendiri.
+- **Penyedia Sistem RME (partner system)**: akunnya memegang kredensial
+  produksi SELURUH faskes yang memilih sistem RME-nya saat memutakhirkan data
+  di DFO/REGFASYANKES/RS ONLINE.
+
+Untuk Sehatera yang dijual ke banyak klinik, **yang benar adalah Penyedia
+Sistem RME**, dan itu keputusan pemilik karena ia menuntut Sehatera terdaftar
+dan terverifikasi sebagai partner di SSP. Kredensial sandbox tetap terbuka
+untuk siapa pun, terverifikasi atau belum, jadi pembangunan payload bisa
+dimulai tanpa menunggu verifikasi itu.
+
+Yang menahan pekerjaan ini sekarang tinggal pembangun payload FHIR-nya.
+Bentuk datanya siap, tempat menyimpan kredensialnya siap (0055), mesin
+antreannya siap (0056), dan alamatnya sudah pasti.
 
 ## Penjamin: tiga kategori, penerbitnya tabel
 
@@ -696,7 +770,8 @@ menarik:
 | 3 | Layar antrean ruang tunggu + panggilan suara | **selesai** (migrasi 0041..0044) |
 | 4 | ICD-10 resmi dan ICD-9-CM untuk tindakan | **selesai** (migrasi 0025..0029) |
 | 5 | Reservasi | **selesai** (migrasi 0054) |
-| 6 | Kirim ke SatuSehat dan BPJS | prasyaratnya **selesai** (0055, 0056); pengirimannya tertahan kredensial |
+| 6 | Kirim ke SatuSehat | **BERJALAN di sandbox**: Encounter, Condition, Procedure, MedicationRequest terbukti diterima |
+| 6b | Kirim ke BPJS | belum, kredensialnya belum ada |
 
 ### Hak akses per sub-modul: SELESAI (migrasi 0039)
 
@@ -821,6 +896,135 @@ sekaligus, dan kunci itu membuka data pasien di sistem nasional.
 mengunci `search_path = public, pg_temp`, jadi apa pun di luar itu tidak
 terlihat kalau tidak disebut skemanya. Ini persis kesalahan migrasi 0043.
 
+## Payload FHIR: yang sudah dibangun, dan DUA hal yang menahannya
+
+`lib/satusehat/bangun.ts`, dibaca dari Panduan Interoperabilitas > Modul
+Pelayanan > **Resume Medis - Rawat Jalan** (disunting 2 Desember 2025) dan
+halaman FHIR > Encounter, pada 25 Agustus 2026. Dibuktikan
+`npx tsx lib/satusehat/bangun.uji.mts`, yang benar cuma "SEMUA UJI LULUS".
+
+Fungsinya MURNI: masuk data, keluar objek, tanpa database dan tanpa jaringan.
+Itu yang membuatnya bisa diuji tanpa kredensial sama sekali.
+
+**Waktu SELALU UTC+00, dan ini kesalahan yang tidak pernah muncul sebagai
+galat.** Dokumennya menyatakannya sebagai aturan: WIB dikurangi 7, WITA
+dikurangi 8, WIT dikurangi 9. Klinik contoh project ini di Denpasar, jadi
+selisihnya DELAPAN jam, cukup besar untuk memindahkan tanggal. Jam dinding yang
+terkirim apa adanya diterima SatuSehat dengan senang hati dan disimpan sebagai
+kunjungan malam. Semuanya lewat `waktuUtc()` di `lib/satusehat/waktu.ts`.
+Tanggal juga tidak boleh lebih awal dari **3 Juni 2014**.
+
+**`Encounter.identifier.system` DIJAHIT dari Organization ID faskesnya**
+(`http://sys-ids.kemkes.go.id/encounter/{organization_id}`), jadi ia berbeda
+antara sandbox dan produksi dan tidak boleh dijadikan tetapan.
+
+**`Encounter.statusHistory` WAJIB**, dan Sehatera kebetulan sudah mencatatnya
+lewat trigger sejak migrasi 0018. Keputusan lama itu terbayar di sini.
+`hospitalization.dischargeDisposition` juga wajib walau terdengar seperti
+urusan rawat inap; pasien klinik pulang ke rumah, jadi `home`.
+
+### SNOMED untuk diagnosis: sempat dikira wajib, ternyata tidak
+
+Ini pelajaran tentang MEMBACA DUA DOKUMEN, bukan satu.
+
+Modul Resume Medis Rawat Jalan (2 Desember 2025) menulis diagnosis "dilaporkan
+menggunakan kode ICD-10 **dan padanan dari kode SNOMED-CT**", dan tabelnya
+mendaftar dua system di bawah satu `code.coding`. Dibaca sendirian, itu
+berbunyi seperti keduanya wajib, dan atas dasar itu saya sempat menyatakan
+diagnosis TERTAHAN sampai ada pemetaan ICD-10 ke SNOMED.
+
+**Itu salah.** Dokumen Lampiran Standar Terminologi v10.3 (30 Juni 2026), tujuh
+bulan lebih baru dan sumber normatif untuk terminologi, memisahkan keduanya
+menurut MAKNA KLINIS di bagian 10.5 `Condition.code`:
+
+| Kode | Dipakai untuk |
+| --- | --- |
+| **ICD-10 versi 2010** | **diagnosis pasien saat kunjungan** |
+| SNOMED CT | kondisi saat meninggalkan RS, keluhan utama, temuan pemeriksaan klinis, riwayat penyakit pribadi & keluarga, masalah gizi, keluhan makan |
+| Terminologi Kemkes | kondisi pasien, topografi & morfologi kanker (ICD-O) |
+
+Jadi diagnosis kunjungan sah berangkat dengan **ICD-10 saja**, dan versinya
+yang dituntut adalah **versi 2010**: persis berkas e-klaim Kemenkes yang sudah
+dimuat di migrasi 0026 sampai 0029. Tidak ada yang perlu dibeli, didaftarkan,
+atau dipetakan lebih dulu.
+
+`snomed` di `DataDiagnosis` sekarang OPSIONAL. Kalau ada, ia ikut sebagai
+coding kedua; kalau tidak ada, entri keduanya TIDAK dibuat sama sekali. Entri
+SNOMED berkode kosong lebih buruk daripada tidak ada: ia terbaca sebagai klaim
+bahwa pemetaannya sudah dikerjakan. **Menebak kode SNOMED tetap dilarang**,
+alasan yang sama dengan kenapa 18.543 nama ICD tidak diterjemahkan mesin.
+
+Kalau kedua dokumen suatu saat benar-benar bertabrakan, yang mengadili bukan
+bacaan siapa pun melainkan **satu POST ke sandbox**.
+
+Nomor afiliasi SNOMED CT tetap diminta sebagai syarat pendaftaran sistem RME di
+SSP, tapi itu berkas pendaftaran, bukan prasyarat teknis untuk mengirim
+diagnosis.
+
+### Yang benar-benar masih menahan
+
+**Poli belum punya tempat menyimpan nomor IHS Location-nya.** Kolom IHS sudah
+ada di `patients`, `app_users`, `settings`, `visits`, dan `prescriptions`, tapi
+`clinic_units` terlewat, padahal `Encounter.location` wajib. Butuh migrasi
+baru, dan isinya baru bisa diisi sesudah Location didaftarkan sebagai prasyarat
+di SSP.
+
+Ketiga nomor IHS lain (pasien, dokter, organisasi) tempatnya sudah ada tapi
+ISINYA masih kosong: pasien diisi lewat `cariPasienByNik()`, dokter dari portal
+SSP, organisasi dari kredensial.
+
+**`Encounter.status`: `obat` dipetakan ke `in-progress`, bukan `finished`.**
+Pasien yang resepnya sedang disiapkan farmasi masih di dalam kliniknya dan
+tagihannya belum tertutup. Menyebutnya selesai berarti waktu selesai kunjungan
+jadi terlalu awal untuk SETIAP pasien yang menebus obat. Petanya ditulis
+lengkap tanpa `else`, supaya keadaan baru di rel kunjungan menabrak berkas itu
+dan dipikirkan, bukan diam-diam jatuh ke salah satu nilai.
+
+## Endpoint server pertama, dan kunci yang tidak boleh ikut ke peramban
+
+`app/api/satusehat/uji/route.ts` adalah **Route Handler pertama di project
+ini**. Sampai sebelumnya seluruh aplikasi bicara ke Supabase langsung dari
+peramban, dan itu memang cukup selama RLS yang menjaga. SatuSehat memaksa
+bentuk yang berbeda karena satu alasan: `ambil_kredensial()` dicabut dari
+`authenticated`, jadi client secret hanya bisa dibuka dari jalur yang memegang
+`service_role`, dan jalur itu tidak boleh ada di dalam peramban.
+
+- **`SUPABASE_SERVICE_ROLE_KEY` tanpa awalan `NEXT_PUBLIC_`.** Awalan itu
+  menanam nilainya ke bundel peramban; kunci service_role yang sampai ke sana
+  membuka SELURUH database untuk siapa pun yang membuka devtools. Kalau kunci
+  itu belum dipasang, `supabaseAdmin()` mengembalikan null dan layarnya
+  mengatakan itu sebagai satu kalimat, bukan gagal saat modul dimuat.
+- **`lib/satusehat/` dan `lib/server/` tidak boleh diimpor komponen.** Keduanya
+  menerima secret sebagai argumen. Yang mengimpornya cuma `app/api/`.
+- **Hak pemanggil diperiksa lewat SESINYA, bukan lewat service_role.** Route
+  handler membuat client kedua yang memakai access token pemanggil, lalu
+  memanggil `my_context()` dengan itu. Kalau haknya diperiksa dengan
+  service_role, yang diperiksa cuma klaim yang ditulis pemanggil sendiri.
+- **Endpoint uji tidak mengembalikan kredensialnya**, tidak juga tersamar.
+  Alasannya sama dengan kenapa layarnya tidak menampilkan balik: yang bisa
+  dibaca balik akan dibaca balik, dan jawaban uji sering tersalin ke tiket.
+
+**Token OAuth2 disimpan di MEMORI PROSES, bukan di tabel.** Ia hidup 3599 detik
+dan ia rahasia; menaruhnya di database berarti menambah satu tempat lagi yang
+bocor kalau RLS salah, padahal Vault dipilih justru untuk mengurangi tempat
+semacam itu. Menyimpannya bukan penghematan melainkan syarat: rate limit
+SatuSehat juga menghukum "terlalu sering membuat token baru dalam satu menit",
+jadi pengirim yang meminta token per baris antrean akan terkunci di baris kedua.
+
+**Uji koneksi harus ada SEBELUM satu baris payload pun ditulis.** Kalau
+pembangun payload dan penyambungan dikerjakan bersamaan, kegagalan pertama
+tidak bisa dibedakan antara "bentuk kirimannya salah" dan "kami bahkan belum
+tersambung". Yang kedua jauh lebih sering dan jauh lebih murah diperiksa.
+Tombolnya di Pengaturan > SatuSehat & BPJS, dan di sandbox ia memakai NIK
+pasien dummy yang disediakan Kemenkes, bukan NIK pasien klinik.
+
+**Pasien TIDAK dibuat sendiri.** SatuSehat mewajibkan pencocokan lewat MPI
+(`GET /Patient?identifier=<system nik>|<nik>`), dan membuat Patient baru untuk
+orang yang sudah ada di sana melahirkan dua nomor IHS untuk satu manusia.
+`cariPasienByNik()` membedakan TIGA jawaban, dan pemanggil wajib ikut
+membedakannya: ketemu, tidak ada di MPI, dan gagal menanyakan. Yang ketiga
+bukan bukti bahwa orangnya belum terdaftar.
+
 ## Antrean kirim: idempoten, dan menyerah itu keadaan
 
 Migrasi 0056, bentuknya mengikuti `webhook_events` dari 0013.
@@ -857,6 +1061,451 @@ pengirimannya sudah jalan. Layarnya mengatakan ini apa adanya.
 'antre'`), yang juga benar untuk baris yang sudah ada. Jawabannya ada di `found`
 sesudah `INSERT ... ON CONFLICT DO NOTHING`, tapi ia harus ditangkap ke variabel
 sebelum SELECT berikutnya menimpanya. Ditemukan uji, bukan saat membacanya.
+
+## Prasyarat SatuSehat: dua DICARI, satu DIBUAT
+
+Salah paham yang sempat saya tulis di sini: "daftarkan Organization, Location,
+Practitioner di portal SSP". **Tidak satu pun dikerjakan di portal.** Ketiganya
+panggilan API, dan sifatnya berbeda-beda:
+
+| Resource | Caranya | Kenapa |
+| --- | --- | --- |
+| Organization | sudah ada | Organization ID datang bersama kredensial |
+| **Practitioner** | **GET, dicari pakai NIK** | Dokter sudah terdaftar nasional lewat STR. Resource ini bahkan TIDAK punya jalur penambahan data, hanya Pencarian dan Detail |
+| **Patient** | **GET, dicari pakai NIK** | Wajib lewat pencocokan MPI. Membuat yang baru untuk orang yang sudah ada melahirkan dua nomor IHS untuk satu manusia |
+| **Location** | **POST, dibuat sendiri** | Poli adalah ruangan di klinik ini, dan tidak ada daftar nasional yang memuatnya |
+
+Jadi "mendaftarkan dokter ke SatuSehat" tidak pernah jadi pekerjaan siapa pun
+di klinik. Yang perlu diisi cuma NIK-nya di Sehatera, dan kolom itu sudah ada
+sejak migrasi 0018. Semuanya lewat satu tombol di Pengaturan > SatuSehat & BPJS.
+
+**`Location.position` (lintang dan bujur) WAJIB, dan Sehatera tidak
+menyimpannya di mana pun.** Angkanya diketik sekali di layar itu. Sengaja tanpa
+nilai bawaan: koordinat karangan menempatkan klinik di tempat yang salah pada
+peta nasional, dan itu tidak pernah muncul sebagai galat.
+
+**Yang sudah punya nomor tidak disentuh lagi**, jadi tombolnya aman ditekan
+berkali-kali dan tidak menghabiskan panggilan untuk menanyakan hal yang
+jawabannya sudah disimpan.
+
+**Sandbox hanya mengenali daftar contoh Kemenkes**: sepuluh NIK pasien dan
+sepuluh NIK tenaga kesehatan. NIK data demo Rexco 88 adalah nomor karangan,
+jadi pencariannya akan menjawab "tidak ditemukan" untuk semuanya, dan itu BUKAN
+kegagalan sistem. `supabase/seed_demo_satusehat.sql` menambah satu pasien dan
+satu dokter ber-NIK contoh resmi beserta satu kunjungan utuh. **Data demo yang
+sudah ada sengaja tidak disentuh**: menempelkan nomor IHS orang lain ke pasien
+demo lebih cepat, dan itu persis jenis kesalahan yang paling mahal di rekam
+medis, karena nomor identitas yang menempel pada orang yang salah terlihat
+seperti data yang benar.
+
+## Resep berangkat, dan lima penolakan yang mengajarkan bentuknya
+
+Migrasi 0078. `MedicationRequest` membawa `Medication` sebagai resource
+**contained**, dan `medicationReference` menunjuk ke dalam dirinya sendiri
+lewat `#`. Satu kiriman per BARIS obat: pasien yang menerima tiga obat
+berangkat sebagai tiga MedicationRequest, jadi nomornya menempel di
+`prescription_items`, bukan di `prescriptions`.
+
+**`Medication.identifier` berbeda dari `Medication.code`.** Yang pertama kode
+obat LOKAL klinik (`OB-005`) dengan system
+`http://sys-ids.kemkes.go.id/medication/{org}`, dan gunanya menelusuri balik ke
+katalog kita. Yang kedua kode KFA, yang menyebut obat apa menurut kamus
+nasional. Tanpa `identifier`, ditolak RuleNumber 10380.
+
+### `dispenseRequest.quantity` memakan lima percobaan
+
+Pesan galatnya menyesatkan di tiap langkah karena **tidak pernah menyebut
+elemen mana** yang salah:
+
+| Yang dikirim | Jawaban validator |
+| --- | --- |
+| `system` = KFA | `Invalid coding system: .../kfa` |
+| `system` dihapus | `Invalid coding system: ` (kosong) |
+| `system` UCUM, tanpa `code` | `Code not found: '' in system: unitsofmeasure` |
+| `code` = `{tbl}` (anotasi UCUM yang SAH) | `Code not found: '{tbl}'` |
+| `code` = `1` (unity UCUM yang SAH) | `Code not found: '1'` |
+
+Jawabannya ada di Lampiran Standar Terminologi bagian
+`MedicationDispense.quantity`: sistemnya
+**`http://terminology.hl7.org/CodeSystem/v3-orderableDrugForm`** dan kodenya
+BENTUK SEDIAAN (`TAB`, `CAP`), bukan satuan besaran sama sekali.
+
+**Pelajarannya: "Code not found" berarti SISTEMNYA yang salah, bukan kodenya.**
+UCUM diterima sebagai system justru karena ia sistem yang sah; yang tidak
+pernah cocok adalah isinya, karena daftar yang dimaksud memang bukan UCUM.
+
+Satuan yang tidak dikenali dikirim **tanpa kode sama sekali**, cuma `unit` yang
+terbaca manusia. Bentuk sediaan yang salah membuat obat minum terbaca sebagai
+tetes mata.
+
+### Dokumentasi bertentangan soal http versus https
+
+Halaman FHIR > Medication menulis system medicationType sebagai
+`https://terminology.kemkes.go.id/...`, Lampiran Standar Terminologi menulis
+`http://`. **Yang diterima validator yang `http`**; `https` dijawab
+`Invalid coding system` (RuleNumber 10031). Kalau ada system lain yang ditolak,
+periksa skemanya lebih dulu sebelum mencurigai kodenya.
+
+### Dua pemetaan kecil, dan keduanya menolak yang tak dikenal
+
+- **Rute** `"oral"` ke kode WHO ATC (`http://www.whocc.no/atc`, `O`). Daftar
+  tertutup dan pendek. Yang tidak dikenali DITOLAK, bukan dijadikan oral, sama
+  seperti `RUTE_LUAR` di `lib/cetak.ts`.
+- **Frekuensi** `"3 x sehari"` diurai jadi `{frequency, period, periodUnit}`.
+  Yang tidak terurai DITOLAK, bukan ditebak jadi sekali sehari: aturan pakai
+  yang salah adalah dosis yang salah.
+
+Hanya resep berstatus `final` ke atas yang dikirim. Yang masih `draf` belum
+tentu jadi, dan yang belum tentu jadi tidak boleh tercatat di sistem nasional
+sebagai obat yang diresepkan.
+
+### `scripts/satusehat-jalankan.mts`
+
+Menjalankan satu putaran antre + kirim dari baris perintah, memakai MODUL YANG
+SAMA dengan tombol di layar, bukan salinan. Bedanya cuma pemeriksaan hak: di
+sana ada sesi pengguna, di sini tidak. Dipakai menguji tanpa membuka peramban.
+**Bukan untuk produksi.**
+
+Satu keterbatasan yang terasa saat memperbaiki bentuk payload: baris antrean
+yang masih `antre` TIDAK ikut diperbarui (0075 hanya membangkitkan yang
+`ditinggalkan`), jadi selama pengembangan barisnya dibuang tangan. Di produksi
+perilakunya benar: payload yang salah gagal berkali-kali sampai `ditinggalkan`,
+lalu hidup lagi dengan bentuk yang sudah dibetulkan.
+
+## Kode KFA: empat namespace, dan pencarinya tidak boleh memilih sendiri
+
+Migrasi 0077. Prasyarat mengirim resep, dan sekaligus menutup baris "pemetaan
+obat ke kode KFA" yang sudah lama berdiri di daftar yang belum ada.
+
+`MedicationRequest` membawa `Medication` sebagai resource **contained**, dan
+`Medication.code` wajib memakai kode KFA. Kamus nasional memisahkannya jadi
+empat daftar, dan awalan kodenya yang membedakan:
+
+| Awalan | Daftar | Contoh |
+| --- | --- | --- |
+| **91** | Zat Aktif | `91000101` Paracetamol |
+| **92** | Produk Template (zat aktif + kekuatan + sediaan) | `92003132` |
+| **93** | Produk Varian (merek tertentu, pabrik tertentu) | `93000108` |
+| 94 | Produk Kemasan | |
+
+`products.kode_kfa` menampung 92 atau 93, dijaga constraint bentuk.
+`prescription_items.kode_kfa` sudah ada sejak 0023, jadi farmasi bisa
+menimpanya per baris saat menyerahkan obat yang mereknya berbeda dari katalog.
+
+**`Medication.form` ternyata TIDAK wajib**, jadi tidak perlu memetakan
+`products.satuan` (yang isinya kemasan seperti Strip dan Box, bukan bentuk
+sediaan) ke kode Kemenkes. Yang wajib di dalam `Medication` cuma
+`ingredient.itemCodeableConcept` dan extension `medicationType`.
+
+### API kamus KFA: terbuka, dan tidak didokumentasikan
+
+`app/api/kfa/route.ts` memanggil API yang dipakai halaman kfa-browser publik:
+
+```
+POST https://satusehat.kemkes.go.id/kfa-browser/farmasi/api/search/product-templates
+POST .../product-variants
+POST .../active-ingredients
+body: { page, size, search, search_by: "name", farmalkes_type: "" }
+```
+
+**Tanpa autentikasi, dan TIDAK ada di dokumentasi mana pun.** Konsekuensinya
+diterima sadar: ia bisa berubah atau hilang tanpa pemberitahuan. Kalau itu
+terjadi yang berhenti cuma pencariannya; kode yang sudah tersimpan tetap utuh
+dan resep tetap bisa dikirim, karena yang dipakai mengirim adalah kolomnya,
+bukan pencarian ini. Lewat server karena situsnya menolak permintaan lintas
+asal.
+
+**Pencarinya sengaja TIDAK memilih sendiri.** Mencari "Amlodipine 10 mg" di
+daftar template mengembalikan obat KOMBINASI lebih dulu (Telmisartan +
+Amlodipine, Amlodipine + Indapamide), karena peringkat kamusnya longgar. Kode
+KFA yang salah berarti melaporkan pasien menerima obat yang tidak pernah ia
+terima, dan itu tidak muncul sebagai galat di mana pun: payload-nya sah,
+kirimannya diterima, dan yang salah cuma isinya. Alasan yang sama dengan kenapa
+kode SNOMED dan ICD tidak pernah ditebak di sini. Layarnya mengatakan ini apa
+adanya di bawah daftar hasilnya.
+
+### Impor CSV produk pernah membuang kolom diam-diam
+
+`importProduk` memakai daftar kolom eksplisit yang tidak memuat `barcode`,
+`rak`, maupun `kode_kfa`, jadi siapa pun yang mengetik ketiganya di berkas CSV
+melihat "berhasil diimpor" sambil ketiganya dibuang. **Jebakan yang sama
+persis dengan `saveSettings`**, dan pola ini sekarang sudah menggigit dua kali:
+tiap kolom baru pada tabel yang punya jalur impor harus didaftarkan di sana
+juga.
+
+Ditambah impor tersendiri **Kode KFA Obat**, yang MEMPERBARUI produk yang sudah
+ada lewat kode produk alih-alih membuat yang baru. Katalog yang sudah berjalan
+setahun tidak bisa diimpor ulang cuma untuk menambah satu kolom.
+
+## Yang ditinggalkan bisa hidup lagi, dan Procedure ikut berangkat
+
+Migrasi 0075 dan 0076.
+
+**`antre_kirim()` membangkitkan baris yang `ditinggalkan` dengan payload baru.**
+Lubang yang ditinggalkan sadar di 0056: payload adalah cuplikan, dan aturan itu
+diterapkan pada SEMUA keadaan termasuk baris yang sudah menyerah dan tidak
+pernah berhasil terkirim. Akibatnya bentuk payload yang dibetulkan tidak pernah
+sampai, karena kunci idempotennya menahan baris baru lahir menggantikannya, dan
+kunjungan itu hilang dari SatuSehat tanpa ada yang menyadarinya.
+
+**Hanya keadaan `ditinggalkan` yang berubah.** Yang `terkirim` tidak disentuh,
+karena ia catatan tentang apa yang benar-benar dikirim ke sistem nasional dan
+catatan yang bisa berubah bukan catatan. Yang masih `antre` juga tidak, karena
+mengganti payload di bawah kaki pengirim yang sedang berjalan adalah cara
+membuat dua kiriman berbeda dengan satu kunci. Ujinya memeriksa ketiganya, dan
+tiga dari empat pemeriksaannya menguji hal yang TIDAK boleh terjadi.
+
+Jawabannya membawa `diulang` yang dibedakan dari `baru`: yang dibangkitkan
+bukan kejadian baru, ia kejadian lama yang mendapat kesempatan kedua, dan layar
+perlu bisa mengatakan bedanya supaya tidak ada yang mengira kunjungan lamanya
+terkirim dua kali.
+
+### Procedure: hanya `tindakan`, dan hanya yang berkode
+
+`Procedure` wajib punya `status`, `code`, `subject`, `encounter`, dan
+**`performer[i].actor`**. Yang terakhir itu seluruh alasan
+`visit_charges.dikerjakan_oleh` ditambahkan di migrasi 0025: sebelum itu yang
+tercatat cuma siapa yang MENGETIK biayanya, yang di klinik sibuk hampir selalu
+kasir, bukan yang memegang alatnya. Keputusan lama itu terbayar di sini tanpa
+pekerjaan tambahan.
+
+**Disaring ke `jenis = 'tindakan'` DAN `kode_icd9` terisi.** Biaya administrasi
+dan tarif konsultasi tinggal di tabel yang sama, dan mengirimnya sebagai
+Procedure berarti melaporkan bahwa pasien menjalani prosedur bernama "Biaya
+Administrasi". Yang tanpa kode ICD-9-CM juga tidak dikirim: `Procedure.code`
+wajib, dan menebak kode tindakan dilarang.
+
+`Procedure.category` memakai SNOMED dan TIDAK wajib, jadi tidak dikirim.
+Alasan yang sama dengan `serviceType` pada Encounter: Sehatera tidak memegang
+padanan SNOMED, dan menebaknya dilarang.
+
+**Tahapnya sejajar dengan Condition, bukan sesudahnya**: keduanya cuma butuh
+Encounter sudah punya nomor. Yang menahan penutupan hanya Condition, karena
+`Encounter.diagnosis` menunjuk ke sana; Procedure berdiri sendiri.
+
+## Aturan validator SatuSehat yang sudah dibuktikan dengan mengirim
+
+Dibedah pada 25 Agustus 2026 dengan mengirim payload berulang ke sandbox dan
+membaca jawabannya. **Tidak satu pun dari ini ada di dokumentasi**; semuanya
+datang dari validatornya sendiri. Nomor aturannya dicatat karena ia yang muncul
+di layar orang kalau nanti gagal.
+
+| Rule | Bunyi | Artinya |
+| --- | --- | --- |
+| 10117 | Element not found: Encounter.identifier | wajib |
+| 10120 | Element not found: Encounter.location | wajib |
+| 10122 | every statusHistory period start and end must be filled | **tiap** rentang riwayat wajib punya start DAN end |
+| 10123 | Element not found: Encounter.period | wajib |
+| 10124 | Reference is mandatory: Encounter.serviceProvider | wajib |
+| 10126 | Reference is mandatory: Condition.encounter | wajib |
+| 10336 | Element not found: Encounter.participant | wajib |
+| 10457 | Element not found: Encounter.diagnosis | wajib, bahkan untuk rawat jalan |
+
+**`unparseable_resource` BUKAN galat bentuk JSON.** Itu jawaban saat sebuah
+REFERENSI di dalam payload tidak bisa ditemukan di SatuSehat. Dibuktikan
+dengan mengirim Encounter yang sah sepenuhnya kecuali `diagnosis[].condition`
+menunjuk ke UUID yang tidak ada: jawabannya berubah dari galat bernama jadi
+`unparseable_resource`. Pesannya tidak menyebut referensi mana yang gagal,
+dan jumlahnya tidak selalu sama dengan jumlah referensi yang salah, jadi
+satu-satunya cara mempersempitnya adalah membuang elemen satu per satu.
+
+**`statusHistory` yang rentang terakhirnya belum punya `end` DITOLAK.** Ini
+berbenturan dengan kenyataan: kunjungan yang sedang berjalan memang belum punya
+waktu selesai. Konsekuensinya Encounter praktis hanya bisa dikirim sesudah
+kunjungannya ditutup.
+
+### Tiga kesalahan bentuk yang dijawab `unparseable_resource`
+
+Rancangan tiga tahap ternyata BENAR; yang salah bentuk payload `arrived`-nya.
+Ketiganya ditemukan dengan membuka **Postman Collection resmi**, koleksi
+`01. Pelayanan - Rawat Jalan`, permintaan `Encounter - Kunjungan Baru`.
+Dokumentasi tidak memuat satu pun dari ini.
+
+1. **`participant[].type` adalah CodeableConcept, jadi coding-nya dibungkus
+   lagi**: `type: [{ coding: [...] }]`, bukan `type: [...]`. Halaman FHIR >
+   Encounter memperlihatkan contoh JSON untuk `participant.type.coding`, dan
+   dibaca sepintas ia terlihat seperti isi `type` itu sendiri.
+2. **`location[]` wajib membawa `period` DAN extension `ServiceClass`**
+   (`https://fhir.kemkes.go.id/r4/StructureDefinition/ServiceClass`, nilai
+   `reguler`). Nilainya administratif, bukan klinis, jadi `reguler` aman jadi
+   bawaan untuk klinik pratama.
+3. **`hospitalization.dischargeDisposition` hanya untuk yang sudah
+   `finished`.** Pasien yang baru datang belum pulang ke mana pun, dan contoh
+   resmi untuk `arrived` memang tidak memuatnya.
+
+`serviceType` ada di contoh resmi (SNOMED, misalnya 419192003 Internal
+medicine) tapi TIDAK bertanda wajib, dan Sehatera tidak menyimpan padanan
+SNOMED per poli. Sengaja tidak dikirim: menebak kode klinis dilarang di project
+ini, dan kiriman terbukti diterima tanpanya.
+
+`statusHistory` boleh punya rentang tanpa `end` untuk `arrived`; aturan 10122
+yang menuntut start DAN end berlaku pada `finished`.
+
+### Terbukti sampai: satu kunjungan utuh ada di SatuSehat
+
+25 Agustus 2026, sandbox, kunjungan `KJG/2026/0027`:
+
+| Tahap | Hasil |
+| --- | --- |
+| POST Encounter (`arrived`) | diterima, nomornya tersimpan di `visits.ihs_encounter_id` |
+| POST Condition (ICD-10 J06.9) | diterima, tersimpan di `visit_diagnoses.ihs_condition_id` |
+| PUT Encounter (`finished` + diagnosis) | `visits.ihs_final_pada` terisi |
+
+Nomor sebenarnya sengaja tidak ditulis di sini: **repo ini publik**, dan
+pengenal milik faskes tidak dipublikasikan walau ia sandbox.
+
+Ketiganya sekali percobaan, tanpa galat.
+
+### Galat kueri TIDAK boleh ditelan
+
+Satu nama kolom yang salah (`created_at` padahal `visit_diagnoses` memakai
+`dicatat_pada`) membuat `data` kosong, dan layarnya melaporkan **"0 masuk
+antrean"**. Itu terbaca sebagai "tidak ada yang perlu dikirim", yaitu bentuk
+kegagalan yang paling menyesatkan karena ia terlihat seperti pekerjaan yang
+sudah selesai. Ketiga pemindaian sekarang melempar galatnya.
+
+**Tabel medis di project ini memakai penamaan Indonesia** (`dicatat_pada`,
+`dibuka_pada`, `ditutup_pada`), sedangkan tabel platform memakai `created_at`.
+Jangan mengandaikan salah satunya.
+
+### Payload cuplikan tidak bisa diperbaiki dari kode
+
+Baris antrean menyimpan payload apa adanya, dan itu memang disengaja. Tapi
+payload yang dibangun pembangun yang KEMUDIAN dibetulkan akan terus dikirim
+dalam bentuk lamanya sampai enam kali lalu `ditinggalkan`, dan kunci
+idempotennya menahan baris baru lahir menggantikannya. Selama pengembangan
+barisnya dibuang tangan. **Belum ada jalan resmi untuk mengantre ulang yang
+`ditinggalkan` sesudah pembangunnya diperbaiki, dan itu pekerjaan berikutnya
+yang paling nyata.**
+
+## Kunjungan berangkat dalam TIGA kiriman, bukan satu
+
+Migrasi 0073. Ini temuan yang didapat dengan MENGIRIM, bukan dengan membaca,
+dan ia membatalkan rancangan sebelumnya.
+
+Kiriman pertama yang benar-benar sampai ke validator Kemenkes dijawab:
+
+```
+400: Element not found: Encounter.diagnosis (RuleNumber: 10457)
+```
+
+`Encounter.diagnosis[i].condition` wajib menunjuk ke Condition, sedangkan
+`Condition.encounter` wajib menunjuk balik ke Encounter. **Salah satu harus
+lahir lebih dulu dan tidak bisa dua-duanya**, jadi satu kiriman jadi di ujung
+kunjungan tidak akan pernah diterima. Katalog ReST-nya menyediakan jalan
+keluarnya: Encounter punya Pembaruan Data (PUT) dan Pembaruan Sebagian (PATCH).
+
+| Kapan | Kiriman | Kunci idempoten |
+| --- | --- | --- |
+| Pasien didaftarkan | POST Encounter, status `arrived`, tanpa diagnosis | `encounter:<visit>` |
+| Diagnosis ditegakkan | POST Condition, menunjuk Encounter tadi | `condition:<diagnosis>` |
+| Kunjungan ditutup | PUT Encounter, `finished` beserta diagnosisnya | `encounter-final:<visit>` |
+
+**Tahap 1 SELALU mengirim status `arrived`, walau kunjungannya sudah lama
+ditutup.** Encounter dimaksudkan lahir di loket pendaftaran, dan di loket belum
+ada diagnosis. Kunjungan lama yang sudah selesai tetap melewati pintu yang
+sama lalu diperbarui di tahap 3; hasil akhirnya di SatuSehat identik.
+
+**Satu kolom `resource` menampung dua jenis kiriman, dan bedanya garis miring:**
+`Encounter` berarti POST, `Encounter/<id>` berarti PUT atas nomor itu.
+Kesepakatan itu ditulis di SATU tempat (`caraKirim()` di `pengirim.ts`), bukan
+disebar sebagai `includes('/')` di beberapa berkas.
+
+**Tahap 3 menunggu SELURUH diagnosis punya nomor Condition.** Mengirim
+sebagian berarti Encounter final yang kekurangan satu diagnosis, dan yang
+kurang di sana tidak akan pernah ada yang menambahkan.
+
+**Batasnya per tahap, bukan untuk seluruhnya.** Kalau satu angka dibagi
+bertiga, tahap pertama yang kebetulan panjang membuat tahap ketiga tidak pernah
+jalan, dan kunjungan yang tinggal selangkah lagi menggantung selamanya.
+
+### `ihs_dicari_pada`: kosong tidak bisa membedakan dua hal
+
+`ihs_id` yang kosong berarti dua hal yang sangat berbeda: **belum pernah
+dicari**, atau **sudah dicari dan memang tidak ada di sana**. Selama bedanya
+tidak tercatat, orang mengulang pekerjaan yang jawabannya sudah didapat, dan
+layar tidak punya cara mengatakan sudah selesai. Pemilik project ini sendiri
+yang menemukannya: ia melihat daftar yang hampir seluruhnya kosong dan
+menyimpulkan pencariannya gagal, padahal 2 dari 2 yang mungkin ditemukan
+memang ditemukan.
+
+Yang dicatat WAKTU-nya, bukan boolean, dan yang gagal tidak dicari lagi selama
+30 hari. Bukan selamanya: jawaban "tidak ada" bisa berubah, misalnya bayi yang
+baru punya NIK atau NIK yang baru dibetulkan salah ketiknya, dan keduanya harus
+punya kesempatan kedua tanpa siapa pun mengingat untuk memintanya.
+
+**Penandanya ditulis SEBELUM pencarian, bukan sesudah.** Pencarian yang mati di
+tengah tidak sempat melapor, dan baris yang selalu membunuh pemanggilnya akan
+dicoba selamanya kalau penandanya menunggu laporan. Alasan yang sama persis
+dengan kenapa `percobaan` di antrean kirim dinaikkan saat DIAMBIL (0056).
+
+### Nomor yang tersimpan tapi tidak terlihat sama saja dengan tidak ada
+
+Nomor IHS tenaga kesehatan sempat hanya terlihat kalau dialog Ubah dibuka satu
+per satu, jadi pekerjaan yang SUDAH berhasil terbaca sebagai "belum ada" oleh
+siapa pun yang melihat daftarnya. Sekarang tampil di baris Perizinan dan di
+Detail Pasien. **Layar yang tidak menampilkan hasil pekerjaannya sendiri
+membuat orang mengulang pekerjaan itu.**
+
+## Pengirim SatuSehat: dua tombol, dan penjaga kembar
+
+Migrasi 0072 plus `lib/satusehat/antre.ts`, `lib/satusehat/pengirim.ts`, dan
+dua Route Handler. Ini pemanggil pertama yang benar-benar mengisi
+`outbound_messages`, yang sengaja dibiarkan kosong sejak 0056.
+
+**Dua tombol terpisah, bukan satu.** Mengisi antrean dan mengurasnya menjawab
+pertanyaan yang berbeda. "Kenapa kunjungan ini tidak terkirim" hampir selalu
+terjawab di langkah pertama, yaitu datanya belum lengkap, dan menyatukan
+keduanya membuat jawaban itu terkubur di bawah hasil pengiriman.
+
+**Yang kurang TIDAK diantrekan, dan alasannya disebut per kunjungan.**
+Mengantrekan payload yang sudah pasti ditolak cuma menumpuk baris yang gagal
+enam kali lalu ditinggalkan, dan kalimat penjelasannya baru terbaca berhari-hari
+kemudian dari dalam antrean. Layarnya menyebut nomor kunjungannya beserta
+nama layar tempat memperbaikinya, bukan cuma menghitung "3 dilewati".
+
+**Hanya kunjungan `selesai` yang diambil.** Yang masih berjalan bisa berpindah
+poli, bertambah diagnosis, dan berubah waktunya, dan cuplikan yang diambil di
+tengah jalan akan berbeda dari kejadian sebenarnya.
+
+**POST ke SatuSehat tidak idempoten, sedangkan antrean ini at-least-once.**
+Proses yang mati di antara "Encounter sudah dibuat di sana" dan "baris antrean
+sudah ditandai terkirim" akan mencoba lagi, dan percobaan kedua melahirkan
+Encounter KEDUA untuk kunjungan yang sama. Penjaganya bukan transaksi, yang
+memang tidak mungkin melintasi dua sistem, melainkan penanda di sisi kita:
+kalau `visits.ihs_encounter_id` sudah terisi, barisnya ditandai terkirim TANPA
+mengetuk SatuSehat lagi.
+
+**Penanda ditulis SEBELUM baris antrean ditandai terkirim.** Urutan sebaliknya
+meninggalkan celah yang persis sama besarnya dengan yang mau ditutup. Kalau
+mati di antara keduanya, yang terjadi adalah baris antrean dicoba lagi lalu
+berhenti di penjaga di atas, dan itu keadaan yang benar. Kalau nomor Encounter
+sudah keluar tapi GAGAL disimpan, barisnya sengaja ditandai gagal beserta nomor
+itu di `galat_terakhir`: yang tidak boleh terjadi adalah nomornya hilang diam-
+diam.
+
+**`statusHistory` disusun dari `visit_status_log`, dan keadaan berturut yang
+memetakan ke nilai FHIR yang SAMA digabung.** `diperiksa` dan `obat` dua-duanya
+`in-progress`; mengirim dua rentang `in-progress` yang bersambungan mengaku ada
+perpindahan yang di mata SatuSehat tidak pernah terjadi.
+
+**Migrasi 0072 menambahkan `p_company` ke `ambil_antrean_kirim`,** dan itu bukan
+soal kerahasiaan karena pengambilannya memang cuma dari jalur server. Soalnya
+efek samping: pengambilan MENAIKKAN `percobaan`. Baris klinik lain yang ikut
+terambil lalu tidak diproses tetap naik hitungannya, dan sesudah beberapa kali
+orang menekan tombol di kliniknya sendiri, kiriman klinik sebelah
+`ditinggalkan` tanpa pernah sekali pun benar-benar dicoba. **Kegagalan yang
+paling sulit dilacak adalah yang sebabnya ada di tenant lain.** Versi lamanya
+di-`drop` lebih dulu, bukan dibiarkan berdampingan.
+
+**Dipicu tombol, bukan penjadwal**, karena project ini belum punya penjadwal.
+Pola yang sama dengan `hanguskan_reservasi_lewat` yang berjalan saat layar
+Reservasi dibuka. Begitu penjadwalnya ada, ia memanggil kedua endpoint yang
+sama dan tidak ada yang perlu ditulis ulang.
+
+**Yang belum: Condition, Procedure, dan MedicationRequest.** Condition menunggu
+Encounter punya id di SatuSehat lebih dulu, karena `Condition.encounter`
+menunjuk ke sana. Urutan itu yang menentukan bentuk pekerjaan berikutnya.
 
 ## Klaim penjamin: baris, bukan tombol cetak
 
@@ -1398,10 +2047,19 @@ mengirim ke lingkungan yang salah. **Jangan menulis kode baru yang membacanya.**
 
 ## Yang belum ada
 
-Pengiriman ke SatuSehat dan BPJS: bentuk datanya siap, tempat menyimpan
-kredensialnya siap (0055), mesin antreannya siap (0056). Yang belum ada adalah
-pembangun payload FHIR-nya dan kredensial faskesnya sendiri. Juga belum:
-pemetaan obat ke kode KFA.
+**SatuSehat sudah BERJALAN di sandbox.** Empat resource terbukti diterima
+validator Kemenkes: Encounter, Condition, Procedure, MedicationRequest. Yang
+belum: hasil lab dan radiologi (DiagnosticReport dan Observation), pemicu
+otomatis (sekarang dua tombol ditekan tangan karena project ini belum punya
+penjadwal), dan pengisian kode KFA untuk 24 obat sisanya.
+
+BPJS belum sama sekali: kredensialnya belum ada. Tempat menyimpannya sudah
+siap sejak 0055.
+
+Modul SATUSEHAT Integration (tombol yang membuka rekam medis pasien dari
+fasilitas LAIN lewat SmartHealth link) belum dikerjakan: portalnya menyediakan
+asetnya tapi tidak memuat alamat endpoint-nya, dan kemungkinan besar ia
+menuntut KYC lebih dulu. Perlu ditanyakan ke Pusat Bantuan SatuSehat.
 
 Pemeriksaan interaksi obat **sengaja tidak dibuat**: butuh basis data interaksi
 terpelihara, dan yang setengah benar lebih berbahaya daripada tidak ada karena

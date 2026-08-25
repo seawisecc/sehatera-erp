@@ -74,6 +74,30 @@ export default function SistemNasional() {
 
   const [form, setForm] = useState<{ sistem: string; lingkungan: string; isi: Record<string, string> } | null>(null)
 
+  // Hasil uji koneksi, per (sistem, lingkungan). Disimpan per kotak, bukan satu
+  // untuk seluruh layar: sandbox yang berhasil dan produksi yang gagal adalah
+  // dua kabar berbeda, dan satu tempat pesan membuat yang kedua menghapus yang
+  // pertama sebelum sempat dibaca.
+  const [menguji, setMenguji] = useState<string | null>(null)
+  const [hasilUji, setHasilUji] = useState<Record<string, { ok: boolean; pesan: string }>>({})
+
+  // Antrean kirim: mengisi dan menguras. Dua tombol terpisah, bukan satu,
+  // karena keduanya menjawab pertanyaan berbeda. "Kenapa kunjungan ini tidak
+  // terkirim" hampir selalu terjawab di langkah pertama (datanya belum
+  // lengkap), dan menyatukannya membuat jawaban itu terkubur di bawah hasil
+  // pengiriman.
+  const [sibukAntre, setSibukAntre] = useState<'antre' | 'kirim' | null>(null)
+  const [dilewati, setDilewati] = useState<{ nomor: string; alasan: string }[]>([])
+
+  // Prasyarat: nomor IHS pasien, tenaga kesehatan, dan poli. Koordinat diketik
+  // sekali di sini karena SatuSehat mewajibkannya untuk Location, dan Sehatera
+  // tidak menyimpannya di mana pun. Sengaja tanpa nilai bawaan: koordinat
+  // karangan menempatkan klinik di tempat yang salah pada peta nasional, dan
+  // itu tidak pernah muncul sebagai galat.
+  const [koord, setKoord] = useState({ lat: '', long: '' })
+  const [sibukPra, setSibukPra] = useState(false)
+  const [catatanPra, setCatatanPra] = useState<{ apa: string; nama: string; hasil: string }[]>([])
+
   const muat = useCallback(async () => {
     setMemuat(true)
     setGalat('')
@@ -93,6 +117,99 @@ export default function SistemNasional() {
 
   const cari = (sistem: string, lingkungan: string) =>
     daftar.find(x => x.sistem === sistem && x.lingkungan === lingkungan)
+
+  /**
+   * Uji koneksi ke SatuSehat.
+   *
+   * Lewat Route Handler, bukan langsung dari peramban, dan itu memang
+   * satu-satunya jalan: kredensialnya hanya bisa dibuka `ambil_kredensial()`
+   * yang dicabut dari `authenticated`. Peramban tidak boleh, dan tidak perlu,
+   * pernah memegang client secret.
+   */
+  const ujiKoneksi = async (sistem: string, lingkungan: string) => {
+    const kunci = `${sistem}:${lingkungan}`
+    setMenguji(kunci)
+    setHasilUji(h => { const n = { ...h }; delete n[kunci]; return n })
+    try {
+      const { data: sesi } = await supabase.auth.getSession()
+      const token = sesi.session?.access_token
+      if (!token) throw new Error(t('Sesi sudah berakhir. Masuk lagi lalu coba lagi.', 'Session expired. Sign in again.'))
+
+      const r = await fetch('/api/satusehat/uji', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ lingkungan, company: app.superViewCompany || null }),
+      })
+      const j = await r.json()
+      setHasilUji(h => ({ ...h, [kunci]: { ok: !!j.ok, pesan: j.pesan || t('Tanpa keterangan.', 'No details.') } }))
+      kabar(j.pesan || (j.ok ? 'OK' : t('Gagal.', 'Failed.')), j.ok ? 'ok' : 'galat')
+    } catch (e) {
+      const pesan = (e as Error).message
+      setHasilUji(h => ({ ...h, [kunci]: { ok: false, pesan } }))
+      kabar(pesan, 'galat')
+    } finally {
+      setMenguji(null)
+    }
+  }
+
+  const ambilPrasyarat = async () => {
+    setSibukPra(true)
+    setCatatanPra([])
+    try {
+      const { data: sesi } = await supabase.auth.getSession()
+      const token = sesi.session?.access_token
+      if (!token) throw new Error(t('Sesi sudah berakhir. Masuk lagi lalu coba lagi.', 'Session expired. Sign in again.'))
+
+      const r = await fetch('/api/satusehat/prasyarat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          lingkungan: 'sandbox',
+          company: app.superViewCompany || null,
+          latitude: koord.lat ? Number(koord.lat) : undefined,
+          longitude: koord.long ? Number(koord.long) : undefined,
+        }),
+      })
+      const j = await r.json()
+      kabar(j.pesan || (j.ok ? 'OK' : t('Gagal.', 'Failed.')), j.ok ? 'ok' : 'galat')
+      if (Array.isArray(j.catatan)) setCatatanPra(j.catatan)
+      await muat()
+    } catch (e) {
+      kabar((e as Error).message, 'galat')
+    } finally {
+      setSibukPra(false)
+    }
+  }
+
+  /** Satu jalur untuk kedua tombol antrean: bedanya cuma alamatnya. */
+  const jalankan = async (jenis: 'antre' | 'kirim') => {
+    setSibukAntre(jenis)
+    setDilewati([])
+    try {
+      const { data: sesi } = await supabase.auth.getSession()
+      const token = sesi.session?.access_token
+      if (!token) throw new Error(t('Sesi sudah berakhir. Masuk lagi lalu coba lagi.', 'Session expired. Sign in again.'))
+
+      const r = await fetch(`/api/satusehat/${jenis}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ lingkungan: 'sandbox', company: app.superViewCompany || null }),
+      })
+      const j = await r.json()
+      kabar(j.pesan || (j.ok ? 'OK' : t('Gagal.', 'Failed.')), j.ok ? 'ok' : 'galat')
+      // Yang dilewati DITAMPILKAN per kunjungan, bukan cuma dihitung. Angka
+      // "3 dilewati" tidak memberi tahu siapa pun apa yang harus diisi.
+      if (Array.isArray(j.dilewati)) setDilewati(j.dilewati)
+      if (Array.isArray(j.galat) && j.galat.length) {
+        setDilewati(j.galat.map((g: any) => ({ nomor: g.resource, alasan: g.pesan })))
+      }
+      await muat()
+    } catch (e) {
+      kabar((e as Error).message, 'galat')
+    } finally {
+      setSibukAntre(null)
+    }
+  }
 
   const simpan = async () => {
     if (!form) return
@@ -182,11 +299,35 @@ export default function SistemNasional() {
                         </p>
                       )}
 
-                      <button
-                        onClick={() => setForm({ sistem: s, lingkungan: lg, isi: { ...(row?.publik || {}) } })}
-                        className="text-xs font-semibold text-[var(--brand)] hover:underline underline-offset-4">
-                        {row?.terpasang ? t('Ganti', 'Replace') : t('Pasang', 'Set up')}
-                      </button>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <button
+                          onClick={() => setForm({ sistem: s, lingkungan: lg, isi: { ...(row?.publik || {}) } })}
+                          className="text-xs font-semibold text-[var(--brand)] hover:underline underline-offset-4">
+                          {row?.terpasang ? t('Ganti', 'Replace') : t('Pasang', 'Set up')}
+                        </button>
+
+                        {/* Uji koneksi cuma masuk akal untuk yang SUDAH
+                            terpasang, dan untuk sekarang cuma SatuSehat: BPJS
+                            belum punya pemanggilnya, dan tombol yang selalu
+                            gagal mengajari orang mengabaikan tombol. */}
+                        {s === 'satusehat' && row?.terpasang && (
+                          <button
+                            onClick={() => ujiKoneksi(s, lg)}
+                            disabled={menguji === `${s}:${lg}`}
+                            className="text-xs font-semibold text-[var(--ink-soft)] hover:text-[var(--brand)] hover:underline underline-offset-4 disabled:opacity-50">
+                            {menguji === `${s}:${lg}`
+                              ? t('Menguji…', 'Testing…')
+                              : t('Uji koneksi', 'Test connection')}
+                          </button>
+                        )}
+                      </div>
+
+                      {hasilUji[`${s}:${lg}`] && (
+                        <p className={`mt-2 text-[11px] leading-relaxed ${
+                          hasilUji[`${s}:${lg}`].ok ? 'text-green-700' : 'text-red-700'}`}>
+                          {hasilUji[`${s}:${lg}`].pesan}
+                        </p>
+                      )}
                     </div>
                   )
                 })}
@@ -195,6 +336,51 @@ export default function SistemNasional() {
           ))}
         </div>
       )}
+
+      {/* Prasyarat. Urutan yang dituntut dokumen SatuSehat: Organization,
+          Location, Practitioner, dan Patient harus punya nomor lebih dulu,
+          baru resource klinis boleh dikirim. */}
+      <div className="border border-[var(--line)] rounded-xl p-4">
+        <h4 className="text-sm font-semibold text-[var(--ink)] mb-1">
+          {t('Nomor IHS prasyarat', 'Prerequisite IHS numbers')}
+        </h4>
+        <p className="text-xs text-[var(--ink-soft)] leading-relaxed mb-3">
+          {t('Pasien dan tenaga kesehatan DICARI memakai NIK: keduanya sudah terdaftar di sistem nasional, jadi tidak ada yang perlu didaftarkan. Poli DIBUAT, karena ruangan di klinik ini memang belum ada di daftar mana pun. Yang sudah punya nomor tidak disentuh lagi, jadi tombolnya aman ditekan berkali-kali.',
+             'Patients and practitioners are LOOKED UP by national ID: both already exist nationally, so nothing needs registering. Units are CREATED, since rooms in this clinic are not in any national list. Anything that already has a number is left alone, so the button is safe to press repeatedly.')}
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div>
+            <label className={L}>{t('Lintang (latitude) klinik', 'Clinic latitude')}</label>
+            <input value={koord.lat} onChange={e => setKoord({ ...koord, lat: e.target.value })}
+              placeholder="-8.670458" className={`${I} num`} />
+          </div>
+          <div>
+            <label className={L}>{t('Bujur (longitude) klinik', 'Clinic longitude')}</label>
+            <input value={koord.long} onChange={e => setKoord({ ...koord, long: e.target.value })}
+              placeholder="115.212629" className={`${I} num`} />
+          </div>
+        </div>
+        <p className="text-[11px] text-[var(--ink-faint)] leading-relaxed mb-3">
+          {t('Koordinat wajib diisi SatuSehat untuk tiap poli, dan Sehatera tidak menyimpannya di mana pun. Ambil dari Google Maps: klik kanan di titik kliniknya, angka pertama lintang, angka kedua bujur. Kotak ini hanya dipakai saat membuat poli baru.',
+             'SatuSehat requires coordinates for each unit, and Sehatera does not store them anywhere. Take them from Google Maps: right-click your clinic, the first number is latitude, the second longitude. These boxes are only used when creating new units.')}
+        </p>
+
+        <button onClick={ambilPrasyarat} disabled={sibukPra}
+          className="px-3 py-2 rounded-lg text-xs font-semibold border border-[var(--line)] text-[var(--ink-soft)] hover:bg-[var(--surface-2)] disabled:opacity-50">
+          {sibukPra ? t('Mengambil…', 'Fetching…') : t('Ambil nomor IHS', 'Fetch IHS numbers')}
+        </button>
+
+        {catatanPra.length > 0 && (
+          <ul className="mt-3 space-y-1">
+            {catatanPra.map((c, i) => (
+              <li key={i} className="text-[11px] text-[var(--ink-soft)] leading-relaxed">
+                <span className="font-semibold">{c.apa}</span> {c.nama} · {c.hasil}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {/* Antrean kirim. Angka yang paling berguna bukan "berapa yang antre",
           melainkan "yang tertua sejak kapan": antrean sepuluh baris itu wajar,
@@ -231,10 +417,36 @@ export default function SistemNasional() {
           </p>
         )}
 
-        <p className="mt-3 flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button onClick={() => jalankan('antre')} disabled={sibukAntre !== null}
+            className="px-3 py-2 rounded-lg text-xs font-semibold border border-[var(--line)] text-[var(--ink-soft)] hover:bg-[var(--surface-2)] disabled:opacity-50">
+            {sibukAntre === 'antre' ? t('Menyusun…', 'Building…') : t('Isi antrean dari kunjungan selesai', 'Queue finished visits')}
+          </button>
+          <button onClick={() => jalankan('kirim')} disabled={sibukAntre !== null}
+            className="px-3 py-2 rounded-lg text-xs font-semibold bg-[var(--brand)] text-[var(--on-brand)] hover:bg-[var(--brand-hover)] disabled:opacity-50">
+            {sibukAntre === 'kirim' ? t('Mengirim…', 'Sending…') : t('Kirim sekarang', 'Send now')}
+          </button>
+        </div>
+
+        {dilewati.length > 0 && (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+            <p className="text-xs font-semibold text-amber-900 mb-1.5">
+              {t('Belum bisa dikirim', 'Cannot be sent yet')}
+            </p>
+            <ul className="space-y-1">
+              {dilewati.slice(0, 10).map((d, i) => (
+                <li key={i} className="text-[11px] text-amber-800 leading-relaxed">
+                  <span className="num font-semibold">{d.nomor}</span> · {d.alasan}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <p className="mt-3 flex items-start gap-2 text-xs text-[var(--ink-faint)] leading-relaxed">
           <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-          {t('Pengirimannya belum dinyalakan. Bentuk kiriman FHIR harus dicocokkan ke dokumen resmi yang berlaku saat kredensialnya sudah ada, bukan dari ingatan, jadi antrean ini sengaja masih kosong. Yang sudah siap: tempat menyimpan kredensial dan mesin antreannya.',
-             'Sending is not switched on yet. The FHIR payload shape must be checked against the official docs current at the time the credentials exist, not from memory, so this queue is deliberately still empty. What is ready: credential storage and the queue machinery.')}
+          {t('Baru Encounter (kunjungan) yang dikirim, dan hanya untuk kunjungan yang sudah selesai. Diagnosis, tindakan, dan resep menyusul. Belum ada penjadwal di aplikasi ini, jadi kedua tombol di atas ditekan sendiri; begitu penjadwalnya ada, ia memanggil jalur yang sama.',
+             'Only Encounter (visits) is sent so far, and only for finished visits. Diagnosis, procedures and prescriptions come next. There is no scheduler in this app yet, so both buttons above are pressed by hand; once a scheduler exists it calls the same paths.')}
         </p>
       </div>
 

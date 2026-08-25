@@ -63,6 +63,13 @@ export type Pasien = {
   kerabat_telepon?: string | null
   kerabat_alamat?: string | null
   identitas_belum_lengkap?: boolean | null
+  /**
+   * Nomor IHS dari SatuSehat, hasil pencocokan NIK. Hanya DIBACA di layar;
+   * yang mengisinya jalur server, bukan formulir ini. Pasien tidak pernah
+   * mengetikkan nomor IHS-nya sendiri, dan yang bisa diketik tangan akan
+   * salah ketik.
+   */
+  ihs_id?: string | null
   alasan_identitas?: string | null
 }
 

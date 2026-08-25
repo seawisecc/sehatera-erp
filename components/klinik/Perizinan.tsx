@@ -44,6 +44,7 @@ type Nakes = {
   sip_mulai: string | null
   sip_sampai: string | null
   ihs_practitioner_id: string | null
+  nik: string | null
   sisa_hari: number | null
   str_sisa_hari: number | null
   poli: string[]
@@ -111,6 +112,7 @@ export default function Perizinan() {
         nomor_sip: form.nomor_sip,
         sip_mulai: form.sip_mulai || null, sip_sampai: form.sip_sampai || null,
         ihs_practitioner_id: form.ihs_practitioner_id,
+        nik: form.nik,
       },
       p_company: co,
     })
@@ -205,6 +207,30 @@ export default function Perizinan() {
                       {n.spesialisasi ? ` · ${n.spesialisasi}` : ''}
                       {n.poli?.length ? ` · ${n.poli.join(', ')}` : ''}
                     </p>
+                    {/* Nomor IHS ditampilkan di sini, bukan cuma tersimpan.
+                        Sebelumnya ia hanya terlihat kalau dialog Ubah dibuka,
+                        jadi nomor yang SUDAH berhasil diambil tetap terbaca
+                        sebagai "belum ada" oleh siapa pun yang melihat daftar
+                        ini. Layar yang tidak menampilkan hasil pekerjaannya
+                        sendiri membuat orang mengulang pekerjaan itu. */}
+                    {/* TIGA keadaan, bukan dua. "Sudah punya nomor", "NIK
+                        sudah ada tapi belum dicocokkan", dan "NIK belum diisi
+                        sama sekali" menuntut tindakan yang berbeda, dan yang
+                        ditampilkan sebagai kosong semua membuat orang mengira
+                        pencariannya gagal. */}
+                    {n.ihs_practitioner_id ? (
+                      <p className="text-[11px] text-green-700 mt-0.5">
+                        {t('IHS', 'IHS')} <span className="num">{n.ihs_practitioner_id}</span>
+                      </p>
+                    ) : n.nik ? (
+                      <p className="text-[11px] text-[var(--ink-faint)] mt-0.5">
+                        {t('Belum dicocokkan ke SatuSehat', 'Not yet matched to SatuSehat')}
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-amber-700 mt-0.5">
+                        {t('NIK belum diisi, jadi nomor IHS tidak bisa dicari', 'National ID missing, so the IHS number cannot be looked up')}
+                      </p>
+                    )}
                   </td>
                   <td className={TD + ' text-[var(--ink-soft)] text-xs'}>
                     {LABEL_PERAN[n.role]?.[lang === 'en' ? 1 : 0] || n.role}
@@ -236,6 +262,7 @@ export default function Perizinan() {
                           nomor_sip: n.nomor_sip || '',
                           sip_mulai: n.sip_mulai || '', sip_sampai: n.sip_sampai || '',
                           ihs_practitioner_id: n.ihs_practitioner_id || '',
+                          nik: n.nik || '',
                         })}>
                         <Pencil size={14} />
                       </TombolIkon>
@@ -279,6 +306,21 @@ export default function Perizinan() {
                   <input autoFocus value={form.nama} onChange={e => setForm({ ...form, nama: e.target.value })}
                     placeholder={form.role === 'dokter' ? 'dr. Nama Lengkap, Sp.PD' : 'apt. Nama Lengkap, S.Farm.'}
                     className={inputCls} />
+                </div>
+
+                {/* NIK. Ini yang dipakai MENCARI nomor IHS orang ini ke
+                    SatuSehat; tanpa NIK ia tidak akan pernah punya nomor, dan
+                    seluruh kunjungan yang ia tangani tidak bisa dikirim.
+                    Boleh kosong: kasir dan pendaftaran tidak butuh nomor IHS,
+                    dan mengumpulkan identitas yang tidak dipakai untuk apa pun
+                    itu bukan kehati-hatian, itu kelebihan. */}
+                <div>
+                  <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">
+                    {t('NIK', 'National ID')}
+                  </label>
+                  <input value={form.nik} onChange={e => setForm({ ...form, nik: e.target.value.replace(/\D/g, '').slice(0, 16) })}
+                    placeholder={t('16 angka, dipakai mencari nomor IHS ke SatuSehat', '16 digits, used to look up the SatuSehat IHS number')}
+                    className={`${inputCls} num`} />
                 </div>
 
                 {form.role === 'dokter' && (

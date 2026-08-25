@@ -10,6 +10,7 @@ import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD, KATEGORI_BADGE } from '@/lib/ui'
 import { rupiah, angka } from '@/lib/format'
+import PilihKfa from '@/components/klinik/PilihKfa'
 import DetailProduk from '@/components/produk/DetailProduk'
 import { bukaCetak, labelRak } from '@/lib/cetak'
 import TombolIkon from '@/components/TombolIkon'
@@ -42,7 +43,7 @@ const FORM_KOSONG = {
   nama_obat: '', nama_generik: '', kandungan: '',
   kategori: 'bebas', satuan: 'Tablet', isi_kemasan: 1,
   harga_beli: 0, harga_jual: 0, stok_total: 0, stok_minimum: 10,
-  barcode: '', rak: '',
+  barcode: '', rak: '', kode_kfa: '',
 }
 
 export default function HalamanProduk() {
@@ -115,6 +116,7 @@ export default function HalamanProduk() {
     const { error } = await supabase.from('products').insert([{
       ...form,
       barcode: form.barcode.trim() || null,
+      kode_kfa: form.kode_kfa.trim() || null,
       rak: form.rak.trim() || null,
       ...app.cid(),
     }])
@@ -162,6 +164,7 @@ export default function HalamanProduk() {
       // barcode melewatkan null, dan dua produk berbarcode "" akan bertabrakan
       // padahal dua-duanya sebenarnya belum diisi.
       barcode: String(edit.barcode || '').trim() || null,
+      kode_kfa: String(edit.kode_kfa || '').trim() || null,
       rak: String(edit.rak || '').trim() || null,
     }).eq('id', edit.id)
     setSibuk(false)
@@ -195,7 +198,7 @@ export default function HalamanProduk() {
     const ok = bukaCetak(labelRak(app.settingsData || {}, daftar.map(x => ({
       nama_obat: x.nama_obat, nama_generik: x.nama_generik, kandungan: x.kandungan,
       satuan: x.satuan, harga_jual: x.harga_jual, kode: x.kode,
-      barcode: x.barcode, rak: x.rak, kategori: x.kategori,
+      barcode: x.barcode, rak: x.rak, kode_kfa: x.kode_kfa, kategori: x.kategori,
     }))), 1000, 800)
     if (!ok) kabar(t('Jendela cetak diblokir peramban. Izinkan popup untuk situs ini.',
                      'The print window was blocked. Allow popups for this site.'), 'galat')
@@ -384,6 +387,24 @@ export default function HalamanProduk() {
                     placeholder={t('mis. A3-2', 'e.g. A3-2')} className={inputCls} />
                 </div>
               </div>
+
+              {/* Kode KFA. Tanpa ini resep yang memuat obat ini TIDAK BISA
+                  dikirim ke SatuSehat: `Medication.code` wajib memakai kamus
+                  farmasi nasional, bukan nama obat dan bukan kode internal
+                  apotek. Boleh dikosongkan untuk perbekalan non-obat seperti
+                  kasa dan spuit, yang memang tidak pernah berangkat sebagai
+                  Medication. */}
+              <div>
+                <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Kode KFA', 'KFA code')}</label>
+                <input value={form.kode_kfa} onChange={e => setForm({ ...form, kode_kfa: e.target.value.replace(/\D/g, '').slice(0, 8) })}
+                  placeholder={t('8 angka, diawali 92 atau 93', '8 digits, starting with 92 or 93')}
+                  className={inputCls + ' num'} />
+                <p className="text-[11px] text-[var(--ink-faint)] mt-1 leading-relaxed">
+                  {t('Awalan 92 untuk produk template (zat aktif dan kekuatannya), 93 untuk produk bermerek. Kosongkan untuk yang bukan obat.',
+                     'Prefix 92 for template products (active ingredient and strength), 93 for branded products. Leave empty for non-medicines.')}
+                </p>
+                <PilihKfa namaObat={form.nama_obat} onPilih={k => setForm({ ...form, kode_kfa: k })} />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Kategori', 'Category')}</label>
@@ -466,6 +487,17 @@ export default function HalamanProduk() {
                   <input value={edit.rak || ''} onChange={e => setEdit({ ...edit, rak: e.target.value })}
                     placeholder={t('mis. A3-2', 'e.g. A3-2')} className={inputCls} />
                 </div>
+              </div>
+              {/* Di sinilah kode KFA paling sering diisi: katalog yang sudah
+                  berjalan diisi satu per satu lewat Ubah, bukan lewat form
+                  tambah. */}
+              <div>
+                <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Kode KFA', 'KFA code')}</label>
+                <input value={edit.kode_kfa || ''}
+                  onChange={e => setEdit({ ...edit, kode_kfa: e.target.value.replace(/\D/g, '').slice(0, 8) })}
+                  placeholder={t('8 angka, diawali 92 atau 93', '8 digits, starting with 92 or 93')}
+                  className={inputCls + ' num'} />
+                <PilihKfa namaObat={String(edit.nama_obat || '')} onPilih={k => setEdit({ ...edit, kode_kfa: k })} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

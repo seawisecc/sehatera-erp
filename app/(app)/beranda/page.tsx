@@ -125,8 +125,6 @@ export default function HalamanBeranda() {
         return { label, nilai: b.nilai, jumlah: klinik ? (b.kunjungan || 0) : b.jumlah }
       })
 
-    setSeri(buat(mulai))
-    setSeriLalu(buat(mulaiLalu))
     setKini({ omzet: oKini, transaksi: tKini, item: iKini })
     setLalu({ omzet: oLalu, transaksi: tLalu, item: iLalu })
 
@@ -157,6 +155,14 @@ export default function HalamanBeranda() {
       setKunjKini({ kunjungan: kKini, pasienBaru: pKini })
       setKunjLalu({ kunjungan: kLalu, pasienBaru: pLalu })
     }
+
+    // Deret grafik dibangun SESUDAH kunjungan masuk ke `ember`, bukan sebelum.
+    // `buat()` membaca ember pada saat ia dipanggil dan mengembalikan angka
+    // mati; dipanggil lebih dulu, garis kunjungan klinik selamanya nol
+    // sementara kartu di atasnya menyebut angka yang benar. Dua angka yang
+    // tidak bisa dijumlahkan membuat orang berhenti percaya pada dua-duanya.
+    setSeri(buat(mulai))
+    setSeriLalu(buat(mulaiLalu))
 
     const { count } = await scope(supabase.from('products').select('*', { count: 'exact', head: true }))
     setTotalProduk(count || 0)

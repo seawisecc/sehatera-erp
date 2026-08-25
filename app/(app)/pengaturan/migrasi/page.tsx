@@ -40,6 +40,14 @@ export default function HalamanMigrasi() {
           satuan: r.satuan || 'Tablet', isi_kemasan: +(r.isi_kemasan || 1) || 1,
           harga_beli: +(r.harga_beli || 0) || 0, harga_jual: +(r.harga_jual || 0) || 0,
           stok_total: +(r.stok_total || 0) || 0, stok_minimum: +(r.stok_minimum || 10) || 10,
+          // Tiga kolom ini sempat tertinggal saat ditambahkan ke tabel, dan
+          // daftar kolom yang eksplisit tidak pernah mengeluh soal itu: impor
+          // tetap "berhasil" sambil membuang barcode, rak, dan kode KFA yang
+          // sudah diketik orang di berkasnya. Ini jebakan yang sama dengan
+          // `saveSettings` di halaman Pengaturan.
+          barcode: r.barcode?.trim() || null,
+          rak: r.rak?.trim() || null,
+          kode_kfa: r.kode_kfa?.trim() || null,
         }
         if (r.kode) o.kode = r.kode
         if (cid) o.company_id = cid
@@ -124,6 +132,50 @@ export default function HalamanMigrasi() {
     finally { setImporting(null) }
   }
 
+  /**
+   * Mengisi kode KFA ke produk yang SUDAH ada, dicocokkan lewat kode produk.
+   *
+   * Terpisah dari impor katalog karena tindakannya berbeda: yang itu MEMBUAT
+   * produk baru, yang ini MEMPERBARUI yang sudah ada. Katalog yang sudah
+   * berjalan setahun tidak bisa diimpor ulang cuma untuk menambahkan satu
+   * kolom, dan mengetik kode KFA satu per satu lewat formulir untuk delapan
+   * ratus obat bukan pekerjaan yang akan pernah selesai.
+   *
+   * Kode KFA dicari sekali di kfa-browser SatuSehat lalu ditempel massal.
+   * Tanpa ini, resep tidak akan pernah bisa dikirim.
+   */
+  const importKfa = async (file: File) => {
+    const cid = (app.isSuper && migrasiCompany) ? migrasiCompany : null
+    setImporting('kfa'); setImportInfo(p => ({ ...p, kfa: '' }))
+    try {
+      const rows = parseCSV(await file.text())
+      const valid = rows.filter(r => (r.kode_produk || r.kode) && r.kode_kfa)
+      if (valid.length === 0) {
+        setImportInfo(p => ({ ...p, kfa: 'Tidak ada baris valid (butuh kode_produk & kode_kfa).' })); return
+      }
+      let ok = 0; const gagal: string[] = []
+      for (const r of valid) {
+        const kode = String(r.kode_produk || r.kode).trim()
+        const kfa = String(r.kode_kfa).trim()
+        // Bentuknya diperiksa DI SINI juga, bukan cuma di database, supaya
+        // baris yang salah disebut namanya alih-alih menggagalkan seluruh
+        // berkas dengan satu pesan constraint.
+        if (!/^9[23][0-9]{6}$/.test(kfa)) { gagal.push(`${kode} (kode "${kfa}" bukan 8 angka diawali 92/93)`); continue }
+        let q = supabase.from('products').update({ kode_kfa: kfa }).eq('kode', kode)
+        if (cid) q = q.eq('company_id', cid)
+        // `select()` sesudah update mengembalikan baris yang benar-benar
+        // tersentuh. Nol baris berarti kodenya tidak ada, dan itu harus
+        // disebut namanya, bukan dihitung sebagai berhasil.
+        const { data, error } = await q.select('id')
+        if (error) { gagal.push(`${kode} (${error.message})`); continue }
+        if (!data?.length) { gagal.push(`${kode} (produk tidak ditemukan)`); continue }
+        ok++
+      }
+      setImportInfo(p => ({ ...p, kfa: `✅ ${ok} produk dapat kode KFA.` + (gagal.length ? ` ${gagal.length} gagal: ${gagal.slice(0, 4).join('; ')}` : '') }))
+    } catch (e: any) { setImportInfo(p => ({ ...p, kfa: 'Gagal membaca file: ' + (e?.message || e) })) }
+    finally { setImporting(null) }
+  }
+
   const importFakturAwal = async (file: File) => {
     const cid = (app.isSuper && migrasiCompany) ? migrasiCompany : null
     setImporting('fakturawal'); setImportInfo(p => ({ ...p, fakturawal: '' }))
@@ -185,10 +237,11 @@ export default function HalamanMigrasi() {
   }
 
   const migrasiCards = [
-    { key: 'produk', title: t('Daftar Produk', 'Product List'), Icon: Pill, desc: t('Impor katalog obat: nama, kategori, harga, dan stok awal.', 'Import the drug catalog: name, category, price, and opening stock.'), cols: 'kode (opsional), nama_obat, nama_generik, kandungan, kategori, satuan, isi_kemasan, harga_beli, harga_jual, stok_total, stok_minimum', hint: t('Kategori: bebas, bebas_terbatas, keras, suplemen, psikotropika, narkotika, prekursor, alkes, lainnya.', 'Category: bebas, bebas_terbatas, keras, suplemen, psikotropika, narkotika, prekursor, alkes, lainnya.'), file: 'template_produk.csv', headers: ['kode', 'nama_obat', 'nama_generik', 'kandungan', 'kategori', 'satuan', 'isi_kemasan', 'harga_beli', 'harga_jual', 'stok_total', 'stok_minimum'], examples: [['', 'Paracetamol 500mg', 'Paracetamol', 'Paracetamol 500 mg', 'bebas', 'Tablet', '100', '500', '1000', '150', '10']], onUpload: importProduk },
+    { key: 'produk', title: t('Daftar Produk', 'Product List'), Icon: Pill, desc: t('Impor katalog obat: nama, kategori, harga, dan stok awal.', 'Import the drug catalog: name, category, price, and opening stock.'), cols: 'kode (opsional), nama_obat, nama_generik, kandungan, kategori, satuan, isi_kemasan, harga_beli, harga_jual, stok_total, stok_minimum, barcode, rak, kode_kfa', hint: t('Kategori: bebas, bebas_terbatas, keras, suplemen, psikotropika, narkotika, prekursor, alkes, lainnya.', 'Category: bebas, bebas_terbatas, keras, suplemen, psikotropika, narkotika, prekursor, alkes, lainnya.'), file: 'template_produk.csv', headers: ['kode', 'nama_obat', 'nama_generik', 'kandungan', 'kategori', 'satuan', 'isi_kemasan', 'harga_beli', 'harga_jual', 'stok_total', 'stok_minimum', 'barcode', 'rak', 'kode_kfa'], examples: [['', 'Paracetamol 500mg', 'Paracetamol', 'Paracetamol 500 mg', 'bebas', 'Tablet', '100', '500', '1000', '150', '10', '8992745110017', 'A1-1', '93000001']], onUpload: importProduk },
     { key: 'supplier', title: t('Daftar Supplier', 'Supplier List'), Icon: Truck, desc: t('Impor daftar PBF / supplier obat.', 'Import the list of distributors / drug suppliers.'), cols: 'nama_supplier, jenis, alamat, telepon, email', hint: t('Jenis yang valid: PBF, Subdistributor, atau Lainnya (nilai lain otomatis disesuaikan).', 'Valid types: PBF, Subdistributor, or Lainnya (other values auto-adjusted).'), file: 'template_supplier.csv', headers: ['nama_supplier', 'jenis', 'alamat', 'telepon', 'email'], examples: [['PT Bina San Prima', 'PBF', 'Jl. Industri No. 1', '021-1234567', 'sales@binasan.co.id']], onUpload: importSupplier },
     { key: 'stok', title: t('Stok Awal (Batch)', 'Opening Stock (Batch)'), Icon: PackageOpen, desc: t('Impor stok awal per batch + expired date. Dicocokkan ke produk lewat kode.', 'Import opening stock per batch + expiry date. Matched to products by code.'), cols: 'kode_produk, batch_number, expired_date (YYYY-MM-DD), stok_batch', hint: t('Impor Produk dulu agar kode-nya tersedia. Stok batch akan menambah stok total produk.', 'Import Products first so codes exist. Batch stock adds to the total product stock.'), file: 'template_stok_awal.csv', headers: ['kode_produk', 'batch_number', 'expired_date', 'stok_batch'], examples: [['OBT-0001', 'BT-2401', '2026-12-31', '150']], onUpload: importStok },
     { key: 'mapping', title: t('Mapping Produk–Supplier', 'Product–Supplier Mapping'), Icon: ClipboardList, desc: t('Kaitkan tiap produk ke supplier-nya, agar pembuatan PO otomatis tahu daftar produk per supplier.', 'Link each product to its supplier, so creating a PO automatically knows the products per supplier.'), cols: 'kode_produk, nama_supplier (atau kode_supplier)', hint: t('Import Produk & Supplier dulu. Nama supplier harus sama persis dengan yang terdaftar.', 'Import Products & Suppliers first. Supplier name must match exactly.'), file: 'template_mapping_produk_supplier.csv', headers: ['kode_produk', 'nama_supplier'], examples: [['OBT-0001', 'PT Bina San Prima']], onUpload: importMapping },
+    { key: 'kfa', title: t('Kode KFA Obat', 'Drug KFA Codes'), Icon: Pill, desc: t('Isi kode KFA ke produk yang SUDAH ada, dicocokkan lewat kode produk. Tanpa kode KFA, resep obat ini tidak bisa dikirim ke SatuSehat.', 'Fill KFA codes into EXISTING products, matched by product code. Without a KFA code, prescriptions for this drug cannot be sent to SatuSehat.'), cols: 'kode_produk, kode_kfa', hint: t('Kode dicari di kfa-browser SatuSehat. Delapan angka: awalan 92 untuk produk template (zat aktif dan kekuatannya), 93 untuk produk aktual (merek tertentu).', 'Look codes up in the SatuSehat KFA browser. Eight digits: prefix 92 for template products, 93 for actual branded products.'), file: 'template_kode_kfa.csv', headers: ['kode_produk', 'kode_kfa'], examples: [['OBT-001', '93000001']], onUpload: importKfa },
     { key: 'fakturawal', title: t('Faktur / Hutang Awal', 'Opening Invoices / Debts'), Icon: Receipt, desc: t('Impor faktur pembelian yang belum lunas, langsung muncul di menu Pembayaran Faktur dengan jatuh tempo.', 'Import unpaid purchase invoices, they appear in Invoice Payments with due dates.'), cols: 'nomor_faktur, nama_supplier, tanggal_faktur (YYYY-MM-DD), term_of_payment, total', hint: t('Import Supplier dulu. Jatuh tempo dihitung dari tanggal_faktur + term_of_payment bila kolom tanggal_jatuh_tempo tidak diisi.', 'Import Suppliers first. Due date is computed from tanggal_faktur + term_of_payment if tanggal_jatuh_tempo is empty.'), file: 'template_faktur_awal.csv', headers: ['nomor_faktur', 'nama_supplier', 'tanggal_faktur', 'term_of_payment', 'total'], examples: [['INV/2025/0087', 'PT Bina San Prima', '2026-06-15', '30', '2500000']], onUpload: importFakturAwal },
   ]
   const isiHalaman = (
