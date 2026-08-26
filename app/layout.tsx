@@ -40,7 +40,15 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
-const SITE_URL = "https://sehatera.vercel.app";
+/**
+ * Alamat resmi Sehatera, dan ia dipakai untuk hal yang tidak terlihat di layar
+ * mana pun: `metadataBase` menjadikan alamat gambar Open Graph mutlak. Nilai
+ * yang tertinggal di alamat lama tidak menggagalkan apa pun di aplikasi, tapi
+ * pratinjau tautan di WhatsApp dan Facebook menunjuk ke deploy lama, dan yang
+ * dilihat calon klien saat tautannya dibagikan adalah halaman versi kapan pun
+ * alamat itu terakhir dibangun.
+ */
+const SITE_URL = "https://sehatera.seawise.id";
 const TITLE = "Sehatera | Sistem Apotek, Klinik, dan Faskes";
 const DESCRIPTION =
   "Sistem manajemen apotek: kasir & resep, stok dengan batch dan kadaluarsa, order terpandu, pembayaran faktur, hingga laporan SIPNAP, dalam satu aplikasi.";
