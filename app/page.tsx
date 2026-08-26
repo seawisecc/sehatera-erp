@@ -7,6 +7,7 @@ import { ThemeToggle } from '../lib/theme'
 import { Check, Eye, EyeOff } from 'lucide-react'
 import { AuthBackdrop } from '../components/AuthBackdrop'
 import { Logo } from '../components/Logo'
+import { TombolInstal } from '../components/PWA'
 
 const inputCls =
   'glass-field w-full rounded-xl px-4 py-3 text-sm text-[var(--ink)] placeholder-[var(--ink-faint)]'
@@ -112,6 +113,11 @@ export default function Auth() {
           {t('Fitur & harga', 'Features & pricing')}
         </a>
         <div className="ml-auto flex items-center gap-2">
+          {/* Tempat yang paling masuk akal untuk menawarkan pemasangan: yang
+              memasang aplikasi di komputer klinik biasanya sedang berdiri di
+              halaman ini, sebelum ada sesi siapa pun. Tombolnya tidak muncul
+              kalau aplikasinya sudah terpasang. */}
+          <TombolInstal />
           <ThemeToggle />
           <LangToggle />
         </div>

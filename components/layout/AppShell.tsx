@@ -9,6 +9,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import PemilihOutlet from '@/components/PemilihOutlet'
+import { TombolInstal } from '@/components/PWA'
 import { useLang, LangToggle } from '@/lib/i18n'
 import { ThemeToggle } from '@/lib/theme'
 import { Logo, Mark } from '@/components/Logo'
@@ -198,6 +199,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {app.companies.map((c: any) => <option key={c.id} value={c.id}>{c.nama}</option>)}
                 </select>
               )}
+              {/* Menyembunyikan dirinya sendiri kalau aplikasinya sudah
+                  terpasang atau peramban tidak menawarkannya. */}
+              <TombolInstal />
               <LangToggle />
               <ThemeToggle />
 
@@ -405,6 +409,7 @@ function NavBawah({
                 </button>
               </div>
               <div className="flex items-center gap-2">
+                <TombolInstal />
                 <LangToggle />
                 <ThemeToggle />
               </div>

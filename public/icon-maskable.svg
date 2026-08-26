@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Ikon "maskable" untuk Android dan Chrome: latarnya SATU WARNA PENUH dari
+       tepi ke tepi, dan lambangnya kecil di tengah.
+
+       Alasannya sistem operasi memotong ikon ini sendiri: bulat di satu
+       peluncur, kotak membulat di peluncur lain. Yang dijamin selamat cuma
+       lingkaran di tengah selebar 80 persen, jadi lambang yang memenuhi kotak
+       akan terpotong sudutnya. Perisai di sini lebarnya sekitar setengah
+       kanvas: jauh di dalam daerah aman, bentuk apa pun potongannya. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4aa8d8"/>
+      <stop offset="52%" stop-color="#2fb8ab"/>
+      <stop offset="100%" stop-color="#5cc98a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#g)"/>
+  <g transform="translate(256 256) scale(8.9) translate(-16 -16)">
+    <path d="M16 2.2 27.2 6.4V16c0 6.5-4.7 12.1-11.2 13.8C9.5 28.1 4.8 22.5 4.8 16V6.4L16 2.2Z"
+          fill="#ffffff" fill-opacity="0.16"/>
+    <path d="M16 2.2 27.2 6.4V16c0 6.5-4.7 12.1-11.2 13.8C9.5 28.1 4.8 22.5 4.8 16V6.4L16 2.2Z"
+          fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+    <g fill="#ffffff">
+      <rect x="13.7" y="9.2" width="4.6" height="13.6" rx="1.9"/>
+      <rect x="9.2" y="13.7" width="13.6" height="4.6" rx="1.9"/>
+    </g>
+    <path d="M9.2 16h2.6l1.5-3.4 2.4 6.8 1.4-3.4h3.7" stroke="#2fb8ab" stroke-width="1.7"
+          stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+</svg>

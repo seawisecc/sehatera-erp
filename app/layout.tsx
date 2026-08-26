@@ -3,6 +3,7 @@ import { JetBrains_Mono, Plus_Jakarta_Sans, Sora } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "../lib/i18n";
 import { ThemeProvider, ThemeScript } from "../lib/theme";
+import { PWA } from "../components/PWA";
 
 /**
  * Tiga huruf, tiga tugas, sama seperti TokoKu. Itu disengaja: dua produk dari
@@ -73,6 +74,17 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
   },
   robots: { index: true, follow: true },
+  /**
+   * Yang membuat aplikasi terpasang di iPhone dan iPad membuka jendelanya
+   * sendiri tanpa bilah alamat Safari. Manifestnya (`app/manifest.ts`) tidak
+   * cukup di sana: Safari sampai sekarang membaca tanda ini, bukan
+   * `display: standalone`.
+   */
+  appleWebApp: {
+    capable: true,
+    title: "Sehatera",
+    statusBarStyle: "default",
+  },
 };
 
 export const viewport: Viewport = {
@@ -102,6 +114,7 @@ export default function RootLayout({
         <ThemeScript />
       </head>
       <body className="min-h-full flex flex-col">
+        <PWA />
         <ThemeProvider>
           <LanguageProvider>{children}</LanguageProvider>
         </ThemeProvider>

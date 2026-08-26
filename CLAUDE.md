@@ -2073,6 +2073,65 @@ Paket **Klinik** ada di database tapi `is_public = false`: harganya
 modulnya benar-benar siap dijual. Rumah sakit tidak ditawarkan di pendaftaran
 mandiri: harganya per implementasi.
 
+## PWA: terpasang seperti aplikasi, tapi TIDAK menyimpan data pasien
+
+Sehatera bisa dipasang lewat Chrome (`app/manifest.ts`, `public/sw.js`). Yang
+didapat klinik: jendela sendiri tanpa bilah alamat, jadi kasir tidak bisa tidak
+sengaja menutup tab atau mengetik alamat lain di tengah transaksi, dan ikonnya
+ada di peluncur bersama aplikasi lain yang dipakai di sana.
+
+**Service worker-nya menyimpan TIGA hal, dan tidak satu pun berisi data**:
+berkas build ber-hash di `/_next/static/`, ikon aplikasi, dan satu halaman
+`/luring`. Selebihnya lewat begitu saja; permintaan ke Supabase dan SatuSehat
+bahkan tidak disentuh karena beda asal.
+
+Alasannya bukan kehati-hatian umum. Halaman aplikasi ini membawa nama, nomor
+rekam medis, diagnosis, dan resep; komputer di ruang pendaftaran dipakai
+bergantian dan hampir tidak pernah dikunci. Cache yang "membantu" dengan
+menyimpan halaman terakhir yang dibuka berarti rekam medis pasien terakhir
+tersimpan di disk, terbaca dari tab mana pun, dan tetap ada sesudah orangnya
+keluar. **Aturan ini berlaku untuk apa pun yang ditambahkan ke `sw.js` nanti.**
+
+**Sehatera BUKAN aplikasi luring, dan halaman `/luring` mengatakannya.**
+Menjanjikan yang sebaliknya pada aplikasi kasir dan rekam medis jauh lebih
+berbahaya daripada tidak menjanjikan apa pun: transaksi yang tersimpan di
+peramban lalu tidak pernah terkirim adalah stok yang salah dan uang yang hilang
+tanpa jejak. Halaman itu ditulis tanpa bergantung pada JavaScript apa pun,
+karena halaman luring yang baru berguna sesudah bundelnya berhasil diunduh
+adalah halaman yang tidak pernah muncul.
+
+**Di `npm run dev` service worker-nya DICABUT, bukan dipasang** (`components/
+PWA.tsx`). Nama berkas di `/_next/static/` membawa hash isinya hanya di hasil
+build; di dev alamat yang sama berisi kode yang berubah tiap kali disimpan,
+jadi cache-dulu akan menyajikan kode kemarin dan setiap perbaikan terlihat
+tidak berpengaruh.
+
+**Tawaran pasang ditangkap di ruang modul, bukan di dalam `useEffect`.**
+`beforeinstallprompt` dikirim sekali dan tidak bisa diminta ulang; pendengar
+yang baru dipasang sesudah render bisa terlambat, dan yang terjadi bukan galat
+melainkan tombol yang tidak pernah muncul di sebagian komputer. Tombolnya ada di
+topbar, di lembar menu mobile, dan di halaman masuk, karena yang memasang
+aplikasi di komputer klinik biasanya belum masuk sebagai siapa pun.
+
+`start_url` sengaja `/beranda`, bukan `/`. Keduanya benar untuk yang belum
+masuk, tapi hanya `/beranda` yang benar untuk yang sudah: `/` adalah formulir
+masuk, dan aplikasi terpasang yang tiap dibuka menampilkan formulir masuk
+terbaca seperti aplikasi yang selalu mengeluarkan orangnya. `id` dikunci ke `/`
+supaya menggeser `start_url` nanti tidak melahirkan aplikasi KEDUA di peluncur
+orang yang sudah memasang yang lama.
+
+**Ikon PNG dibuat tangan lewat `node scripts/buat-ikon.mjs`, hasilnya masuk
+repo.** Perasternya `next/og` yang memang sudah dipakai `opengraph-image.tsx`,
+jadi tidak ada dependensi baru. Dua purpose wajib ada: `any` dipakai apa adanya,
+`maskable` dipotong sendiri oleh sistem operasi jadi bulat atau kotak membulat.
+Yang cuma `any` akan terpotong sudutnya di Android.
+
+**Sekalian membetulkan bug lama:** `app/apple-icon.svg` menulis koordinat
+gradiennya dalam ruang kanvas 180 padahal `userSpaceOnUse` dibacanya di dalam
+grup yang sudah diskalakan ke ruang 32. Seluruh perisai jatuh di pangkal
+gradien dan warnanya rata biru. Ketahuan justru saat merasterkannya jadi PNG:
+di layar ia cuma terlihat seperti pilihan warna.
+
 ## Lembar progres
 
 `~/.claude/projects/-Users-agusyulyastrawan-Desktop-sehatera-erp/progres-sehatera.html`,

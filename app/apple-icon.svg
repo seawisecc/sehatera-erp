@@ -1,6 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <!-- Koordinat gradiennya ditulis dalam ruang PERISAI (0..32), bukan ruang
+       kanvas 180, karena `userSpaceOnUse` dibaca di dalam grup yang sudah
+       diskalakan di bawah. Ditulis dalam ruang kanvas, seluruh perisai jatuh
+       di pangkal gradien dan warnanya rata biru: tidak ada yang gagal, warnanya
+       saja yang hilang. -->
   <defs>
-    <linearGradient id="g" x1="22" y1="12" x2="158" y2="168" gradientUnits="userSpaceOnUse">
+    <linearGradient id="g" x1="4" y1="2" x2="28" y2="30" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#4aa8d8"/>
       <stop offset="52%" stop-color="#2fb8ab"/>
       <stop offset="100%" stop-color="#5cc98a"/>
