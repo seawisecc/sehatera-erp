@@ -135,11 +135,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           className={`${sidebarCollapsed ? 'md:w-[64px]' : 'md:w-64'} w-64 bg-gradient-to-b from-[var(--brand)] via-[var(--brand-soft)] to-[var(--brand-hover)] flex flex-col shrink-0 fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 md:z-auto ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
           style={{ transition: 'transform var(--t-normal) var(--ease), width var(--t-normal) var(--ease)' }}
         >
-          <div className={`${sidebarCollapsed ? 'px-2' : 'px-5'} pt-5 pb-3`}>
+          <div className={`${sidebarCollapsed ? 'px-5 md:px-2' : 'px-5'} pt-5 pb-3`}>
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-              {sidebarCollapsed
-                ? <Mark size={26} variant="mono" className="text-[var(--on-brand)]" />
-                : <Logo size={38} sub={app.namaFaskes} tone="onBrand" />}
+              {/*
+                Melipat sidebar adalah gagasan DESKTOP. Di telepon lacinya cuma
+                punya dua keadaan, terbuka atau tertutup, dan yang terbuka
+                selebar 256px: tidak ada alasan menyembunyikan apa pun di sana.
+
+                Sebelum ini `sidebarCollapsed` dipakai apa adanya di kedua
+                tempat, dan karena /kasir termasuk RUTE_FOKUS yang melipat
+                sidebar sendiri, laci mobile di layar Kasir terbuka selebar
+                penuh TAPI isinya cuma deretan ikon tanpa nama. Sepuluh ikon
+                tanpa keterangan, di layar tempat orang justru sedang mencari
+                jalan keluar. Ditemukan pemilik dari HP-nya sendiri.
+
+                Penyaringnya CSS, bukan lebar layar yang dibaca JavaScript:
+                yang dibaca JavaScript belum diketahui saat halaman dilukis
+                pertama kali di server, dan menebaknya berarti laci yang
+                berkedip ganti bentuk sesudah terpasang.
+              */}
+              {sidebarCollapsed ? (
+                <>
+                  <span className="hidden md:block">
+                    <Mark size={26} variant="mono" className="text-[var(--on-brand)]" />
+                  </span>
+                  <span className="md:hidden">
+                    <Logo size={38} sub={app.namaFaskes} tone="onBrand" />
+                  </span>
+                </>
+              ) : (
+                <Logo size={38} sub={app.namaFaskes} tone="onBrand" />
+              )}
               <button onClick={() => setMobileNavOpen(false)} className="md:hidden ml-auto text-[var(--on-brand-soft)] hover:text-white" aria-label="Tutup menu">
                 <X size={20} />
               </button>
@@ -187,7 +213,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
 
-          <nav className={`flex-1 min-h-0 overflow-y-auto ${sidebarCollapsed ? 'px-2' : 'px-3'} pb-2 space-y-1`}>
+          <nav className={`flex-1 min-h-0 overflow-y-auto ${sidebarCollapsed ? 'px-3 md:px-2' : 'px-3'} pb-2 space-y-1`}>
             {nav.map(item => <ItemNav key={item.id} item={item} aktif={menuAktif(pathname, item)} ciut={sidebarCollapsed} lang={lang} />)}
           </nav>
         </div>
@@ -351,6 +377,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
  * Warna tulisannya memakai --on-grad, bukan putih. Gradasi keempat tema ini
  * terang, dan putih di atasnya hilang.
  */
+/**
+ * Satu baris menu di sidebar.
+ *
+ * `ciut` berarti "sidebar sedang dilipat", dan itu keadaan DESKTOP. Di telepon
+ * elemen yang sama dipakai sebagai isi laci selebar 256px, jadi apa pun yang
+ * `ciut` sembunyikan harus disembunyikan lewat penyaring `md:`, bukan dengan
+ * membuangnya dari DOM.
+ */
 function ItemNav({ item, aktif, ciut, lang }: { item: MenuItem; aktif: boolean; ciut: boolean; lang: string }) {
   const Icon = item.icon
   const nama = lang === 'en' ? item.en : item.label
@@ -359,7 +393,7 @@ function ItemNav({ item, aktif, ciut, lang }: { item: MenuItem; aktif: boolean; 
       href={item.href}
       title={ciut ? nama : undefined}
       aria-current={aktif ? 'page' : undefined}
-      className={`relative w-full flex items-center ${ciut ? 'justify-center px-0' : 'gap-3 px-3'} py-2.5 rounded-xl text-sm ${
+      className={`relative w-full flex items-center ${ciut ? 'gap-3 px-3 md:justify-center md:gap-0 md:px-0' : 'gap-3 px-3'} py-2.5 rounded-xl text-sm ${
         aktif
           ? 'font-semibold shadow-sm'
           : 'text-[var(--on-brand-soft)] hover:bg-white/[0.07] hover:text-white'
@@ -370,7 +404,11 @@ function ItemNav({ item, aktif, ciut, lang }: { item: MenuItem; aktif: boolean; 
       }}
     >
       <Icon size={17} className="shrink-0" strokeWidth={aktif ? 2.4 : 2} />
-      {!ciut && <span className="truncate">{nama}</span>}
+      {/* Namanya SELALU dirender, lalu disembunyikan lewat CSS hanya pada
+          layar lebar saat sidebarnya memang sedang dilipat. Kalau ia dibuang
+          dari DOM seperti sebelumnya, laci mobile ikut kehilangan namanya
+          karena keduanya elemen yang sama. */}
+      <span className={ciut ? 'truncate md:hidden' : 'truncate'}>{nama}</span>
     </Link>
   )
 }
