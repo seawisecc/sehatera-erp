@@ -49,9 +49,25 @@ const jetbrains = JetBrains_Mono({
  * alamat itu terakhir dibangun.
  */
 const SITE_URL = "https://sehatera.seawise.id";
-const TITLE = "Sehatera | Sistem Apotek, Klinik, dan Faskes";
+const TITLE = "Sehatera | Sistem Apotek, Klinik, dan Rumah Sakit";
+/**
+ * Kalimat ini yang muncul di bawah judul saat tautannya dibagikan di WhatsApp,
+ * dan sering ia satu-satunya yang benar-benar dibaca orang.
+ *
+ * Versi sebelumnya menyebut apotek saja: "kasir & resep, stok dengan batch dan
+ * kadaluarsa, order terpandu, pembayaran faktur, laporan SIPNAP". Seluruhnya
+ * masih benar, tapi tidak satu pun menyebut rekam medis, antrean poli, klaim
+ * penjamin, atau SatuSehat, padahal itu yang dibangun sepanjang tahap 7 dan 8
+ * dan itu pula yang ada di paket paling mahal. Pemilik klinik yang membaca
+ * kalimat lama menyimpulkan produk ini bukan untuk dia, dan ia tidak akan
+ * menekan tautannya untuk memastikan.
+ *
+ * Urutannya sengaja dimulai dari yang membedakan (rekam medis, e-resep,
+ * antrean) lalu turun ke yang sudah lama ada (kasir, SIPNAP): 160 karakter
+ * pertama yang dipotong pratinjau harus memuat alasan orang berhenti menggulung.
+ */
 const DESCRIPTION =
-  "Sistem manajemen apotek: kasir & resep, stok dengan batch dan kadaluarsa, order terpandu, pembayaran faktur, hingga laporan SIPNAP, dalam satu aplikasi.";
+  "Rekam medis elektronik, e-resep, antrean per poli, reservasi, kasir dengan batch & kadaluarsa, klaim BPJS & asuransi, laporan SIPNAP, dan pengiriman ke SatuSehat. Untuk apotek, klinik, dan rumah sakit.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -64,7 +80,9 @@ export const metadata: Metadata = {
   keywords: [
     "aplikasi apotek", "software apotek", "ERP apotek", "sistem manajemen apotek",
     "POS apotek", "laporan SIPNAP", "stok obat", "kadaluarsa obat",
-    "sistem klinik", "rekam medis elektronik", "pharmacy management system",
+    "aplikasi klinik", "software klinik", "sistem informasi klinik",
+    "rekam medis elektronik", "RME", "e-resep", "antrean pasien klinik",
+    "SatuSehat", "klaim BPJS", "SIMRS", "pharmacy management system",
   ],
   authors: [{ name: "Seawise Creative" }],
   creator: "Seawise Creative",
@@ -76,6 +94,12 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESCRIPTION,
   },
+  /**
+   * Alamat sah tunggal. Tanpa ini, pratinjau yang dibagikan dari alamat
+   * `*.vercel.app` bawaan Vercel dihitung sebagai halaman terpisah oleh mesin
+   * pencari, dan tautan yang sudah beredar menunjuk ke deploy lama.
+   */
+  alternates: { canonical: SITE_URL },
   twitter: {
     card: "summary_large_image",
     title: TITLE,

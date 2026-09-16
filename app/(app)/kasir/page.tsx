@@ -966,27 +966,31 @@ export default function HalamanKasir() {
             <div>
               <div className="text-center mb-4 border-b border-dashed border-[var(--line)] pb-4">
                 <h2 className="font-bold text-lg text-[var(--brand)]">{app.namaFaskes}</h2>
-                <p className="text-xs text-[var(--ink-soft)] mt-1">{app.settingsData.alamat}</p>
-                <p className="text-xs text-[var(--ink-soft)]">{app.settingsData.nomor_telepon}</p>
-                {app.settingsData.nomor_ijin && <p className="text-xs text-[var(--ink-faint)] mt-1">SIA: {app.settingsData.nomor_ijin}</p>}
+                <p className="text-sm text-[var(--ink-soft)] mt-1">{app.settingsData.alamat}</p>
+                <p className="text-sm text-[var(--ink-soft)]">{app.settingsData.nomor_telepon}</p>
+                {app.settingsData.nomor_ijin && <p className="text-xs text-[var(--ink-soft)] mt-1">SIA: {app.settingsData.nomor_ijin}</p>}
               </div>
-              <div className="text-xs text-[var(--ink-soft)] mb-3 flex justify-between gap-2 num">
+              {/* Pratinjau struk memakai ukuran yang sama dengan sisa aplikasi,
+                  bukan 12px seperti sebelumnya. Ini yang dibaca kasir untuk
+                  MEMERIKSA sebelum menyerahkan struknya, dan yang harus
+                  diperiksa paling teliti justru nama obat dan nominalnya. */}
+              <div className="text-sm text-[var(--ink-soft)] mb-3 flex justify-between gap-2 num">
                 <span>{struk.nomor_transaksi}</span>
                 <span>{tanggalJam(struk.created_at)}</span>
               </div>
-              <div className="border-t border-dashed border-[var(--line)] pt-3 space-y-1.5">
+              <div className="border-t border-dashed border-[var(--line)] pt-3 space-y-2.5">
                 {strukItems.map((item, i) => (
-                  <div key={i} className="text-xs">
+                  <div key={i} className="text-sm">
                     <div className="flex justify-between gap-2 text-[var(--ink)] font-medium">
                       <span>{item.nama_obat}</span>
                       <span className="num shrink-0">{rupiah(item.subtotal)}</span>
                     </div>
-                    <div className="text-[var(--ink-faint)] num">{angka(item.jumlah)} x {rupiah(item.harga_jual)}</div>
+                    <div className="text-[var(--ink-soft)] num text-xs mt-0.5">{angka(item.jumlah)} x {rupiah(item.harga_jual)}</div>
                   </div>
                 ))}
               </div>
-              <div className="border-t border-dashed border-[var(--line)] mt-3 pt-3 space-y-1 text-xs">
-                <div className="flex justify-between font-bold text-sm text-[var(--brand)]">
+              <div className="border-t border-dashed border-[var(--line)] mt-3 pt-3 space-y-1.5 text-sm">
+                <div className="flex justify-between font-bold text-lg text-[var(--brand)]">
                   <span>Total</span><span className="num">{rupiah(struk.total)}</span>
                 </div>
                 <div className="flex justify-between text-[var(--ink-soft)]">
@@ -996,7 +1000,7 @@ export default function HalamanKasir() {
                   <span>{t('Kembalian', 'Change')}</span><span className="num">{rupiah(struk.kembalian)}</span>
                 </div>
               </div>
-              <p className="text-center text-xs text-[var(--ink-faint)] mt-4 border-t border-dashed border-[var(--line)] pt-3">
+              <p className="text-center text-sm text-[var(--ink-soft)] mt-4 border-t border-dashed border-[var(--line)] pt-3">
                 {t('Terima kasih atas kunjungan Anda', 'Thank you for your visit')}
               </p>
             </div>

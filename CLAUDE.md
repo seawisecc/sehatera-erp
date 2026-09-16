@@ -1720,6 +1720,55 @@ pembongkarnya memakai tabel yang sama. Itu cuma bisa dibuktikan dengan memindai
 hasil cetaknya. Karena itu label selalu membawa angkanya dalam huruf di bawah
 bar, dan lembar pertama harus dipindai sungguhan sebelum dipercaya.
 
+## Dokumen cetak membawa jalan keluarnya sendiri
+
+`bukaCetak()` memakai `window.open`, dan **ukuran jendela yang diberikannya
+DIABAIKAN peramban ponsel**: yang terbuka tab baru, bukan jendela kecil di atas
+aplikasi. Tab itu lahir dari `about:blank` lalu isinya ditulis belakangan, jadi
+riwayatnya kosong dan tombol Back tidak punya tempat untuk kembali. Satu-satunya
+jalan keluar adalah pemilih tab, dan itu tidak terpikirkan orang yang sedang
+dikejar antrean. Dilaporkan pemilik sebagai "cetak di HP kadang nyangkut".
+
+Dua hal disuntikkan ke SETIAP dokumen dari dalam `bukaCetak`, bukan ditulis
+ulang di sepuluh templat:
+
+- **Penanda viewport.** Tanpanya peramban ponsel menganggap halaman selebar
+  980px lalu mengecilkannya supaya muat: dokumen A4 jadi seukuran perangko.
+- **Bilah tombol Cetak & Tutup**, `display:none` saat dicetak. Tutup memanggil
+  `window.close()`, yang memang diizinkan untuk tab yang dibuka skrip.
+
+Suntikannya menyasar `<head>` dan `<body>` HARFIAH. Templat baru yang menulis
+`<body class="...">` akan lolos build, lolos typecheck, dan terbit tanpa
+keduanya. `lib/cetak.uji.mts` memeriksa ketujuh templat untuk itu.
+
+**Di layar sentuh dokumennya ditampilkan dulu, tidak langsung mencetak.** Dialog
+cetak yang muncul seketika menutupi dokumen yang belum sempat dilihat, dan
+begitu ditutup orangnya tertinggal di tab yang tampak kosong. Di tetikus
+sebaliknya: apoteker menekan Cetak karena memang mau mencetak.
+
+### Komentar di dalam templat IKUT TERCETAK
+
+Isi templat di `lib/cetak.ts` terkirim apa adanya ke dokumen yang dibuka orang,
+jadi komentar CSS di dalam blok `<style>`-nya adalah paragraf yang menumpang di
+struk pembeli. Penjelasan panjang tempatnya di komentar TypeScript di atas
+fungsinya. Ujinya menolak komentar lebih dari 160 karakter di dalam dokumen.
+
+Jebakan kembarannya: **backtick di dalam komentar itu menutup template
+literal-nya**, dan galatnya muncul sebagai `TS1443: Module declaration names may
+only use quoted strings` yang sama sekali tidak menyebut penyebabnya.
+
+### Struk termal: besar, dan hitam pekat
+
+Versi pertama memakai 10px untuk keterangan dan 11px untuk nama obat. Di layar
+itu cuma terasa kecil; di atas kertas 58mm yang dibaca sambil berdiri, praktis
+tidak terbaca. **Nama obat tidak boleh lebih kecil daripada angkanya**: yang
+paling perlu dibaca ulang di rumah justru namanya, bukan harganya.
+
+**Printer termal tidak punya abu-abu.** Ia menyalakan titik atau tidak, jadi
+`#555` diterjemahkan jadi titik berjarak yang keluar sebagai tulisan pudar dan
+garis putus-putus yang tampak seperti kepala cetak kotor. Semuanya hitam pekat;
+yang membedakan tingkatannya UKURAN dan TEBAL huruf, bukan warna.
+
 ## Etiket obat: warna itu pengaman, bukan hiasan
 
 `etiketObat()` di `lib/cetak.ts`, dicetak dari layar Farmasi. Satu kartu per
@@ -2072,6 +2121,31 @@ Paket **Klinik** ada di database tapi `is_public = false`: harganya
 (Rp 1.490.000/bln) sudah disetujui pemilik, tapi baru boleh ditampilkan setelah
 modulnya benar-benar siap dijual. Rumah sakit tidak ditawarkan di pendaftaran
 mandiri: harganya per implementasi.
+
+## Gambar bagikan: tidak pernah dibuka, jadi tidak pernah ketahuan basi
+
+`app/opengraph-image.tsx` adalah layar pertama yang dilihat calon klien, sering
+SEBELUM ia membuka situsnya. Ia juga satu-satunya berkas yang tidak pernah
+dibuka siapa pun yang sedang mengerjakan aplikasinya, jadi ia tertinggal tiga
+kali sekaligus tanpa satu pun muncul sebagai galat: warnanya masih hijau gelap
+`#1e3a2c` dari palet yang sudah dibuang, judulnya masih "Apotek Anda" padahal
+klinik justru paket termahal, dan lambangnya ikon labu takar dari pustaka ikon,
+bukan lambang Sehatera yang dipakai di seluruh aplikasi.
+
+**Warnanya ditulis harfiah, bukan lewat token.** `next/og` merender di server
+tanpa CSS aplikasi sama sekali, jadi `var(--brand)` jadi warna kosong dan
+gambarnya terbit hitam polos. Kalau palet Vital Tide diubah, berkas itu ikut
+diubah tangan.
+
+Dua batas Satori (perender di balik `next/og`) yang keduanya ditemukan dengan
+merender, bukan dengan membaca:
+
+- **Div dengan lebih dari satu anak WAJIB menyebut `display`.** Judul yang
+  dipisah `<br />` menggagalkan build, bukan menghasilkan gambar yang jelek.
+- **`position: absolute` tidak dihormati, dan `filter: blur` tidak ada.** Bidang
+  cahaya di atas latar terbit dengan tepi bawah berupa garis mendatar melintasi
+  seluruh gambar, terlihat seperti PNG rusak. Kedalamannya sekarang datang dari
+  gradien latarnya sendiri, tanpa lapisan kedua yang bisa membocorkan tepinya.
 
 ## PWA: terpasang seperti aplikasi, tapi TIDAK menyimpan data pasien
 

@@ -53,16 +53,96 @@ export const tanggalPanjang = (v: unknown, kosong = '-'): string => {
 
 export const rupiah = (n: unknown): string => 'Rp ' + Number(n || 0).toLocaleString('id-ID')
 
-/** Membuka jendela cetak. Mengembalikan false kalau diblokir peramban. */
+/**
+ * Bilah yang HANYA ada di layar, tidak pernah ikut tercetak.
+ *
+ * Ini jawaban atas satu keluhan yang bunyinya "cetak di HP kadang nyangkut,
+ * tidak bisa kembali". Penyebabnya bukan kadang-kadang, melainkan selalu:
+ * `window.open` dengan ukuran jendela DIABAIKAN peramban ponsel, jadi yang
+ * terbuka adalah TAB BARU, bukan jendela kecil di atas aplikasi. Tab itu lahir
+ * dari `about:blank` dan isinya ditulis belakangan, jadi riwayatnya kosong, dan
+ * tombol Back tidak punya tempat untuk kembali. Satu-satunya jalan keluar
+ * adalah pemilih tab, yang tidak terpikirkan orang yang sedang buru-buru.
+ *
+ * Jadi dokumennya membawa jalan keluarnya sendiri. Tombol Tutup memanggil
+ * `window.close()`, yang memang diizinkan untuk tab yang dibuka skrip.
+ *
+ * Bilahnya TIDAK memakai margin negatif untuk menembus padding body: tiap
+ * templat di berkas ini punya padding sendiri (40px untuk dokumen A4, 16px
+ * untuk struk, 0 untuk lembar etiket), jadi satu angka negatif yang benar di
+ * satu templat akan merusak tata letak di templat lain.
+ *
+ * Penjelasannya ditulis di sini, bukan sebagai komentar CSS di dalam string di
+ * bawah: apa pun yang ada di dalam string itu ikut terkirim ke dokumen yang
+ * dibuka orang, dan komentar yang menumpang di struk pembeli bukan komentar.
+ */
+const BILAH_CETAK = `
+<style>
+  .sw-bilah{position:sticky;top:0;z-index:99;display:flex;gap:8px;align-items:center;
+    flex-wrap:wrap;padding:10px 12px;margin:0 0 16px;border-radius:10px;
+    background:#111;color:#fff;
+    font-family:system-ui,-apple-system,sans-serif;font-size:14px;}
+  .sw-bilah button{font:inherit;font-weight:600;border:0;border-radius:8px;
+    padding:10px 16px;cursor:pointer;min-height:44px;}
+  .sw-bilah .cetak{background:#fff;color:#111;}
+  .sw-bilah .tutup{background:rgba(255,255,255,.16);color:#fff;}
+  .sw-bilah .sisa{margin-left:auto;opacity:.6;font-size:12px;}
+  @media print { .sw-bilah{display:none !important;} }
+</style>
+<div class="sw-bilah">
+  <button class="cetak" onclick="window.print()">Cetak</button>
+  <button class="tutup" onclick="window.close()">Tutup</button>
+  <span class="sisa">Dokumen siap cetak</span>
+</div>`
+
+/**
+ * Membuka jendela cetak. Mengembalikan false kalau diblokir peramban.
+ *
+ * Dua hal disuntikkan ke SETIAP dokumen di sini, bukan ditulis ulang di
+ * sepuluh templat: penanda viewport, dan bilah tombol di atas. Templat yang
+ * masing-masing mengurusnya sendiri berarti templat berikutnya yang ditulis
+ * akan lupa, dan yang lupa cuma ketahuan di tangan orang.
+ *
+ * **Tanpa penanda viewport, peramban ponsel menganggap halaman selebar 980px**
+ * lalu mengecilkannya supaya muat: dokumen A4 jadi seukuran perangko dan
+ * tulisannya tidak terbaca sama sekali. Ini tidak pernah terlihat di desktop.
+ */
 export function bukaCetak(html: string, lebar = 800, tinggi = 900): boolean {
   const win = window.open('', '_blank', `width=${lebar},height=${tinggi}`)
   if (!win) return false
-  win.document.write(html)
+
+  const sentuh = typeof window.matchMedia === 'function'
+    && window.matchMedia('(pointer: coarse)').matches
+
+  const siap = html
+    .replace('<head>', '<head><meta name="viewport" content="width=device-width,initial-scale=1">')
+    .replace('<body>', '<body>' + BILAH_CETAK)
+
+  win.document.write(siap)
   win.document.close()
-  win.print()
+
+  /**
+   * Di layar sentuh dokumennya DITAMPILKAN dulu, tidak langsung mencetak.
+   *
+   * Dialog cetak yang muncul seketika menutupi dokumen yang belum sempat
+   * dilihat orangnya, dan begitu ia menutup dialog itu ia tertinggal di tab
+   * yang tampak kosong dan terasa seperti aplikasi yang hang. Di tetikus
+   * sebaliknya: apoteker menekan Cetak karena memang mau mencetak, dan dialog
+   * yang menunggu satu klik lagi cuma menambah langkah.
+   */
+  if (!sentuh) win.print()
   return true
 }
 
+/**
+ * Gaya bersama seluruh dokumen A4 di berkas ini.
+ *
+ * Blok `@media screen` di bawahnya HANYA berlaku saat dokumennya dibaca di
+ * layar, tidak pernah saat dicetak, jadi kertasnya tidak berubah sedikit pun.
+ * Ia ada karena dokumen ini sekarang benar-benar dibuka di ponsel: padding 40mm
+ * dan blok tanda tangan selebar 180px membuat halamannya 580px di layar 414px,
+ * jadi orang menggulung menyamping untuk membaca satu berita acara.
+ */
 const GAYA_DOKUMEN = `
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:Arial,sans-serif;font-size:12px;padding:40px;color:#000;background:#fff;}
@@ -76,6 +156,16 @@ td{padding:6px 8px;vertical-align:top;}
 .ttd{margin-top:48px;display:flex;justify-content:space-around;}
 .ttd-box{text-align:center;}
 .ttd-line{border-top:1px solid #000;width:180px;margin:48px auto 4px;}
+
+@media screen and (max-width:520px){
+  body{padding:16px;font-size:14px;}
+  h1{font-size:18px;}
+  h2{font-size:15px;}
+  td{padding:6px 4px;}
+  .label{width:42%;}
+  .ttd{flex-wrap:wrap;gap:24px;justify-content:flex-start;}
+  .ttd-line{width:150px;margin-top:40px;}
+}
 `
 
 const kepalaApotek = (p: ProfilApotek) => `
@@ -443,12 +533,30 @@ export type DataStruk = {
  * nama apotek serta nama obat dulu ditempel mentah ke HTML, dan waktunya
  * diambil dari `new Date()` alih-alih waktu transaksinya, jadi struk yang
  * dicetak ulang menunjukkan jam cetak, bukan jam penjualan.
+ *
+ * ## Keterbacaan, dan kenapa ia diperbaiki belakangan
+ *
+ * **Ukurannya dinaikkan.** Versi pertama memakai 10px untuk keterangan dan
+ * 11px untuk nama obat. Di layar itu cuma terasa kecil; di atas kertas termal
+ * selebar 58mm yang dibaca sambil berdiri, itu praktis tidak terbaca. Nama
+ * obat sekarang tidak pernah lebih kecil daripada angkanya, karena yang paling
+ * perlu dibaca ulang di rumah justru NAMA OBATNYA, bukan harganya.
+ *
+ * **Tidak ada lagi abu-abu.** Warna abu terbaca lembut di layar, tapi printer
+ * termal tidak punya abu-abu sama sekali: ia menyalakan titik atau tidak, jadi
+ * abu diterjemahkan jadi titik berjarak yang keluar sebagai tulisan pudar dan
+ * garis putus-putus yang tampak seperti kepala cetak kotor. Semuanya hitam
+ * pekat sekarang; yang membedakan tingkatannya UKURAN dan TEBAL huruf.
+ *
+ * **Penjelasan seperti ini tidak boleh ditulis di dalam blok `<style>`-nya.**
+ * Isi templat di berkas ini ikut terkirim ke dokumen yang dibuka orang, jadi
+ * komentar CSS di sana adalah paragraf yang menumpang di struk pembeli.
  */
 export function strukPenjualan(p: ProfilApotek, d: DataStruk, items: BarisStruk[]): string {
   const waktu = d.created_at ? new Date(d.created_at) : new Date()
   const baris = items.map(i => `
-    <div style="margin:4px 0;">
-      <div class="bold" style="font-size:11px;">${teks(i.nama_obat, '')}</div>
+    <div style="margin:6px 0;">
+      <div class="bold nama">${teks(i.nama_obat, '')}</div>
       <div class="row small">
         <span>${i.jumlah ?? 0} x ${rupiah(i.harga_jual)}</span>
         <span>${rupiah(i.subtotal)}</span>
@@ -457,15 +565,26 @@ export function strukPenjualan(p: ProfilApotek, d: DataStruk, items: BarisStruk[
 
   return `<!doctype html><html lang="id"><head><meta charset="utf-8">
 <title>Struk ${teks(d.nomor_transaksi, '')}</title><style>
-@page { margin: 4mm; }
+@page { size: 58mm auto; margin: 3mm; }
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Courier New',monospace;font-size:12px;padding:16px;width:300px;color:#000;background:#fff;}
-h2{font-size:13px;text-align:center;font-weight:bold;margin-bottom:2px;}
-p{text-align:center;font-size:10px;color:#555;margin:1px 0;}
-.divider{border-top:1px dashed #999;margin:8px 0;}
-.row{display:flex;justify-content:space-between;margin:2px 0;gap:8px;}
+body{font-family:'Courier New',monospace;font-size:12.5px;line-height:1.45;
+  padding:16px;width:300px;max-width:100%;color:#000;background:#fff;}
+h2{font-size:16px;text-align:center;font-weight:bold;margin-bottom:3px;}
+p{text-align:center;font-size:11.5px;color:#000;margin:1px 0;}
+.divider{border-top:1px dashed #000;margin:9px 0;}
+.row{display:flex;justify-content:space-between;margin:3px 0;gap:8px;}
 .bold{font-weight:bold;}
-.small{font-size:10px;color:#555;}
+.nama{font-size:13px;line-height:1.3;}
+.small{font-size:11.5px;color:#000;}
+.total{font-size:15px;font-weight:bold;}
+
+@media screen and (max-width:420px){
+  body{width:100%;font-size:14px;}
+  h2{font-size:18px;}
+  .nama{font-size:15px;}
+  .small,p{font-size:13px;}
+  .total{font-size:17px;}
+}
 </style></head><body>
 <h2>${teks(p.nama_faskes ?? p.nama_apotek)}</h2>
 <p>${teks(p.alamat, '')}</p>
@@ -479,7 +598,7 @@ ${d.nama_pasien ? `<div class="row small"><span>Pasien</span><span>${teks(d.nama
 <div class="divider"></div>
 ${baris}
 <div class="divider"></div>
-<div class="row bold"><span>TOTAL</span><span>${rupiah(d.total)}</span></div>
+<div class="row total"><span>TOTAL</span><span>${rupiah(d.total)}</span></div>
 <div class="row small"><span>Bayar (${teks(d.metode_bayar, 'Tunai')})</span><span>${rupiah(d.bayar)}</span></div>
 <div class="row small"><span>Kembalian</span><span>${rupiah(d.kembalian)}</span></div>
 <div class="divider"></div>
@@ -553,6 +672,10 @@ const luar = (rute?: string | null): boolean => {
  *
  * Ukurannya 70 x 40 mm, dua kolom per baris. Itu ukuran etiket yang umum
  * dijual di Indonesia, jadi kertas stiker yang sudah dipotong tetap terpakai.
+ *
+ * **Warna etiket dicetak sebagai PITA di tepi, bukan sebagai latar penuh.**
+ * Latar penuh menghabiskan tinta dan membuat tulisan hitam di atas biru lebih
+ * sulit dibaca, padahal yang justru harus terbaca adalah aturan pakainya.
  */
 export function etiketObat(p: ProfilApotek, d: DataEtiket, items: BarisEtiket[]): string {
   const namaFaskes = teks(p.nama_faskes || p.nama_apotek, 'Apotek')
@@ -602,9 +725,7 @@ export function etiketObat(p: ProfilApotek, d: DataEtiket, items: BarisEtiket[])
     display: flex; flex-direction: column; overflow: hidden;
     page-break-inside: avoid;
   }
-  /* Warna etiket dicetak sebagai PITA di tepi, bukan sebagai latar penuh.
-     Latar penuh menghabiskan tinta dan membuat tulisan hitam di atas biru
-     lebih sulit dibaca, padahal yang harus terbaca justru aturan pakainya. */
+  
   .etiket.dalam { border-left: 4mm solid #d9d9d9; }
   .etiket.luar  { border-left: 4mm solid #1e4d8c; }
   .kop { display: flex; justify-content: space-between; font-size: 7pt; line-height: 1.1; }
