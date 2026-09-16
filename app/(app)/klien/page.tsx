@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TH_R, TR } from '@/lib/ui'
@@ -281,11 +282,19 @@ export default function HalamanKlien() {
       </>)}
 
       {edit && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <h2 className="text-lg font-bold text-[var(--brand)] mb-1">{t('Paket & Masa Aktif', 'Plan & Validity')}</h2>
-            <p className="text-xs text-[var(--ink-soft)] mb-4">{edit.nama}</p>
-
+        <Dialog
+          lebar="sm"
+          onTutup={() => setEdit(null)}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Paket & Masa Aktif', 'Plan & Validity')}
+          sub={edit.nama}
+          aksi={<>
+            <button onClick={() => setEdit(null)} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+            <button onClick={() => simpan(false)} disabled={simpanan} className={TOMBOL_UTAMA}>
+              {simpanan ? t('Menyimpan…', 'Saving…') : t('Simpan & Aktifkan', 'Save & Activate')}
+            </button>
+          </>}
+        >
             <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Paket', 'Plan')}</label>
             <select value={paket} onChange={e => setPaket(e.target.value)} className={inputCls + ' mb-3'}>
               <option value="">{t('(tidak diubah)', '(unchanged)')}</option>
@@ -319,18 +328,7 @@ export default function HalamanKlien() {
                  'Saving also moves this facility from trial to paid, and the change is written to the subscription history.')}
             </p>
 
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => setEdit(null)}
-                className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-                {t('Batal', 'Cancel')}
-              </button>
-              <button onClick={() => simpan(false)} disabled={simpanan}
-                className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                {simpanan ? t('Menyimpan…', 'Saving…') : t('Simpan & Aktifkan', 'Save & Activate')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Dialog>
       )}
     </div>
   )

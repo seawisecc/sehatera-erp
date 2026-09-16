@@ -5,6 +5,7 @@ import { CalendarClock, Check, Phone, Search, UserPlus, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { boleh } from '@/lib/hak'
@@ -422,14 +423,20 @@ export default function HalamanReservasi() {
 
       {/* ── Buat reservasi ── */}
       {buka && (
-        <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 pt-[8vh]" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[85vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-[var(--brand)] mb-1">{t('Buat Reservasi', 'New Appointment')}</h2>
-            <p className="text-xs text-[var(--ink-soft)] mb-4">
-              {t('Untuk ' + tanggal(tgl) + '. Pasien yang belum pernah datang cukup diisi nama dan teleponnya.',
+        <Dialog
+          lebar="md"
+          onTutup={() => setBuka(false)}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Buat Reservasi', 'New Appointment')}
+          sub={t('Untuk ' + tanggal(tgl) + '. Pasien yang belum pernah datang cukup diisi nama dan teleponnya.',
                  'For ' + tanggal(tgl) + '. Someone who has never been here only needs a name and phone number.')}
-            </p>
-
+          aksi={<>
+            <button onClick={() => setBuka(false)} className={TOMBOL_KEDUA}>{t('Tutup', 'Close')}</button>
+            <button onClick={simpan} disabled={sibuk || !form.nama.trim() || !form.jadwal} className={TOMBOL_UTAMA}>
+              {t('Simpan Reservasi', 'Save Appointment')}
+            </button>
+          </>}
+        >
             <div className="space-y-3">
               <div>
                 <label className="text-[11px] font-medium text-[var(--ink-soft)] mb-1 block uppercase tracking-wide">
@@ -535,33 +542,27 @@ export default function HalamanReservasi() {
               )}
             </div>
 
-            <div className="flex gap-2 mt-5">
-              <button onClick={simpan} disabled={sibuk || !form.nama.trim() || !form.jadwal}
-                className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2.5 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-40">
-                {t('Simpan Reservasi', 'Save Appointment')}
-              </button>
-              <button onClick={() => setBuka(false)}
-                className="px-4 py-2.5 rounded-xl text-sm border border-[var(--line)] text-[var(--ink-soft)] hover:bg-[var(--surface-2)]">
-                {t('Tutup', 'Close')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Dialog>
       )}
 
       {/* ── Cocokkan pasien saat orangnya tiba ── */}
       {cocokkan && (
-        <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 pt-[12vh]" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-lg font-bold text-[var(--brand)] mb-1">{t('Siapa yang datang?', 'Who arrived?')}</h2>
-            <p className="text-xs text-[var(--ink-soft)] mb-4 leading-relaxed">
-              {t(`"${cocokkan.nama}" memesan tanpa nomor RM. Cocokkan ke pasien yang sudah ada, atau daftarkan dulu sebagai pasien baru di menu Pasien.`,
+        <Dialog
+          lebar="sm"
+          onTutup={() => { setCocokkan(null); setCariCocok('') }}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Siapa yang datang?', 'Who arrived?')}
+          sub={t(`"${cocokkan.nama}" memesan tanpa nomor RM. Cocokkan ke pasien yang sudah ada, atau daftarkan dulu sebagai pasien baru di menu Pasien.`,
                  `"${cocokkan.nama}" booked without a record number. Match them to an existing patient, or register them first in the Patients screen.`)}
-            </p>
-
+          aksi={
+            <button onClick={() => { setCocokkan(null); setCariCocok('') }} className={TOMBOL_KEDUA}>
+              <X size={14} /> {t('Tutup', 'Close')}
+            </button>
+          }
+        >
             <div className="relative mb-2">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]" />
-              <input value={cariCocok} onChange={e => setCariCocok(e.target.value)} autoFocus
+              <input value={cariCocok} onChange={e => setCariCocok(e.target.value)}
                 placeholder={t('Nama, no. RM, atau telepon', 'Name, record no., or phone')}
                 className={inputCls + ' pl-9'} />
             </div>
@@ -582,13 +583,7 @@ export default function HalamanReservasi() {
               className="mt-3 inline-flex items-center gap-1.5 text-sm text-[var(--brand)] hover:underline underline-offset-4">
               <UserPlus size={14} /> {t('Daftarkan sebagai pasien baru', 'Register as a new patient')}
             </a>
-
-            <button onClick={() => { setCocokkan(null); setCariCocok('') }}
-              className="mt-4 w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm border border-[var(--line)] text-[var(--ink-soft)] hover:bg-[var(--surface-2)]">
-              <X size={14} /> {t('Tutup', 'Close')}
-            </button>
-          </div>
-        </div>
+        </Dialog>
       )}
     </div>
   )

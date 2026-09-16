@@ -5,6 +5,7 @@ import { Check, FlaskRound, Plus, RefreshCw, Trash2, Zap } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { boleh } from '@/lib/hak'
@@ -272,25 +273,32 @@ export default function HalamanPenunjang() {
       )}
 
       {kerja && (
-        <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 pt-[6vh]" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl w-full max-w-3xl shadow-xl max-h-[88vh] overflow-y-auto">
-            <div className="sticky top-0 bg-[var(--surface)] px-6 pt-6 pb-3 border-b border-[var(--line-soft)] z-10">
-              <h2 className="text-lg font-bold text-[var(--brand)]">{kerja.nama}</h2>
-              <p className="text-xs text-[var(--ink-soft)]">
-                {kerja.pasien_nama}
-                {kerja.nomor_rm ? ` · ${kerja.nomor_rm}` : ''}
-                {kerja.catatan_klinis ? ` · ${kerja.catatan_klinis}` : ''}
-              </p>
-            </div>
-
-            <div className="px-6 py-4 space-y-3">
+        <Dialog
+          lebar="xl"
+          onTutup={() => setKerja(null)}
+          labelTutup={t('Tutup', 'Close')}
+          judul={kerja.nama}
+          sub={`${kerja.pasien_nama}${kerja.nomor_rm ? ` · ${kerja.nomor_rm}` : ''}${kerja.catatan_klinis ? ` · ${kerja.catatan_klinis}` : ''}`}
+          aksi={<>
+            <button onClick={() => setKerja(null)} className={TOMBOL_KEDUA}>{t('Tutup', 'Close')}</button>
+            {/* Simpan tanpa menyelesaikan: pemeriksaan yang parameternya
+                keluar bertahap tidak perlu ditahan sampai semuanya lengkap. */}
+            <button onClick={() => simpan(false)} disabled={sibuk} className={TOMBOL_KEDUA}>
+              {t('Simpan sementara', 'Save draft')}
+            </button>
+            <button onClick={() => simpan(true)} disabled={sibuk} className={TOMBOL_UTAMA}>
+              <Check size={15} /> {sibuk ? t('Menyimpan…', 'Saving…') : t('Selesai', 'Complete')}
+            </button>
+          </>}
+        >
+            <div className="space-y-3">
               {kerja.jenis === 'lab' ? (
                 <>
                   <p className="text-[11px] text-[var(--ink-faint)] leading-relaxed">
                     {t('Tiap parameter satu baris, dengan satuan dan rentang rujukannya. Bukan satu kotak catatan: hasil yang ditulis bebas tidak bisa dibandingkan dengan hasil bulan lalu maupun dikirim ke SatuSehat.',
                        'One row per parameter, with unit and reference range. Not one free-text box: results written as prose cannot be compared with last month nor sent to SatuSehat.')}
                   </p>
-                  <div className="overflow-x-auto">
+                  <div className="sw-geser-x">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="text-[var(--ink-faint)] text-[10px] uppercase tracking-wide">
@@ -371,24 +379,7 @@ export default function HalamanPenunjang() {
               )}
             </div>
 
-            <div className="sticky bottom-0 bg-[var(--surface)] px-6 py-4 border-t border-[var(--line-soft)] flex flex-wrap gap-2">
-              <button onClick={() => setKerja(null)}
-                className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-                {t('Tutup', 'Close')}
-              </button>
-              {/* Simpan tanpa menyelesaikan: pemeriksaan yang parameternya
-                  keluar bertahap tidak perlu ditahan sampai semuanya lengkap. */}
-              <button onClick={() => simpan(false)} disabled={sibuk}
-                className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm hover:bg-[var(--surface-2)] disabled:opacity-50">
-                {t('Simpan sementara', 'Save draft')}
-              </button>
-              <button onClick={() => simpan(true)} disabled={sibuk}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                <Check size={15} /> {sibuk ? t('Menyimpan…', 'Saving…') : t('Selesai', 'Complete')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Dialog>
       )}
     </div>
   )

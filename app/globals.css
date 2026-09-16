@@ -586,3 +586,125 @@ select {
     width: 100%;
   }
 }
+
+/* ============================================================
+   Layar sentuh: aturan yang tidak bisa ditulis per komponen
+   ============================================================
+
+   Semua di bawah ini disaring `pointer: coarse`, jadi tidak satu pun menyentuh
+   tampilan tetikus. Alasannya sederhana: yang salah di layar sentuh bukan
+   warnanya melainkan UKURAN dan JANGKAUAN, dan keduanya tidak terlihat sama
+   sekali di peramban desktop yang jendelanya dipersempit. Menyempitkan jendela
+   Chrome memberi lebar telepon dengan ketepatan tetikus, dan itulah kenapa
+   bug-bug di bawah bertahan lama.
+   ============================================================ */
+
+/* ── Kotak isian tidak boleh di bawah 16px di iPhone ──
+   Safari iOS MEMBESARKAN halaman begitu kotak isian yang hurufnya di bawah
+   16px mendapat fokus, dan ia TIDAK mengembalikannya sesudah selesai. Yang
+   terjadi bukan galat: halaman cuma tertinggal dalam keadaan membesar, tombol
+   simpan terdorong ke luar layar, dan orangnya harus mencubit layar untuk
+   kembali. Seluruh isian di aplikasi ini memakai `text-sm` (14px), jadi
+   semuanya kena.
+
+   Batas 820px menjaga iPad Pro yang memakai papan ketik luar tetap memakai
+   ukuran rancangannya; yang dituju cuma telepon dan tablet kecil. */
+@media (pointer: coarse) and (max-width: 820px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* ── Sasaran sentuh ──
+   Jari menutupi sekitar 9mm layar, dan tombol 24px yang nyaman diarahkan
+   tetikus jadi tebakan di tangan. Yang diperbesar BUKAN gambarnya melainkan
+   daerah yang menanggapi sentuhan: gambarnya tetap seukuran rancangan, jadi
+   baris tabel tidak melar dan tidak ada satu pun tata letak yang bergeser.
+
+   Dipasang sengaja, bukan ke semua tombol: `button { min-height }` menyeluruh
+   akan menumbuhkan tombol teks sebaris di tengah kalimat. */
+.sw-tap { position: relative; }
+@media (pointer: coarse) {
+  .sw-tap::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%; height: 100%;
+    min-width: 44px; min-height: 44px;
+  }
+}
+
+/* Kilat abu-abu bawaan Android saat disentuh tidak tahu bentuk tombolnya, jadi
+   ia menggambar kotak di atas tombol yang sudutnya membulat. Digantikan
+   keadaan tekan milik aplikasi sendiri. */
+@media (pointer: coarse) {
+  a, button, [role="button"], label, summary {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:active:not(:disabled), [role="button"]:active {
+    transform: scale(0.98);
+    transition: transform var(--t-instant) var(--ease);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled), [role="button"]:active { transform: none; }
+}
+
+/* ── Gulungan ──
+   `overscroll-behavior: contain` menahan gulungan yang sudah mentok di dalam
+   daftar supaya tidak berlanjut menggulung halaman di belakangnya. Tanpa itu,
+   menggulung daftar obat di dalam dialog menggeser halaman di belakang dialog,
+   dan saat dialognya ditutup orang mendapati dirinya di tempat lain. */
+.sw-gulung {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tabel yang lebih lebar dari layar. Bayangan di tepi kanan muncul HANYA
+   selama masih ada yang belum terlihat, dan hilang sendiri begitu digulung
+   sampai ujung: tiga lapis latar yang menempel pada isi tabel (`local`)
+   menutupi dua lapis yang menempel pada bingkainya (`scroll`).
+
+   Ini menjawab pertanyaan yang tidak pernah terjawab di tabel yang digulung
+   mendatar: apakah masih ada kolom di sebelah kanan. Tanpa isyarat itu orang
+   membaca empat kolom pertama lalu menyimpulkan itulah seluruh isinya. */
+.sw-geser-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  background:
+    linear-gradient(to right, var(--surface) 30%, transparent) left center / 24px 100% no-repeat local,
+    linear-gradient(to left,  var(--surface) 30%, transparent) right center / 24px 100% no-repeat local,
+    radial-gradient(farthest-side at 0   50%, color-mix(in oklab, var(--ink) 16%, transparent), transparent) left center / 12px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, color-mix(in oklab, var(--ink) 16%, transparent), transparent) right center / 12px 100% no-repeat scroll;
+}
+
+/* ── Tinggi layar yang benar di telepon ──
+   `100vh` di Safari iOS berarti tinggi layar TANPA bilah alamat, jadi elemen
+   setinggi 90vh sebenarnya menjulur ke bawah layar selama bilah alamatnya
+   masih terlihat, dan yang tersembunyi di ujung bawah dialog selalu tombol
+   simpannya. `dvh` mengikuti tinggi yang benar-benar terlihat saat itu. */
+.sw-tinggi-layar { height: 100dvh; }
+.sw-maks-layar { max-height: 100dvh; }
+
+/* Ruang aman iPhone, dipakai lembar yang menempel di tepi bawah. */
+.sw-aman-bawah { padding-bottom: env(safe-area-inset-bottom); }
+
+/**
+ * Tinggi navigasi bawah, dibaca oleh apa pun yang menempel di tepi bawah layar.
+ *
+ * Navigasi bawah hanya ada di bawah 768px (`md:hidden` di AppShell), jadi
+ * nilainya nol di atas itu. Ditulis sebagai token supaya kabar, lembar, dan
+ * bilah tindakan yang ditambahkan nanti tidak masing-masing menebak angkanya:
+ * yang menebak akan tetap memakai angka lama pada hari navigasinya berubah
+ * tinggi, dan yang terjadi bukan galat melainkan tombol yang tertutup.
+ */
+:root { --nav-bawah: 0px; }
+@media (max-width: 767px) {
+  :root { --nav-bawah: 62px; }
+}
+.sw-atas-nav { bottom: calc(1rem + var(--nav-bawah) + env(safe-area-inset-bottom)); }

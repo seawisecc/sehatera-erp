@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, Check, FlaskRound, Plus, Trash2, X, Zap } from 'lucide-react'
-import Portal from '@/components/Portal'
+import { AlertTriangle, Check, FlaskRound, Plus, Trash2, Zap } from 'lucide-react'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -135,32 +135,22 @@ export default function Penunjang({
   const svc = layanan.find(x => x.id === form.service)
 
   return (
-    <Portal>
-    <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 pt-[6vh]" role="dialog" aria-modal="true">
-      <div className="bg-[var(--surface)] rounded-2xl w-full max-w-2xl shadow-xl max-h-[88vh] overflow-y-auto">
-        <div className="sticky top-0 bg-[var(--surface)] px-6 pt-6 pb-4 border-b border-[var(--line-soft)] flex items-start justify-between gap-3 z-10">
-          <div>
-            <h2 className="text-lg font-bold text-[var(--brand)] flex items-center gap-2">
-              <FlaskRound size={18} /> {t('Pemeriksaan Penunjang', 'Diagnostic Tests')}
-            </h2>
-            <p className="text-xs text-[var(--ink-soft)] mt-0.5">
-              {t('Laboratorium dan radiologi untuk kunjungan ini.', 'Lab and imaging for this visit.')}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {bolehMinta && (
-              <button onClick={() => setBuka(true)}
-                className="inline-flex items-center gap-1.5 bg-[var(--brand)] text-[var(--on-brand)] px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-[var(--brand-hover)] transition">
-                <Plus size={14} /> {t('Minta pemeriksaan', 'Order a test')}
-              </button>
-            )}
-            <button onClick={onTutup} className="text-[var(--ink-faint)] hover:text-[var(--ink)]" aria-label={t('Tutup', 'Close')}>
-              <X size={18} />
-            </button>
-          </div>
-        </div>
-
-        <div className="px-6 py-5 space-y-3">
+    <Dialog
+      lebar="lg"
+      onTutup={onTutup}
+      labelTutup={t('Tutup', 'Close')}
+      judul={<span className="inline-flex items-center gap-2"><FlaskRound size={17} /> {t('Pemeriksaan Penunjang', 'Diagnostic Tests')}</span>}
+      sub={t('Laboratorium dan radiologi untuk kunjungan ini.', 'Lab and imaging for this visit.')}
+      aksi={<>
+        <button onClick={onTutup} className={TOMBOL_KEDUA}>{t('Tutup', 'Close')}</button>
+        {bolehMinta && !buka && (
+          <button onClick={() => setBuka(true)} className={TOMBOL_UTAMA}>
+            <Plus size={15} /> {t('Minta pemeriksaan', 'Order a test')}
+          </button>
+        )}
+      </>}
+    >
+        <div className="space-y-3">
           {memuat ? (
             <p className="text-sm text-[var(--ink-faint)] py-6 text-center">{t('Memuat…', 'Loading…')}</p>
           ) : daftar.length === 0 ? (
@@ -287,7 +277,7 @@ export default function Penunjang({
         </div>
 
         {buka && (
-          <div className="px-6 pb-6">
+          <div className="mt-4">
             <div className="rounded-xl border border-[var(--brand)] p-4 space-y-3">
               <p className="text-sm font-semibold text-[var(--brand)]">{t('Minta pemeriksaan', 'Order a test')}</p>
 
@@ -363,8 +353,6 @@ export default function Penunjang({
             </div>
           </div>
         )}
-      </div>
-    </div>
-    </Portal>
+    </Dialog>
   )
 }

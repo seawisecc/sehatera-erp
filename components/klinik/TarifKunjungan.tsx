@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Check, Plus, Search, Trash2, X } from 'lucide-react'
+import { Check, Plus, Search, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { rupiah } from '@/lib/format'
@@ -127,20 +128,24 @@ export default function TarifKunjungan({
   const L = 'block text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-faint)] mb-0.5'
 
   return (
-    <div className="fixed inset-0 bg-black/45 flex items-start justify-center z-50 p-4 overflow-y-auto" role="dialog" aria-modal="true">
-      <div className="bg-[var(--surface-2)] rounded-2xl w-full max-w-2xl my-4 shadow-xl">
-
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 px-6 py-4 bg-[var(--surface)] rounded-t-2xl border-b border-[var(--line)]">
-          <div className="min-w-0">
-            <h2 className="text-lg font-bold text-[var(--ink)]">{t('Tarif & Tindakan', 'Charges & Procedures')}</h2>
-            <p className="text-xs text-[var(--ink-soft)] truncate">{nama}</p>
-          </div>
-          <button onClick={onTutup} className="shrink-0 text-[var(--ink-faint)] hover:text-[var(--ink)]" aria-label={t('Tutup', 'Close')}>
-            <X size={20} />
+    <Dialog
+      lebar="lg"
+      onTutup={onTutup}
+      labelTutup={t('Tutup', 'Close')}
+      judul={t('Tarif & Tindakan', 'Charges & Procedures')}
+      sub={nama}
+      aksi={memuat ? undefined : <>
+        <button onClick={onTutup} className={TOMBOL_KEDUA}>
+          {tertutup ? t('Tutup', 'Close') : t('Batal', 'Cancel')}
+        </button>
+        {!tertutup && (
+          <button onClick={simpan} disabled={sibuk} className={TOMBOL_UTAMA}>
+            <Check size={16} /> {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan Tarif', 'Save Charges')}
           </button>
-        </div>
-
-        <div className="p-6 space-y-4">
+        )}
+      </>}
+    >
+        <div className="space-y-4">
           {memuat ? (
             <p className="py-10 text-center text-sm text-[var(--ink-faint)]">{t('Memuat…', 'Loading…')}</p>
           ) : (
@@ -237,21 +242,6 @@ export default function TarifKunjungan({
           )}
         </div>
 
-        {!memuat && (
-          <div className="sticky bottom-0 flex gap-3 px-6 py-4 bg-[var(--surface)] rounded-b-2xl border-t border-[var(--line)]">
-            <button onClick={onTutup}
-              className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2.5 rounded-lg text-sm">
-              {tertutup ? t('Tutup', 'Close') : t('Batal', 'Cancel')}
-            </button>
-            {!tertutup && (
-              <button onClick={simpan} disabled={sibuk}
-                className="flex-1 inline-flex items-center justify-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] py-2.5 rounded-lg text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                <Check size={16} /> {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan Tarif', 'Save Charges')}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+    </Dialog>
   )
 }

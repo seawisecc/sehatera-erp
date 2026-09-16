@@ -5,6 +5,7 @@ import { Printer } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import Dialog, { TOMBOL_KEDUA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD } from '@/lib/ui'
@@ -519,17 +520,21 @@ export default function HalamanLaporan() {
       )}
 
       {detail && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-[var(--brand)]">{t('Detail Transaksi', 'Transaction Details')}</h2>
-                <p className="text-xs text-[var(--ink-soft)] num">{detail.nomor_transaksi}</p>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${detail.status === 'dibatalkan' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
-                {detail.status === 'dibatalkan' ? t('dibatalkan', 'cancelled') : (detail.status || t('selesai', 'completed'))}
-              </span>
-            </div>
+        <Dialog
+          lebar="md"
+          onTutup={() => { setDetail(null); setDetailItems([]) }}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Detail Transaksi', 'Transaction Details')}
+          sub={<span className="num">{detail.nomor_transaksi}</span>}
+          aksi={
+            <button onClick={() => { setDetail(null); setDetailItems([]) }} className={TOMBOL_KEDUA}>
+              {t('Tutup', 'Close')}
+            </button>
+          }
+        >
+            <span className={`inline-block mb-4 px-3 py-1 rounded-full text-xs font-medium ${detail.status === 'dibatalkan' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+              {detail.status === 'dibatalkan' ? t('dibatalkan', 'cancelled') : (detail.status || t('selesai', 'completed'))}
+            </span>
 
             <div className="grid grid-cols-2 gap-3 mb-4 p-4 bg-[var(--surface-2)] rounded-xl text-sm">
               <div>
@@ -556,7 +561,8 @@ export default function HalamanLaporan() {
               </p>
             )}
 
-            <table className="w-full text-sm mb-4">
+            <div className="sw-geser-x rounded-lg mb-4">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[var(--brand)]">
                   <th className="text-left px-3 py-2 text-xs text-[var(--on-brand)]">{t('Produk', 'Product')}</th>
@@ -582,13 +588,8 @@ export default function HalamanLaporan() {
                 </tr>
               </tbody>
             </table>
-
-            <button onClick={() => { setDetail(null); setDetailItems([]) }}
-              className="w-full border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-              {t('Tutup', 'Close')}
-            </button>
-          </div>
-        </div>
+            </div>
+        </Dialog>
       )}
     </div>
   )

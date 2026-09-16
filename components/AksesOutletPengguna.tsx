@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Building2, Check, X } from 'lucide-react'
-import Portal from '@/components/Portal'
+import { Building2, Check } from 'lucide-react'
+import Dialog, { TOMBOL_KEDUA } from '@/components/Dialog'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/lib/i18n'
 import { pesanError } from '@/lib/session'
@@ -85,25 +85,22 @@ export default function AksesOutletPengguna({
   const I = 'border border-[var(--line)] rounded-lg px-2 py-1 text-xs bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]'
 
   return (
-    <Portal>
-      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-        <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[85vh] overflow-y-auto">
-          <div className="flex items-start justify-between gap-3 mb-1">
-            <h3 className="text-lg font-bold text-[var(--brand)] flex items-center gap-2">
-              <Building2 size={18} /> {t('Akses Outlet', 'Outlet Access')}
-            </h3>
-            <button onClick={onTutup} className="text-[var(--ink-faint)] hover:text-[var(--ink)]" aria-label={t('Tutup', 'Close')}>
-              <X size={18} />
-            </button>
-          </div>
-          <p className="text-xs text-[var(--ink-soft)] mb-4 leading-relaxed">
-            {nama || email}
-            {nama && <span className="text-[var(--ink-faint)]"> · {email}</span>}
-            <br />
-            {t('Perannya boleh berbeda di tiap outlet. Berpindah outlet dilakukan orangnya sendiri lewat pemilih di kanan atas.',
-               'The role may differ per outlet. Switching outlets is done by the person themselves with the picker at the top right.')}
-          </p>
-
+    <Dialog
+      lebar="md"
+      onTutup={onTutup}
+      labelTutup={t('Tutup', 'Close')}
+      judul={<span className="inline-flex items-center gap-2"><Building2 size={17} /> {t('Akses Outlet', 'Outlet Access')}</span>}
+      sub={<>
+        {nama || email}
+        {nama && <span className="text-[var(--ink-faint)]"> · {email}</span>}
+        <br />
+        {t('Perannya boleh berbeda di tiap outlet. Berpindah outlet dilakukan orangnya sendiri lewat pemilih di kanan atas.',
+           'The role may differ per outlet. Switching outlets is done by the person themselves with the picker at the top right.')}
+      </>}
+      aksi={
+        <button onClick={onTutup} className={TOMBOL_KEDUA}>{t('Tutup', 'Close')}</button>
+      }
+    >
           {memuat ? (
             <p className="text-sm text-[var(--ink-faint)] py-6 text-center">{t('Memuat…', 'Loading…')}</p>
           ) : daftar.length <= 1 ? (
@@ -146,12 +143,6 @@ export default function AksesOutletPengguna({
             </div>
           )}
 
-          <button onClick={onTutup}
-            className="mt-5 w-full border border-[var(--line)] text-[var(--ink-soft)] py-2.5 rounded-lg text-sm hover:bg-[var(--surface-2)] transition">
-            {t('Tutup', 'Close')}
-          </button>
-        </div>
-      </div>
-    </Portal>
+    </Dialog>
   )
 }

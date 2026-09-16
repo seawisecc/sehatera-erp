@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/lib/i18n'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { rupiah } from '@/lib/format'
@@ -113,11 +114,19 @@ export default function EditorPaket() {
       </p>
 
       {edit && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-[var(--brand)] mb-1">{t('Ubah Paket', 'Edit Plan')}</h2>
-            <p className="text-xs text-[var(--ink-soft)] mb-4 num">{edit.code}</p>
-
+        <Dialog
+          lebar="md"
+          onTutup={() => setEdit(null)}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Ubah Paket', 'Edit Plan')}
+          sub={<span className="num">{edit.code}</span>}
+          aksi={<>
+            <button onClick={() => setEdit(null)} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+            <button onClick={simpan} disabled={sibuk} className={TOMBOL_UTAMA}>
+              {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan Paket', 'Save Plan')}
+            </button>
+          </>}
+        >
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Nama', 'Name')}</label>
@@ -198,17 +207,7 @@ export default function EditorPaket() {
               </label>
             </div>
 
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => setEdit(null)} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-                {t('Batal', 'Cancel')}
-              </button>
-              <button onClick={simpan} disabled={sibuk}
-                className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan Paket', 'Save Plan')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Dialog>
       )}
     </div>
   )

@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Check, Plus, Trash2, X } from 'lucide-react'
-import Portal from '@/components/Portal'
+import { Check, Plus, Trash2 } from 'lucide-react'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/lib/i18n'
 import { pesanError } from '@/lib/session'
@@ -166,17 +166,18 @@ export default function TarifPenunjang({ bolehUbah }: { bolehUbah: boolean }) {
       )}
 
       {form && (
-        <Portal>
-          <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 pt-[5vh]" role="dialog" aria-modal="true">
-            <div className="bg-[var(--surface)] rounded-2xl w-full max-w-3xl shadow-xl max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-[var(--surface)] px-6 pt-6 pb-3 border-b border-[var(--line-soft)] flex items-start justify-between gap-3 z-10">
-                <h3 className="text-lg font-bold text-[var(--brand)]">
-                  {form.id ? t('Ubah Pemeriksaan', 'Edit Test') : t('Tambah Pemeriksaan', 'Add Test')}
-                </h3>
-                <button onClick={() => setForm(null)} className="text-[var(--ink-faint)] hover:text-[var(--ink)]">
-                  <X size={18} />
-                </button>
-              </div>
+        <Dialog
+          lebar="xl"
+          onTutup={() => setForm(null)}
+          labelTutup={t('Tutup', 'Close')}
+          judul={form.id ? t('Ubah Pemeriksaan', 'Edit Test') : t('Tambah Pemeriksaan', 'Add Test')}
+          aksi={<>
+            <button onClick={() => setForm(null)} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+            <button onClick={simpan} disabled={sibuk || !form.nama.trim()} className={TOMBOL_UTAMA}>
+              <Check size={15} /> {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
+            </button>
+          </>}
+        >
 
               <div className="px-6 py-4 space-y-4">
                 <div className="flex gap-2">
@@ -288,19 +289,7 @@ export default function TarifPenunjang({ bolehUbah }: { bolehUbah: boolean }) {
                 )}
               </div>
 
-              <div className="sticky bottom-0 bg-[var(--surface)] px-6 py-4 border-t border-[var(--line-soft)] flex gap-3">
-                <button onClick={() => setForm(null)}
-                  className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2.5 rounded-lg text-sm">
-                  {t('Batal', 'Cancel')}
-                </button>
-                <button onClick={simpan} disabled={sibuk || !form.nama.trim()}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 bg-[var(--brand)] text-[var(--on-brand)] py-2.5 rounded-lg text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                  <Check size={15} /> {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </Portal>
+        </Dialog>
       )}
     </div>
   )

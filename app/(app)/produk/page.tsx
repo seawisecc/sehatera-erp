@@ -12,6 +12,7 @@ import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD, KATEGORI_BADGE } from '
 import { rupiah, angka } from '@/lib/format'
 import PilihKfa from '@/components/klinik/PilihKfa'
 import DetailProduk from '@/components/produk/DetailProduk'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { bukaCetak, labelRak } from '@/lib/cetak'
 import TombolIkon from '@/components/TombolIkon'
 
@@ -354,14 +355,23 @@ export default function HalamanProduk() {
 
       {/* ── Tambah produk ── */}
       {formBuka && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-[var(--brand)] mb-4">{t('Tambah Produk Baru', 'Add New Product')}</h2>
+        <Dialog
+          lebar="md"
+          onTutup={() => setFormBuka(false)}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Tambah Produk Baru', 'Add New Product')}
+          aksi={<>
+            <button onClick={() => setFormBuka(false)} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+            <button onClick={simpanBaru} disabled={sibuk} className={TOMBOL_UTAMA}>
+              {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan Produk', 'Save Product')}
+            </button>
+          </>}
+        >
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Nama Obat *', 'Drug Name *')}</label>
-                  <input autoFocus value={form.nama_obat} onChange={e => setForm({ ...form, nama_obat: e.target.value })} className={inputCls} />
+                  <input value={form.nama_obat} onChange={e => setForm({ ...form, nama_obat: e.target.value })} className={inputCls} />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Nama Generik', 'Generic Name')}</label>
@@ -441,26 +451,25 @@ export default function HalamanProduk() {
                    'Opening stock is recorded as a product figure only, with no batch number or expiry date. For traceable medicines, record it through Purchasing so the batch is captured too.')}
               </p>
             </div>
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => setFormBuka(false)} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-                {t('Batal', 'Cancel')}
-              </button>
-              <button onClick={simpanBaru} disabled={sibuk}
-                className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan Produk', 'Save Product')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Dialog>
       )}
 
       {/* ── Edit produk ── */}
       {edit && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[55] p-4" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-[var(--brand)] mb-4">
-              {t('Edit Produk', 'Edit Product')} <span className="num text-sm text-[var(--ink-soft)]">{edit.kode}</span>
-            </h2>
+        <Dialog
+          lebar="md"
+          onTutup={() => { setEdit(null); setEditSuppliers([]); setCariSupplier('') }}
+          labelTutup={t('Tutup', 'Close')}
+          judul={<>{t('Edit Produk', 'Edit Product')} <span className="num text-sm font-normal text-[var(--ink-soft)]">{edit.kode}</span></>}
+          aksi={<>
+            <button onClick={() => { setEdit(null); setEditSuppliers([]); setCariSupplier('') }} className={TOMBOL_KEDUA}>
+              {t('Batal', 'Cancel')}
+            </button>
+            <button onClick={simpanEdit} disabled={sibuk} className={TOMBOL_UTAMA}>
+              {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan Perubahan', 'Save Changes')}
+            </button>
+          </>}
+        >
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -574,18 +583,7 @@ export default function HalamanProduk() {
               </div>
             </div>
 
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => { setEdit(null); setEditSuppliers([]); setCariSupplier('') }}
-                className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-                {t('Batal', 'Cancel')}
-              </button>
-              <button onClick={simpanEdit} disabled={sibuk}
-                className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan Perubahan', 'Save Changes')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Dialog>
       )}
 
       {detail && (

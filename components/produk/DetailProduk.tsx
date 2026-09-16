@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Truck } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/lib/i18n'
+import Dialog from '@/components/Dialog'
 import { TR } from '@/lib/ui'
 import { rupiah, angka, desimal, tanggal } from '@/lib/format'
 import TindakLanjutBatch, { type BatchTindakLanjut } from '@/components/TindakLanjutBatch'
@@ -84,30 +85,28 @@ export default function DetailProduk({ produk, profil, namaApoteker, onTutup, on
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-        <div className="bg-[var(--surface)] rounded-2xl w-full max-w-3xl shadow-xl max-h-[90vh] flex flex-col">
-          <div className="p-6 border-b border-[var(--line-soft)]">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <h2 className="text-lg font-bold text-[var(--brand)] truncate">{produk.nama_obat}</h2>
-                <p className="text-xs text-[var(--ink-soft)]">
-                  <span className="num">{produk.kode}</span>{produk.nama_generik ? ` · ${produk.nama_generik}` : ''}
-                </p>
-              </div>
-              <button onClick={onTutup} aria-label={t('Tutup', 'Close')}
-                className="text-[var(--ink-faint)] hover:text-[var(--brand)] text-xl font-light shrink-0">✕</button>
-            </div>
-            <div className="flex gap-1 mt-4 flex-wrap">
+      <Dialog
+        lebar="xl"
+        onTutup={onTutup}
+        labelTutup={t('Tutup', 'Close')}
+        judul={produk.nama_obat}
+        sub={<><span className="num">{produk.kode}</span>{produk.nama_generik ? ` · ${produk.nama_generik}` : ''}</>}
+      >
+          <div className="mb-4">
+            {/* Tab digulung mendatar di telepon: empat tab yang dibungkus jadi
+                dua baris menggeser isi kartunya ke bawah tiap kali salah satu
+                judulnya kebetulan panjang. */}
+            <div className="sw-geser-x flex gap-1 pb-1">
               {TAB.map(x => (
                 <button key={x} onClick={() => setTab(x)}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-medium transition ${tab === x ? 'bg-[var(--brand)] text-[var(--on-brand)]' : 'text-[var(--ink-soft)] hover:bg-[var(--surface-2)]'}`}>
+                  className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-lg text-xs font-medium transition ${tab === x ? 'bg-[var(--brand)] text-[var(--on-brand)]' : 'text-[var(--ink-soft)] hover:bg-[var(--surface-2)]'}`}>
                   {judul[x]}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6">
+          <div>
             {tab === 'info' && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 bg-[var(--surface)] border border-[var(--line)] rounded-xl p-4">
@@ -319,8 +318,7 @@ export default function DetailProduk({ produk, profil, namaApoteker, onTutup, on
               )
             )}
           </div>
-        </div>
-      </div>
+      </Dialog>
 
       {tindakLanjut && (
         <TindakLanjutBatch

@@ -1,8 +1,8 @@
 'use client'
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
-import { Ban, CheckCircle2, FileText, Printer, Send, X, XCircle } from 'lucide-react'
-import Portal from '@/components/Portal'
+import { Ban, CheckCircle2, FileText, Printer, Send, XCircle } from 'lucide-react'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import TombolIkon from '@/components/TombolIkon'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
@@ -364,23 +364,21 @@ export default function Klaim() {
 
       {/* ── Buat klaim ─────────────────────────────────────────── */}
       {form && (
-        <Portal>
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-            <div className="bg-[var(--surface)] rounded-2xl w-full max-w-3xl shadow-xl max-h-[90vh] flex flex-col">
-              <div className="flex items-start justify-between gap-4 p-6 pb-4 border-b border-[var(--line)]">
-                <div>
-                  <h2 className="text-lg font-bold text-[var(--brand)]">{t('Buat Klaim', 'New Claim')}</h2>
-                  <p className="text-xs text-[var(--ink-soft)] mt-1">
-                    {t('Yang masuk hanya pelayanan yang belum pernah diklaim. Yang sudah tertagihkan tidak akan muncul dua kali.',
-                       'Only services never claimed before are included. Already-billed ones will not appear twice.')}
-                  </p>
-                </div>
-                <button onClick={() => setForm(null)} className="shrink-0 p-1.5 rounded-lg text-[var(--ink-faint)] hover:bg-[var(--surface-2)]" aria-label={t('Tutup', 'Close')}>
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="p-6 overflow-y-auto space-y-4">
+        <Dialog
+          lebar="xl"
+          onTutup={() => setForm(null)}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Buat Klaim', 'New Claim')}
+          sub={t('Yang masuk hanya pelayanan yang belum pernah diklaim. Yang sudah tertagihkan tidak akan muncul dua kali.',
+                 'Only services never claimed before are included. Already-billed ones will not appear twice.')}
+          aksi={<>
+            <button onClick={() => setForm(null)} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+            <button onClick={buat} disabled={sibuk || muatPratinjau || (pratinjau || []).length === 0} className={TOMBOL_UTAMA}>
+              {sibuk ? t('Menyimpan…', 'Saving…') : t('Buat Klaim', 'Create Claim')}
+            </button>
+          </>}
+        >
+              <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div>
                     <label className="text-[11px] font-medium text-[var(--ink-soft)] mb-1 block uppercase tracking-wide">{t('Dari Tgl', 'From')}</label>
@@ -457,52 +455,35 @@ export default function Klaim() {
                 </div>
               </div>
 
-              <div className="flex gap-3 p-6 pt-4 border-t border-[var(--line)]">
-                <button onClick={() => setForm(null)} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-                  {t('Batal', 'Cancel')}
-                </button>
-                <button onClick={buat} disabled={sibuk || muatPratinjau || (pratinjau || []).length === 0}
-                  className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                  {sibuk ? t('Menyimpan…', 'Saving…') : t('Buat Klaim', 'Create Claim')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </Portal>
+        </Dialog>
       )}
 
       {/* ── Rincian satu klaim ─────────────────────────────────── */}
       {detail && (
-        <Portal>
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-            <div className="bg-[var(--surface)] rounded-2xl w-full max-w-4xl shadow-xl max-h-[90vh] flex flex-col">
-              <div className="flex items-start justify-between gap-4 p-6 pb-4 border-b border-[var(--line)]">
-                <div>
-                  <h2 className="text-lg font-bold text-[var(--brand)] num">{detail.nomor}</h2>
-                  <p className="text-xs text-[var(--ink-soft)] mt-1">
-                    {namaPenjamin(detail)} · {tanggal(detail.dari)} – {tanggal(detail.sampai)} ·{' '}
-                    {LABEL_STATUS[detail.status]?.[lang === 'en' ? 1 : 0] || detail.status}
-                  </p>
-                  {detail.dikirim_pada && (
-                    <p className="text-[11px] text-[var(--ink-faint)] mt-0.5">
-                      {t('Dikirim', 'Sent')} {tanggalJam(detail.dikirim_pada)}
-                      {detail.dibayar_pada ? ` · ${t('dibayar', 'paid')} ${tanggal(detail.dibayar_pada)} ${rupiah(detail.dibayar_jumlah)}` : ''}
-                    </p>
-                  )}
-                  {detail.catatan && <p className="text-xs text-[var(--ink-soft)] mt-1">{detail.catatan}</p>}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => cetak(detail)}
-                    className="inline-flex items-center gap-1.5 border border-[var(--line)] text-[var(--ink-soft)] px-3 py-1.5 rounded-lg text-xs hover:bg-[var(--surface-2)]">
-                    <Printer size={14} /> {t('Cetak', 'Print')}
-                  </button>
-                  <button onClick={() => setDetail(null)} className="p-1.5 rounded-lg text-[var(--ink-faint)] hover:bg-[var(--surface-2)]" aria-label={t('Tutup', 'Close')}>
-                    <X size={18} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="overflow-y-auto">
+        <Dialog
+          lebar="full"
+          onTutup={() => setDetail(null)}
+          labelTutup={t('Tutup', 'Close')}
+          judul={<span className="num">{detail.nomor}</span>}
+          sub={<>
+            {namaPenjamin(detail)} · {tanggal(detail.dari)} – {tanggal(detail.sampai)} ·{' '}
+            {LABEL_STATUS[detail.status]?.[lang === 'en' ? 1 : 0] || detail.status}
+            {detail.dikirim_pada && (
+              <span className="block text-[11px] text-[var(--ink-faint)] mt-0.5">
+                {t('Dikirim', 'Sent')} {tanggalJam(detail.dikirim_pada)}
+                {detail.dibayar_pada ? ` · ${t('dibayar', 'paid')} ${tanggal(detail.dibayar_pada)} ${rupiah(detail.dibayar_jumlah)}` : ''}
+              </span>
+            )}
+            {detail.catatan && <span className="block mt-1">{detail.catatan}</span>}
+          </>}
+          aksi={<>
+            <button onClick={() => setDetail(null)} className={TOMBOL_KEDUA}>{t('Tutup', 'Close')}</button>
+            <button onClick={() => cetak(detail)} className={TOMBOL_UTAMA}>
+              <Printer size={15} /> {t('Cetak', 'Print')}
+            </button>
+          </>}
+        >
+              <div className="sw-geser-x">
                 <table className={TBL}>
                   <thead className={THEAD}>
                     <tr>
@@ -539,9 +520,7 @@ export default function Klaim() {
                   </tbody>
                 </table>
               </div>
-            </div>
-          </div>
-        </Portal>
+        </Dialog>
       )}
     </div>
   )

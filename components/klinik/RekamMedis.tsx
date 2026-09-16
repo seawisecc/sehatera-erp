@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Check, Plus, Search, Trash2, X } from 'lucide-react'
+import { AlertTriangle, Check, Plus, Search, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/lib/i18n'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { tanggalJam } from '@/lib/format'
@@ -149,20 +150,20 @@ export default function RekamMedis({
   const vitalTerakhir = isi?.vital?.[0]
 
   return (
-    <div className="fixed inset-0 bg-black/45 flex items-start justify-center z-50 p-4 overflow-y-auto" role="dialog" aria-modal="true">
-      <div className="bg-[var(--surface-2)] rounded-2xl w-full max-w-3xl my-4 shadow-xl">
-
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 px-6 py-4 bg-[var(--surface)] rounded-t-2xl border-b border-[var(--line)]">
-          <div className="min-w-0">
-            <h2 className="text-lg font-bold text-[var(--ink)] truncate">{t('Rekam Medis', 'Medical Record')}</h2>
-            <p className="text-xs text-[var(--ink-soft)] truncate">{nama}</p>
-          </div>
-          <button onClick={onTutup} className="shrink-0 text-[var(--ink-faint)] hover:text-[var(--ink)]" aria-label={t('Tutup', 'Close')}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="p-6 space-y-6">
+    <Dialog
+      lebar="xl"
+      onTutup={onTutup}
+      labelTutup={t('Tutup', 'Close')}
+      judul={t('Rekam Medis', 'Medical Record')}
+      sub={nama}
+      aksi={!tertutup && isi ? <>
+        <button onClick={onTutup} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+        <button onClick={simpan} disabled={sibuk} className={TOMBOL_UTAMA}>
+          <Check size={16} /> {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan Rekam Medis', 'Save Record')}
+        </button>
+      </> : undefined}
+    >
+        <div className="space-y-6">
 
           {alergi && (
             <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-300 text-red-900" role="alert">
@@ -403,19 +404,6 @@ export default function RekamMedis({
             </>
           )}
         </div>
-
-        {!tertutup && isi && (
-          <div className="sticky bottom-0 flex gap-3 px-6 py-4 bg-[var(--surface)] rounded-b-2xl border-t border-[var(--line)]">
-            <button onClick={onTutup} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2.5 rounded-lg text-sm">
-              {t('Batal', 'Cancel')}
-            </button>
-            <button onClick={simpan} disabled={sibuk}
-              className="flex-1 inline-flex items-center justify-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] py-2.5 rounded-lg text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-              <Check size={16} /> {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan Rekam Medis', 'Save Record')}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+    </Dialog>
   )
 }

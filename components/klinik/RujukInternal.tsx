@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, Share2, X } from 'lucide-react'
-import Portal from '@/components/Portal'
+import { AlertTriangle, Share2 } from 'lucide-react'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -94,21 +94,20 @@ export default function RujukInternal({
   const dokterSePoli = tujuan ? (tugas[tujuan] || []) : []
 
   return (
-    <Portal>
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-      <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[88vh] overflow-y-auto">
-        <div className="flex items-start justify-between gap-3 mb-1">
-          <h2 className="text-lg font-bold text-[var(--brand)] flex items-center gap-2">
-            <Share2 size={18} /> {t('Rujuk ke Poli Lain', 'Refer to Another Unit')}
-          </h2>
-          <button onClick={onTutup} className="text-[var(--ink-faint)] hover:text-[var(--ink)]" aria-label={t('Tutup', 'Close')}>
-            <X size={18} />
-          </button>
-        </div>
-        <p className="text-xs text-[var(--ink-soft)] mb-4 leading-relaxed">
-          {t('Tetap satu kunjungan dan satu tagihan. Yang berpindah poli, dokter, dan nomor antreannya.',
+    <Dialog
+      lebar="sm"
+      onTutup={onTutup}
+      labelTutup={t('Tutup', 'Close')}
+      judul={<span className="inline-flex items-center gap-2"><Share2 size={17} /> {t('Rujuk ke Poli Lain', 'Refer to Another Unit')}</span>}
+      sub={t('Tetap satu kunjungan dan satu tagihan. Yang berpindah poli, dokter, dan nomor antreannya.',
              'Still one visit and one bill. What moves is the unit, the doctor, and the queue number.')}
-        </p>
+      aksi={<>
+        <button onClick={onTutup} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+        <button onClick={rujuk} disabled={sibuk || !tujuan || !alasan.trim()} className={TOMBOL_UTAMA}>
+          {sibuk ? t('Merujuk…', 'Referring…') : t('Rujuk sekarang', 'Refer now')}
+        </button>
+      </>}
+    >
 
         <div className="space-y-3">
           <div>
@@ -167,18 +166,6 @@ export default function RujukInternal({
           </div>
         </div>
 
-        <div className="flex gap-3 mt-5">
-          <button onClick={onTutup}
-            className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2.5 rounded-lg text-sm">
-            {t('Batal', 'Cancel')}
-          </button>
-          <button onClick={rujuk} disabled={sibuk || !tujuan || !alasan.trim()}
-            className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2.5 rounded-lg text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-            {sibuk ? t('Merujuk…', 'Referring…') : t('Rujuk sekarang', 'Refer now')}
-          </button>
-        </div>
-      </div>
-    </div>
-    </Portal>
+    </Dialog>
   )
 }

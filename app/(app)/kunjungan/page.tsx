@@ -18,6 +18,7 @@ import Resep from '@/components/klinik/Resep'
 import TarifKunjungan from '@/components/klinik/TarifKunjungan'
 import Penunjang from '@/components/klinik/Penunjang'
 import RujukInternal from '@/components/klinik/RujukInternal'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 
 /**
  * Kunjungan: satu layar kerja untuk seluruh hari.
@@ -1002,19 +1003,22 @@ export default function HalamanKunjungan() {
 
       {/* ── Daftarkan kunjungan ── */}
       {bukaDaftar && (
-        <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 pt-[10vh]" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[85vh] overflow-y-auto relative">
-            <button onClick={() => { setBukaDaftar(false); setPasienDipilih(null) }}
-              aria-label={t('Tutup', 'Close')}
-              className="absolute right-4 top-4 text-[var(--ink-faint)] hover:text-[var(--ink)]">
-              <X size={18} />
-            </button>
-            <h2 className="text-lg font-bold text-[var(--brand)] mb-1">{t('Daftarkan Kunjungan', 'Register a Visit')}</h2>
-            <p className="text-xs text-[var(--ink-soft)] mb-4">
-              {t('Cari pasien yang sudah pernah datang. Kalau belum ada, daftarkan sebagai pasien baru.',
+        <Dialog
+          lebar="md"
+          onTutup={() => { setBukaDaftar(false); setPasienDipilih(null) }}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Daftarkan Kunjungan', 'Register a Visit')}
+          sub={t('Cari pasien yang sudah pernah datang. Kalau belum ada, daftarkan sebagai pasien baru.',
                  'Find a returning patient. If they are new, register them first.')}
-            </p>
-
+          aksi={<>
+            <button onClick={() => { setBukaDaftar(false); setPasienDipilih(null) }} className={TOMBOL_KEDUA}>
+              {t('Tutup', 'Close')}
+            </button>
+            <button onClick={() => { setBukaDaftar(false); setFormPasien(null) }} className={TOMBOL_UTAMA}>
+              <UserPlus size={15} /> {t('Pasien Baru', 'New Patient')}
+            </button>
+          </>}
+        >
             {/* Poli dipilih SEBELUM pasiennya, karena itu yang menentukan
                 deret antreannya. Kalau ditanyakan sesudah, nomornya sudah
                 terlanjur terbit dari deret yang salah. */}
@@ -1224,18 +1228,7 @@ export default function HalamanKunjungan() {
               </div>
             )}
 
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => { setBukaDaftar(false); setPasienDipilih(null) }}
-                className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-                {t('Tutup', 'Close')}
-              </button>
-              <button onClick={() => { setBukaDaftar(false); setFormPasien(null) }}
-                className="flex-1 inline-flex items-center justify-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">
-                <UserPlus size={15} /> {t('Pasien Baru', 'New Patient')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Dialog>
       )}
 
       {bukaRekam && aktif && (

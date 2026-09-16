@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import Portal from '@/components/Portal'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useLang } from '@/lib/i18n'
 
 /**
@@ -136,19 +136,25 @@ export default function FormPasien({
   const bolehSimpan = isi.nama.trim() !== '' && !nikSalah && !nikKurang && !telpKurang && !alasanKurang
 
   return (
-    <Portal>
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-      <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg font-bold text-[var(--brand)] mb-1">
-          {pasien ? t('Ubah Data Pasien', 'Edit Patient') : t('Pasien Baru', 'New Patient')}
-        </h2>
-        <p className="text-xs text-[var(--ink-soft)] mb-5">
-          {pasien
-            ? <>No. RM <span className="num">{pasien.nomor_rm || '-'}</span></>
-            : t('NIK dan nomor telepon wajib. Kalau pasiennya memang tidak bisa menunjukkan identitas, tandai di bagian bawah dan tulis alasannya.',
-                'ID number and phone are required. If the patient genuinely cannot show identification, tick the box at the bottom and write why.')}
-        </p>
-
+    <Dialog
+      lebar="lg"
+      onTutup={onTutup}
+      labelTutup={t('Tutup', 'Close')}
+      judul={pasien ? t('Ubah Data Pasien', 'Edit Patient') : t('Pasien Baru', 'New Patient')}
+      sub={pasien
+        ? <>No. RM <span className="num">{pasien.nomor_rm || '-'}</span></>
+        : t('NIK dan nomor telepon wajib. Kalau pasiennya memang tidak bisa menunjukkan identitas, tandai di bagian bawah dan tulis alasannya.',
+            'ID number and phone are required. If the patient genuinely cannot show identification, tick the box at the bottom and write why.')}
+      aksi={<>
+        <button onClick={onTutup} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+        <button
+          onClick={() => { if (bolehSimpan) onSimpan(isi, pasien?.id ?? null) }}
+          disabled={sibuk || !bolehSimpan}
+          className={TOMBOL_UTAMA}>
+          {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
+        </button>
+      </>}
+    >
         <div className="space-y-5">
           {/* ── Identitas ── */}
           <div>
@@ -156,7 +162,7 @@ export default function FormPasien({
             <div className="space-y-3">
               <div>
                 <label className={label}>{t('Nama lengkap', 'Full name')} <span className="text-red-500">*</span></label>
-                <input autoFocus value={isi.nama} onChange={e => ubah('nama', e.target.value)} className={input} />
+                <input value={isi.nama} onChange={e => ubah('nama', e.target.value)} className={input} />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -397,19 +403,6 @@ export default function FormPasien({
           </div>
         </div>
 
-        <div className="flex gap-3 mt-6 sticky bottom-0 -mx-6 -mb-6 px-6 pt-3 pb-6 bg-[var(--surface)] border-t border-[var(--line-soft)]">
-          <button onClick={onTutup} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-            {t('Batal', 'Cancel')}
-          </button>
-          <button
-            onClick={() => { if (bolehSimpan) onSimpan(isi, pasien?.id ?? null) }}
-            disabled={sibuk || !bolehSimpan}
-            className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-            {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
-          </button>
-        </div>
-      </div>
-    </div>
-    </Portal>
+    </Dialog>
   )
 }

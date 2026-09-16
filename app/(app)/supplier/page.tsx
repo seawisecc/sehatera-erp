@@ -5,6 +5,7 @@ import { Pencil, Power, PowerOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import TombolIkon from '@/components/TombolIkon'
 import { pesanError } from '@/lib/session'
@@ -170,15 +171,24 @@ export default function HalamanSupplier() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-lg font-bold text-[var(--brand)] mb-4">
-              {ubahId ? t('Ubah Supplier', 'Edit Supplier') : t('Tambah Supplier', 'Add Supplier')}
-            </h2>
+        <Dialog
+          lebar="sm"
+          onTutup={() => { setShowForm(false); setUbahId(null) }}
+          labelTutup={t('Tutup', 'Close')}
+          judul={ubahId ? t('Ubah Supplier', 'Edit Supplier') : t('Tambah Supplier', 'Add Supplier')}
+          aksi={<>
+            <button onClick={() => { setShowForm(false); setUbahId(null) }} className={TOMBOL_KEDUA}>
+              {t('Batal', 'Cancel')}
+            </button>
+            <button onClick={simpan} disabled={simpanan} className={TOMBOL_UTAMA}>
+              {simpanan ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
+            </button>
+          </>}
+        >
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Nama Supplier *', 'Supplier Name *')}</label>
-                <input autoFocus value={form.nama_supplier} onChange={e => setForm({ ...form, nama_supplier: e.target.value })}
+                <input value={form.nama_supplier} onChange={e => setForm({ ...form, nama_supplier: e.target.value })}
                   onKeyDown={e => { if (e.key === 'Enter') simpan() }} className={inputCls} />
               </div>
               <div>
@@ -204,17 +214,7 @@ export default function HalamanSupplier() {
                 <textarea value={form.alamat} onChange={e => setForm({ ...form, alamat: e.target.value })} rows={2} className={inputCls} />
               </div>
             </div>
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => { setShowForm(false); setUbahId(null) }} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-                {t('Batal', 'Cancel')}
-              </button>
-              <button onClick={simpan} disabled={simpanan}
-                className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                {simpanan ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Dialog>
       )}
     </div>
   )

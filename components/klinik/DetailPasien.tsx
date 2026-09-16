@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect } from 'react'
-import { AlertTriangle, History, Pencil, Phone, X } from 'lucide-react'
-import Portal from '@/components/Portal'
+import { AlertTriangle, History, Pencil, Phone } from 'lucide-react'
+import Dialog, { TOMBOL_KEDUA } from '@/components/Dialog'
 import { useLang } from '@/lib/i18n'
 import { tanggal } from '@/lib/format'
 import type { Pasien } from '@/components/klinik/FormPasien'
@@ -69,34 +69,28 @@ export default function DetailPasien({
   ].filter(Boolean).join(', ')
 
   return (
-    <Portal>
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-      <div className="bg-[var(--surface)] rounded-2xl w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-[var(--surface)] px-6 pt-6 pb-4 border-b border-[var(--line-soft)] z-10">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-xl font-bold text-[var(--ink)] truncate">{pasien.nama}</h2>
-              <p className="text-xs text-[var(--ink-soft)] mt-0.5">
-                <span className="num text-[var(--brand)] font-medium">{pasien.nomor_rm || '-'}</span>
-                {pasien.jenis_kelamin && <> · {KELAMIN[pasien.jenis_kelamin]?.[lang === 'en' ? 1 : 0]}</>}
-                {umur !== null && <> · <span className="num">{umur}</span> {t('th', 'y')}</>}
-              </p>
-              {/* Nomor IHS SatuSehat. Ditampilkan karena tanpa ini tidak ada
-                  satu pun layar yang memberi tahu bahwa pencocokan ke SatuSehat
-                  sudah berhasil, dan yang tidak terlihat dianggap belum
-                  dikerjakan. */}
-              {(pasien as { ihs_id?: string | null }).ihs_id && (
-                <p className="text-[11px] text-green-700 mt-0.5">
-                  {t('IHS SatuSehat', 'SatuSehat IHS')}{' '}
-                  <span className="num">{(pasien as { ihs_id?: string | null }).ihs_id}</span>
-                </p>
-              )}
-            </div>
-            <button onClick={onTutup} className="shrink-0 text-[var(--ink-faint)] hover:text-[var(--ink)]" aria-label={t('Tutup', 'Close')}>
-              <X size={18} />
-            </button>
-          </div>
-
+    <Dialog
+      lebar="lg"
+      onTutup={onTutup}
+      labelTutup={t('Tutup', 'Close')}
+      judul={pasien.nama}
+      sub={<>
+        <span className="num text-[var(--brand)] font-medium">{pasien.nomor_rm || '-'}</span>
+        {pasien.jenis_kelamin && <> · {KELAMIN[pasien.jenis_kelamin]?.[lang === 'en' ? 1 : 0]}</>}
+        {umur !== null && <> · <span className="num">{umur}</span> {t('th', 'y')}</>}
+        {/* Nomor IHS SatuSehat. Ditampilkan karena tanpa ini tidak ada satu
+            pun layar yang memberi tahu bahwa pencocokan ke SatuSehat sudah
+            berhasil, dan yang tidak terlihat dianggap belum dikerjakan. */}
+        {(pasien as { ihs_id?: string | null }).ihs_id && (
+          <span className="block text-[11px] text-green-700 mt-0.5">
+            {t('IHS SatuSehat', 'SatuSehat IHS')}{' '}
+            <span className="num">{(pasien as { ihs_id?: string | null }).ihs_id}</span>
+          </span>
+        )}
+      </>}
+      aksi={<button onClick={onTutup} className={TOMBOL_KEDUA}>{t('Tutup', 'Close')}</button>}
+    >
+        <div className="mb-4">
           {pasien.alergi && (
             <p className="mt-3 flex items-start gap-2 text-xs text-red-800 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               <AlertTriangle size={14} className="shrink-0 mt-0.5" />
@@ -197,8 +191,6 @@ export default function DetailPasien({
             </div>
           )}
         </div>
-      </div>
-    </div>
-    </Portal>
+    </Dialog>
   )
 }

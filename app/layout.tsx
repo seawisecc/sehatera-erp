@@ -98,6 +98,17 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  /**
+   * `viewportFit: 'cover'` adalah syarat `env(safe-area-inset-*)` berisi angka.
+   *
+   * Tanpanya keempat inset itu SELALU nol, dan tidak ada yang gagal: navigasi
+   * bawah tetap tergambar, cuma barisnya duduk persis di bawah garis geser
+   * iPhone. Yang terjadi bukan tombol yang hilang melainkan tombol yang
+   * ditekan menggeser aplikasi ke belakang, dan di tangan kasir yang sedang
+   * dikejar antrean itu terbaca sebagai aplikasi yang menutup dirinya sendiri.
+   * AppShell sudah membaca insetnya sejak lama; yang kurang cuma izin ini.
+   */
+  viewportFit: "cover",
   // Keempat tema terang, jadi bilah peramban satu warna saja, mengikuti Vital
   // Tide yang jadi bawaan.
   themeColor: "#f5fbfc",

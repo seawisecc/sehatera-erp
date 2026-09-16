@@ -5,6 +5,7 @@ import { CalendarClock, CreditCard, Printer, Receipt, Wallet } from 'lucide-reac
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { bukaCetak, buktiPembayaranFaktur } from '@/lib/cetak'
@@ -204,12 +205,19 @@ export default function HalamanFaktur() {
       </div>
 
       {bayar && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <div className="mb-4">
-              <h2 className="text-lg font-bold text-[var(--brand)]">{t('Bayar Faktur', 'Pay Invoice')}</h2>
-              <p className="text-xs text-[var(--ink-soft)]">{bayar.nomor_faktur} · {bayar.suppliers?.nama_supplier}</p>
-            </div>
+        <Dialog
+          lebar="sm"
+          onTutup={() => setBayar(null)}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Bayar Faktur', 'Pay Invoice')}
+          sub={`${bayar.nomor_faktur} · ${bayar.suppliers?.nama_supplier || ''}`}
+          aksi={<>
+            <button onClick={() => setBayar(null)} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+            <button onClick={simpanBayar} disabled={menyimpan} className={TOMBOL_UTAMA}>
+              {menyimpan ? t('Menyimpan…', 'Saving…') : t('Lunasi & Cetak', 'Pay & Print')}
+            </button>
+          </>}
+        >
             <div className="rounded-xl bg-[var(--surface-2)] px-4 py-3 mb-4 flex items-center justify-between">
               <span className="text-sm text-[var(--ink-soft)]">{t('Jumlah dibayar', 'Amount due')}</span>
               <span className="text-xl font-bold text-[var(--ink)] num">{rp(bayar.total)}</span>
@@ -241,17 +249,7 @@ export default function HalamanFaktur() {
             <p className="text-[11px] text-[var(--ink-faint)] mt-3">
               {t('Bukti pembayaran langsung dicetak sesudah disimpan.', 'The payment receipt prints immediately after saving.')}
             </p>
-            <div className="flex gap-3 mt-4">
-              <button onClick={() => setBayar(null)} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-                {t('Batal', 'Cancel')}
-              </button>
-              <button onClick={simpanBayar} disabled={menyimpan}
-                className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                {menyimpan ? t('Menyimpan…', 'Saving…') : t('Lunasi & Cetak', 'Pay & Print')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Dialog>
       )}
     </div>
   )

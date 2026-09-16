@@ -6,6 +6,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
@@ -257,16 +258,20 @@ function FormLayanan({
   const inputCls = 'w-full border border-[var(--line)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]'
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-      <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md shadow-xl">
-        <h2 className="text-lg font-bold text-[var(--brand)] mb-4">
-          {isEdit ? t('Edit Layanan', 'Edit Service') : t('Tambah Layanan', 'Add Service')}
-        </h2>
+    <Dialog
+      lebar="sm"
+      onTutup={batal}
+      labelTutup={t('Tutup', 'Close')}
+      judul={isEdit ? t('Edit Layanan', 'Edit Service') : t('Tambah Layanan', 'Add Service')}
+      aksi={<>
+        <button onClick={batal} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+        <button onClick={simpan} className={TOMBOL_UTAMA}>{t('Simpan', 'Save')}</button>
+      </>}
+    >
         <div className="space-y-3">
           <div>
             <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Nama Layanan *', 'Service Name *')}</label>
             <input
-              autoFocus
               value={nilai.nama}
               onChange={e => ubah({ nama: e.target.value })}
               onKeyDown={e => { if (e.key === 'Enter') simpan() }}
@@ -303,11 +308,6 @@ function FormLayanan({
             </div>
           )}
         </div>
-        <div className="flex gap-3 mt-5">
-          <button onClick={batal} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">{t('Batal', 'Cancel')}</button>
-          <button onClick={simpan} className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">{t('Simpan', 'Save')}</button>
-        </div>
-      </div>
-    </div>
+    </Dialog>
   )
 }

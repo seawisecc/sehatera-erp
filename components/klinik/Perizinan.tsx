@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, BadgeCheck, Pencil, X } from 'lucide-react'
-import Portal from '@/components/Portal'
+import { AlertTriangle, BadgeCheck, Pencil } from 'lucide-react'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import TombolIkon from '@/components/TombolIkon'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
@@ -281,22 +281,20 @@ export default function Perizinan() {
       </p>
 
       {form && (
-        <Portal>
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" role="dialog" aria-modal="true">
-            <div className="bg-[var(--surface)] rounded-2xl w-full max-w-lg shadow-xl max-h-[90vh] flex flex-col">
-              <div className="flex items-start justify-between gap-4 p-6 pb-4 border-b border-[var(--line)]">
-                <div>
-                  <h3 className="text-lg font-bold text-[var(--brand)]">{t('Perizinan', 'Licence')}</h3>
-                  <p className="text-xs text-[var(--ink-soft)] mt-0.5">
-                    {LABEL_PERAN[form.role]?.[lang === 'en' ? 1 : 0] || form.role}
-                  </p>
-                </div>
-                <button onClick={() => setForm(null)} className="p-1.5 rounded-lg text-[var(--ink-faint)] hover:bg-[var(--surface-2)]" aria-label={t('Tutup', 'Close')}>
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="p-6 overflow-y-auto space-y-3">
+        <Dialog
+          lebar="md"
+          onTutup={() => setForm(null)}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Perizinan', 'Licence')}
+          sub={LABEL_PERAN[form.role]?.[lang === 'en' ? 1 : 0] || form.role}
+          aksi={<>
+            <button onClick={() => setForm(null)} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+            <button onClick={simpan} disabled={sibuk} className={TOMBOL_UTAMA}>
+              <BadgeCheck size={15} /> {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
+            </button>
+          </>}
+        >
+              <div className="space-y-3">
                 <div>
                   <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">
                     {t('Nama lengkap dengan gelar', 'Full name with title')}
@@ -374,18 +372,7 @@ export default function Perizinan() {
                 </div>
               </div>
 
-              <div className="flex gap-3 p-6 pt-4 border-t border-[var(--line)]">
-                <button onClick={() => setForm(null)} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-                  {t('Batal', 'Cancel')}
-                </button>
-                <button onClick={simpan} disabled={sibuk}
-                  className="flex-1 inline-flex items-center justify-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                  <BadgeCheck size={15} /> {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </Portal>
+        </Dialog>
       )}
     </div>
   )

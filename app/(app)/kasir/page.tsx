@@ -5,6 +5,7 @@ import { AlertTriangle, HeartPulse, Search } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
@@ -895,9 +896,18 @@ export default function HalamanKasir() {
       </div>
 
       {struk && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
+        <Dialog
+          lebar="sm"
+          onTutup={() => { setStruk(null); setStrukItems([]); cariRef.current?.focus() }}
+          labelTutup={t('Tutup', 'Close')}
+          aksi={<>
+            <button onClick={() => { setStruk(null); setStrukItems([]); cariRef.current?.focus() }} className={TOMBOL_KEDUA}>
+              {t('Tutup', 'Close')}
+            </button>
+            <button onClick={cetakStruk} className={TOMBOL_UTAMA}>{t('Cetak', 'Print')}</button>
+          </>}
+        >
+            <div>
               <div className="text-center mb-4 border-b border-dashed border-[var(--line)] pb-4">
                 <h2 className="font-bold text-lg text-[var(--brand)]">{app.namaFaskes}</h2>
                 <p className="text-xs text-[var(--ink-soft)] mt-1">{app.settingsData.alamat}</p>
@@ -934,18 +944,7 @@ export default function HalamanKasir() {
                 {t('Terima kasih atas kunjungan Anda', 'Thank you for your visit')}
               </p>
             </div>
-            <div className="flex gap-2 p-4 border-t border-[var(--line-soft)]">
-              <button onClick={() => { setStruk(null); setStrukItems([]); cariRef.current?.focus() }}
-                className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-                {t('Tutup', 'Close')}
-              </button>
-              <button onClick={cetakStruk}
-                className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">
-                {t('Cetak', 'Print')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Dialog>
       )}
     </div>
   )

@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AlertTriangle, FileText, Pill, Stethoscope, X } from 'lucide-react'
+import { AlertTriangle, FileText, Pill, Stethoscope } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/lib/i18n'
+import Dialog, { TOMBOL_KEDUA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
-import { tanggal, tanggalJam } from '@/lib/format'
+import { tanggal } from '@/lib/format'
 import RekamMedis from '@/components/klinik/RekamMedis'
 
 /**
@@ -67,32 +68,22 @@ export default function RiwayatPasien({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 overflow-y-auto"
-        role="dialog" aria-modal="true">
-        <div className="bg-[var(--surface)] rounded-2xl w-full max-w-3xl shadow-xl my-8">
-          <div className="flex items-start justify-between p-6 pb-4 border-b border-[var(--line)]">
-            <div>
-              <h2 className="text-lg font-bold text-[var(--brand)]">
-                {t('Riwayat Kunjungan', 'Visit History')}
-              </h2>
-              {pasien && (
-                <p className="text-sm text-[var(--ink-soft)] mt-0.5">
-                  {pasien.nama}
-                  {pasien.nomor_rm && <span className="num"> · {pasien.nomor_rm}</span>}
-                  {pasien.tanggal_lahir && ` · ${tanggal(pasien.tanggal_lahir)}`}
-                </p>
-              )}
-            </div>
-            <button onClick={onTutup} className="text-[var(--ink-faint)] hover:text-[var(--ink)]"
-              aria-label={t('Tutup', 'Close')}>
-              <X size={18} />
-            </button>
-          </div>
-
+      <Dialog
+        lebar="xl"
+        onTutup={onTutup}
+        labelTutup={t('Tutup', 'Close')}
+        judul={t('Riwayat Kunjungan', 'Visit History')}
+        sub={pasien ? <>
+          {pasien.nama}
+          {pasien.nomor_rm && <span className="num"> · {pasien.nomor_rm}</span>}
+          {pasien.tanggal_lahir && ` · ${tanggal(pasien.tanggal_lahir)}`}
+        </> : undefined}
+        aksi={<button onClick={onTutup} className={TOMBOL_KEDUA}>{t('Tutup', 'Close')}</button>}
+      >
           {/* Alergi diulang di sini, bukan cuma di layar Kunjungan. Orang yang
               sedang membaca riwayat sedang memutuskan terapi. */}
           {pasien?.alergi && (
-            <div className="mx-6 mt-4 flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+            <div className="mb-4 flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2">
               <AlertTriangle size={15} className="text-red-600 shrink-0 mt-0.5" />
               <p className="text-sm text-red-800">
                 <span className="font-semibold">{t('Alergi', 'Allergy')}:</span> {pasien.alergi}
@@ -100,7 +91,7 @@ export default function RiwayatPasien({
             </div>
           )}
 
-          <div className="p-6 pt-4">
+          <div>
             {memuat ? (
               <p className="py-10 text-center text-sm text-[var(--ink-faint)]">{t('Memuat…', 'Loading…')}</p>
             ) : daftar.length === 0 ? (
@@ -156,8 +147,7 @@ export default function RiwayatPasien({
               </div>
             )}
           </div>
-        </div>
-      </div>
+      </Dialog>
 
       {buka && pasien && (
         <RekamMedis

@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Check, HandHelping, PackageX, Plus, Search, Trash2, X } from 'lucide-react'
+import { AlertTriangle, Check, HandHelping, PackageX, Plus, Search, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { angka, tanggalJam } from '@/lib/format'
@@ -203,28 +204,50 @@ export default function Resep({
   const L = 'block text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-faint)] mb-0.5'
 
   return (
-    <div className="fixed inset-0 bg-black/45 flex items-start justify-center z-50 p-4 overflow-y-auto" role="dialog" aria-modal="true">
-      <div className="bg-[var(--surface-2)] rounded-2xl w-full max-w-3xl my-4 shadow-xl">
-
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 px-6 py-4 bg-[var(--surface)] rounded-t-2xl border-b border-[var(--line)]">
-          <div className="min-w-0">
-            <h2 className="text-lg font-bold text-[var(--ink)] flex items-center gap-2">
-              {t('Resep', 'Prescription')}
-              {resep?.nomor && <span className="num text-xs font-medium text-[var(--ink-faint)]">{resep.nomor}</span>}
-              {resep?.status && resep.status !== 'draf' && (
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                  resep.status === 'dilayani' ? 'bg-green-100 text-green-700' : 'bg-[var(--brand)] text-[var(--on-brand)]'
-                }`}>{resep.status.toUpperCase()}</span>
-              )}
-            </h2>
-            <p className="text-xs text-[var(--ink-soft)] truncate">{nama}</p>
-          </div>
-          <button onClick={onTutup} className="shrink-0 text-[var(--ink-faint)] hover:text-[var(--ink)]" aria-label={t('Tutup', 'Close')}>
-            <X size={20} />
+    <Dialog
+      lebar="xl"
+      onTutup={onTutup}
+      labelTutup={t('Tutup', 'Close')}
+      judul={<span className="flex flex-wrap items-center gap-2">
+        {t('Resep', 'Prescription')}
+        {resep?.nomor && <span className="num text-xs font-medium text-[var(--ink-faint)]">{resep.nomor}</span>}
+        {resep?.status && resep.status !== 'draf' && (
+          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+            resep.status === 'dilayani' ? 'bg-green-100 text-green-700' : 'bg-[var(--brand)] text-[var(--on-brand)]'
+          }`}>{resep.status.toUpperCase()}</span>
+        )}
+      </span>}
+      sub={nama}
+      aksi={memuat ? undefined : (terkunci ? <>
+        <button onClick={onTutup} className={TOMBOL_KEDUA}>{t('Tutup', 'Close')}</button>
+        {resep?.status === 'final' && !tertutup && (
+          <button onClick={batalkanResep} disabled={sibuk}
+            className={TOMBOL_KEDUA + ' border-red-300 text-red-700 hover:bg-red-50'}>
+            {t('Batalkan Resep', 'Cancel Prescription')}
           </button>
-        </div>
-
-        <div className="p-6 space-y-5">
+        )}
+      </> : <>
+        <button onClick={() => kirim(false)} disabled={sibuk} className={TOMBOL_KEDUA}>
+          {t('Simpan Draf', 'Save Draft')}
+        </button>
+        <button onClick={() => kirim(true)} disabled={sibuk || items.length === 0} className={TOMBOL_UTAMA}>
+          <Check size={16} /> {t('Finalkan Resep', 'Finalise Prescription')}
+        </button>
+        {/* Draf pun harus bisa dibatalkan, dan itu bukan kelengkapan.
+            Draf tidak pernah sampai ke farmasi, tapi ia tetap terhitung
+            sebagai resep yang belum diserahkan, jadi kunjungannya tidak
+            bisa ditutup kasir. Tanpa tombol ini, resep yang dibuka lalu
+            ditinggalkan dokter membuat kunjungan itu menggantung terbuka
+            selamanya, dan tidak ada seorang pun yang punya cara menutupnya. */}
+        {resep?.id && resep.status === 'draf' && !tertutup && (
+          <button onClick={batalkanResep} disabled={sibuk}
+            className="sw-tap w-full px-4 py-2.5 rounded-xl border border-red-300 text-red-700 text-sm font-medium hover:bg-red-50 transition disabled:opacity-50">
+            {t('Batalkan Draf Resep', 'Cancel Draft')}
+          </button>
+        )}
+      </>)}
+    >
+        <div className="space-y-5">
 
           {alergi && (
             <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-300 text-red-900" role="alert">
@@ -413,50 +436,6 @@ export default function Resep({
             </>
           )}
         </div>
-
-        {!memuat && (
-          <div className="sticky bottom-0 flex flex-wrap gap-3 px-6 py-4 bg-[var(--surface)] rounded-b-2xl border-t border-[var(--line)]">
-            {terkunci ? (
-              <>
-                <button onClick={onTutup}
-                  className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2.5 rounded-lg text-sm">
-                  {t('Tutup', 'Close')}
-                </button>
-                {resep?.status === 'final' && !tertutup && (
-                  <button onClick={batalkanResep} disabled={sibuk}
-                    className="flex-1 border border-red-300 text-red-700 py-2.5 rounded-lg text-sm font-medium hover:bg-red-50 transition disabled:opacity-50">
-                    {t('Batalkan Resep', 'Cancel Prescription')}
-                  </button>
-                )}
-              </>
-            ) : (
-              <>
-                <button onClick={() => kirim(false)} disabled={sibuk}
-                  className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2.5 rounded-lg text-sm hover:bg-[var(--surface-2)] transition disabled:opacity-50">
-                  {t('Simpan Draf', 'Save Draft')}
-                </button>
-                <button onClick={() => kirim(true)} disabled={sibuk || items.length === 0}
-                  className="flex-1 inline-flex items-center justify-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] py-2.5 rounded-lg text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                  <Check size={16} /> {t('Finalkan Resep', 'Finalise Prescription')}
-                </button>
-                {/* Draf pun harus bisa dibatalkan, dan itu bukan kelengkapan.
-                    Draf tidak pernah sampai ke farmasi, tapi ia tetap terhitung
-                    sebagai resep yang belum diserahkan, jadi kunjungannya tidak
-                    bisa ditutup kasir. Tanpa tombol ini, resep yang dibuka lalu
-                    ditinggalkan dokter membuat kunjungan itu menggantung
-                    terbuka selamanya, dan tidak ada seorang pun yang punya cara
-                    menutupnya. */}
-                {resep?.id && resep.status === 'draf' && !tertutup && (
-                  <button onClick={batalkanResep} disabled={sibuk}
-                    className="w-full border border-red-300 text-red-700 py-2.5 rounded-lg text-sm font-medium hover:bg-red-50 transition disabled:opacity-50">
-                    {t('Batalkan Draf Resep', 'Cancel Draft')}
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+    </Dialog>
   )
 }

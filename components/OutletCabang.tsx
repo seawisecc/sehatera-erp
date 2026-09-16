@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Building2, Plus, X } from 'lucide-react'
-import Portal from '@/components/Portal'
+import { Building2, Plus } from 'lucide-react'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/lib/i18n'
 import { pesanError } from '@/lib/session'
@@ -183,19 +183,20 @@ export default function OutletCabang() {
       </div>
 
       {buka && (
-        <Portal>
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-            <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md shadow-xl">
-              <div className="flex items-start justify-between gap-3 mb-1">
-                <h3 className="text-lg font-bold text-[var(--brand)]">{t('Tambah Outlet', 'Add Outlet')}</h3>
-                <button onClick={() => setBuka(false)} className="text-[var(--ink-faint)] hover:text-[var(--ink)]">
-                  <X size={18} />
-                </button>
-              </div>
-              <p className="text-xs text-[var(--ink-soft)] mb-4 leading-relaxed">
-                {t('Outlet baru memakai paket dan masa aktif yang sama, tidak membuat langganan kedua. Isinya mulai kosong: katalog, stok, dan penggunanya diisi sendiri di outlet itu.',
-                   'The new outlet uses the same plan and validity, not a second subscription. It starts empty: its catalogue, stock, and users are set up inside that outlet.')}
-              </p>
+        <Dialog
+          lebar="sm"
+          onTutup={() => setBuka(false)}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Tambah Outlet', 'Add Outlet')}
+          sub={t('Outlet baru memakai paket dan masa aktif yang sama, tidak membuat langganan kedua. Isinya mulai kosong: katalog, stok, dan penggunanya diisi sendiri di outlet itu.',
+                 'The new outlet uses the same plan and validity, not a second subscription. It starts empty: its catalogue, stock, and users are set up inside that outlet.')}
+          aksi={<>
+            <button onClick={() => setBuka(false)} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+            <button onClick={tambah} disabled={sibuk || !form.nama.trim()} className={TOMBOL_UTAMA}>
+              {sibuk ? t('Membuat…', 'Creating…') : t('Buat outlet', 'Create outlet')}
+            </button>
+          </>}
+        >
 
               <div className="space-y-3">
                 <div>
@@ -218,19 +219,7 @@ export default function OutletCabang() {
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-5">
-                <button onClick={() => setBuka(false)}
-                  className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2.5 rounded-lg text-sm">
-                  {t('Batal', 'Cancel')}
-                </button>
-                <button onClick={tambah} disabled={sibuk || !form.nama.trim()}
-                  className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2.5 rounded-lg text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                  {sibuk ? t('Membuat…', 'Creating…') : t('Buat outlet', 'Create outlet')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </Portal>
+        </Dialog>
       )}
     </div>
   )

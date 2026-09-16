@@ -1,10 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, Check, Pencil, Receipt, Truck, Wand2, X } from 'lucide-react'
+import { AlertTriangle, Check, Pencil, Receipt, Truck, Wand2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
@@ -414,10 +415,18 @@ export default function HalamanPembelian() {
 
       {/* ── Order manual ── */}
       {formPO && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-[var(--brand)] mb-4">{t('Order Manual', 'Manual Order')}</h2>
-
+        <Dialog
+          lebar="lg"
+          onTutup={tutupFormPO}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Order Manual', 'Manual Order')}
+          aksi={<>
+            <button onClick={tutupFormPO} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+            <button onClick={simpanPO} disabled={sibuk} className={TOMBOL_UTAMA}>
+              {sibuk ? t('Menyimpan…', 'Saving…') : t('Buat PO', 'Create PO')}
+            </button>
+          </>}
+        >
             <div className="mb-4">
               <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Pilih Supplier *', 'Select Supplier *')}</label>
               <select
@@ -516,28 +525,32 @@ export default function HalamanPembelian() {
               <textarea value={catatanPO} onChange={e => setCatatanPO(e.target.value)} rows={2} className={inputCls + ' w-full'} />
             </div>
 
-            <div className="flex gap-3">
-              <button onClick={tutupFormPO} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-                {t('Batal', 'Cancel')}
-              </button>
-              <button onClick={simpanPO} disabled={sibuk}
-                className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                {sibuk ? t('Menyimpan…', 'Saving…') : t('Buat PO', 'Create PO')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Dialog>
       )}
 
       {/* ── Order terpandu ── */}
       {terpanduBuka && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl w-full max-w-3xl shadow-xl max-h-[92vh] flex flex-col">
-            <div className="px-6 pt-5 pb-4 border-b border-[var(--line-soft)]">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-[var(--brand)] flex items-center gap-2"><Wand2 size={18} /> {t('Order Terpandu', 'Guided Order')}</h2>
-                <button onClick={tutupTerpandu} aria-label={t('Tutup', 'Close')} className="text-[var(--ink-faint)] hover:text-[var(--brand)]"><X size={20} /></button>
-              </div>
+        <Dialog
+          lebar="xl"
+          onTutup={tutupTerpandu}
+          labelTutup={t('Tutup', 'Close')}
+          judul={<span className="inline-flex items-center gap-2"><Wand2 size={17} /> {t('Order Terpandu', 'Guided Order')}</span>}
+          aksi={<>
+            <button onClick={() => terpanduStep === 1 ? tutupTerpandu() : setTerpanduStep(terpanduStep - 1)} className={TOMBOL_KEDUA}>
+              {terpanduStep === 1 ? t('Batal', 'Cancel') : t('Kembali', 'Back')}
+            </button>
+            {terpanduStep < 3 ? (
+              <button onClick={() => setTerpanduStep(terpanduStep + 1)} disabled={terpanduItems.length === 0} className={TOMBOL_UTAMA}>
+                {t('Lanjut', 'Next')}
+              </button>
+            ) : (
+              <button onClick={simpanTerpandu} disabled={terpanduSibuk} className={TOMBOL_UTAMA}>
+                {terpanduSibuk ? t('Memproses…', 'Processing…') : t('Buat Semua PO', 'Create All POs')}
+              </button>
+            )}
+          </>}
+        >
+            <div className="pb-4 mb-4 border-b border-[var(--line-soft)]">
               <div className="flex items-center gap-2">
                 {[
                   { n: 1, label: t('Pilih Barang', 'Select Items') },
@@ -560,7 +573,7 @@ export default function HalamanPembelian() {
               </div>
             </div>
 
-            <div className="px-6 py-4 overflow-y-auto flex-1">
+            <div>
               {terpanduStep === 1 && (
                 <div>
                   <p className="text-sm text-[var(--ink-soft)] mb-3">
@@ -570,7 +583,7 @@ export default function HalamanPembelian() {
                   {terpanduItems.length === 0 ? (
                     <p className="text-center text-sm text-[var(--ink-faint)] py-8">{t('Tidak ada barang yang perlu direstok.', 'No items need restocking.')}</p>
                   ) : (
-                    <div className="overflow-x-auto">
+                    <div className="sw-geser-x">
                       <table className="w-full text-sm border border-[var(--line-soft)] rounded-lg overflow-hidden">
                         <thead>
                           <tr className="bg-[var(--surface-2)] text-xs text-[var(--ink-soft)]">
@@ -697,37 +710,35 @@ export default function HalamanPembelian() {
               })()}
             </div>
 
-            <div className="px-6 py-4 border-t border-[var(--line-soft)] flex gap-3">
-              <button onClick={() => terpanduStep === 1 ? tutupTerpandu() : setTerpanduStep(terpanduStep - 1)}
-                className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm hover:bg-[var(--surface-2)]">
-                {terpanduStep === 1 ? t('Batal', 'Cancel') : t('Kembali', 'Back')}
-              </button>
-              {terpanduStep < 3 ? (
-                <button onClick={() => setTerpanduStep(terpanduStep + 1)} disabled={terpanduItems.length === 0}
-                  className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] disabled:opacity-50">
-                  {t('Lanjut', 'Next')}
-                </button>
-              ) : (
-                <button onClick={simpanTerpandu} disabled={terpanduSibuk}
-                  className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] disabled:opacity-50">
-                  {terpanduSibuk ? t('Memproses…', 'Processing…') : t('Buat Semua PO', 'Create All POs')}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+        </Dialog>
       )}
 
       {/* ── Penerimaan barang ── */}
       {terima && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-3xl shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="mb-4">
-              <h2 className="text-lg font-bold text-[var(--brand)]">{t('Penerimaan Barang', 'Goods Receipt')}</h2>
-              <p className="text-xs text-[var(--ink-soft)]">PO {terima.nomor_po} · {terima.suppliers?.nama_supplier}</p>
-            </div>
-
-            <div className="overflow-x-auto">
+        <Dialog
+          lebar="xl"
+          onTutup={() => { setTerima(null); setBarisTerima([]) }}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Penerimaan Barang', 'Goods Receipt')}
+          sub={`PO ${terima.nomor_po} · ${terima.suppliers?.nama_supplier || ''}`}
+          aksi={<>
+            <button onClick={() => { setTerima(null); setBarisTerima([]) }} className={TOMBOL_KEDUA}>
+              {t('Batal', 'Cancel')}
+            </button>
+            <button onClick={() => batalkanPO(terima)}
+              className="sw-tap px-4 py-2.5 rounded-xl border border-red-200 text-red-500 text-sm hover:bg-red-50 transition">
+              {t('Batalkan PO', 'Cancel PO')}
+            </button>
+            <button onClick={() => simpanPenerimaan(false)} disabled={sibuk}
+              className={TOMBOL_KEDUA + ' border-2 border-[var(--brand)] text-[var(--brand)]'}>
+              {t('Simpan Parsial', 'Save Partial')}
+            </button>
+            <button onClick={() => simpanPenerimaan(true)} disabled={sibuk} className={TOMBOL_UTAMA}>
+              {sibuk ? t('Menyimpan…', 'Saving…') : t('Terima & Tutup PO', 'Receive & Close PO')}
+            </button>
+          </>}
+        >
+            <div className="sw-geser-x">
               <table className="w-full text-sm mb-4">
                 <thead>
                   <tr className="bg-[var(--surface-2)] text-xs text-[var(--ink-soft)]">
@@ -816,41 +827,25 @@ export default function HalamanPembelian() {
                  'enter the cumulative received quantity, including earlier receipts. The database computes the difference, so saving twice does not add stock twice.')}
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              <button onClick={() => { setTerima(null); setBarisTerima([]) }}
-                className="flex-1 min-w-[7rem] border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-                {t('Batal', 'Cancel')}
-              </button>
-              <button onClick={() => batalkanPO(terima)}
-                className="px-4 border border-red-200 text-red-500 py-2 rounded-lg text-sm hover:bg-red-50 transition">
-                {t('Batalkan PO', 'Cancel PO')}
-              </button>
-              <button onClick={() => simpanPenerimaan(false)} disabled={sibuk}
-                className="flex-1 min-w-[9rem] border-2 border-[var(--brand)] text-[var(--brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--surface-2)] transition disabled:opacity-50">
-                {t('Simpan Parsial', 'Save Partial')}
-              </button>
-              <button onClick={() => simpanPenerimaan(true)} disabled={sibuk}
-                className="flex-1 min-w-[9rem] bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                {sibuk ? t('Menyimpan…', 'Saving…') : t('Terima & Tutup PO', 'Receive & Close PO')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Dialog>
       )}
 
       {/* ── Detail PO ── */}
       {detail && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-[var(--brand)]">{t('Detail PO', 'PO Details')}</h2>
-                <p className="text-xs text-[var(--ink-soft)] num">{detail.nomor_po}</p>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${STATUS_WARNA[detail.status] || 'bg-gray-100 text-gray-600'}`}>
-                {detail.status}
-              </span>
-            </div>
+        <Dialog
+          lebar="lg"
+          onTutup={() => setDetail(null)}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Detail PO', 'PO Details')}
+          sub={<span className="num">{detail.nomor_po}</span>}
+          aksi={<>
+            <button onClick={() => setDetail(null)} className={TOMBOL_KEDUA}>{t('Tutup', 'Close')}</button>
+            <button onClick={() => cetakPO(detail)} className={TOMBOL_UTAMA}>{t('Cetak PO', 'Print PO')}</button>
+          </>}
+        >
+            <span className={`inline-block mb-4 px-3 py-1 rounded-full text-xs font-medium ${STATUS_WARNA[detail.status] || 'bg-gray-100 text-gray-600'}`}>
+              {detail.status}
+            </span>
 
             <div className="grid grid-cols-2 gap-4 mb-4 p-4 bg-[var(--surface-2)] rounded-xl text-sm">
               <div>
@@ -877,7 +872,7 @@ export default function HalamanPembelian() {
               )}
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="sw-geser-x">
               <table className="w-full text-sm mb-4">
                 <thead>
                   <tr className="bg-[var(--brand)] text-xs text-[var(--on-brand)]">
@@ -916,17 +911,7 @@ export default function HalamanPembelian() {
               </table>
             </div>
 
-            <div className="flex gap-3">
-              <button onClick={() => setDetail(null)} className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2 rounded-lg text-sm">
-                {t('Tutup', 'Close')}
-              </button>
-              <button onClick={() => cetakPO(detail)}
-                className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">
-                {t('Cetak PO', 'Print PO')}
-              </button>
-            </div>
-          </div>
-        </div>
+        </Dialog>
       )}
     </div>
   )

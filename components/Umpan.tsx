@@ -125,7 +125,15 @@ export function UmpanProvider({ children }: { children: React.ReactNode }) {
           sedang dikerjakan orang tetap terlihat di belakangnya. */}
       {pesan.length > 0 && (
         <Portal>
-          <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-[calc(100vw-2rem)] sm:w-auto pointer-events-none">
+          {/* Di telepon kabar duduk DI ATAS navigasi bawah, bukan menimpanya.
+              Navigasi itu tingginya sekitar 62px ditambah ruang aman iPhone,
+              dan kabar galat di aplikasi ini panjang: kalimatnya menyebutkan
+              apa yang harus dilakukan orangnya. Yang menimpa navigasi berarti
+              menutup jalan keluar persis pada saat orang paling perlu pindah
+              layar untuk membetulkan sesuatu. */}
+          <div
+            className="sw-atas-nav fixed z-[100] flex flex-col gap-2 max-w-sm left-4 right-4 sm:left-auto sm:right-4 sm:w-auto pointer-events-none"
+          >
             {pesan.map(p => {
               const Ikon = IKON[p.jenis]
               return (

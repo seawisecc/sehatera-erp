@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle, Check, KeyRound, Lock, RefreshCw } from 'lucide-react'
-import Portal from '@/components/Portal'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -451,16 +451,20 @@ export default function SistemNasional() {
       </div>
 
       {form && (
-        <Portal>
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[85vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-[var(--brand)] mb-1">
-              {BENTUK[form.sistem].nama} · {form.lingkungan === 'sandbox' ? t('Sandbox', 'Sandbox') : t('Produksi', 'Production')}
-            </h3>
-            <p className="text-xs text-[var(--ink-soft)] mb-4 leading-relaxed">
-              {t('Kolom rahasia yang dikosongkan tidak mengubah apa pun, jadi memperbaiki satu pengenal yang salah ketik tidak menuntut mengetik ulang kuncinya.',
+        <Dialog
+          lebar="sm"
+          onTutup={() => setForm(null)}
+          labelTutup={t('Tutup', 'Close')}
+          judul={`${BENTUK[form.sistem].nama} · ${form.lingkungan === 'sandbox' ? t('Sandbox', 'Sandbox') : t('Produksi', 'Production')}`}
+          sub={t('Kolom rahasia yang dikosongkan tidak mengubah apa pun, jadi memperbaiki satu pengenal yang salah ketik tidak menuntut mengetik ulang kuncinya.',
                  'Secret fields left empty change nothing, so fixing one mistyped identifier does not require retyping the key.')}
-            </p>
+          aksi={<>
+            <button onClick={() => setForm(null)} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+            <button onClick={simpan} disabled={sibuk} className={TOMBOL_UTAMA}>
+              <Check size={15} /> {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
+            </button>
+          </>}
+        >
 
             <div className="space-y-3">
               {BENTUK[form.sistem].publik.map(([k, label]) => (
@@ -491,19 +495,7 @@ export default function SistemNasional() {
               </div>
             </div>
 
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => setForm(null)}
-                className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2.5 rounded-lg text-sm">
-                {t('Batal', 'Cancel')}
-              </button>
-              <button onClick={simpan} disabled={sibuk}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-[var(--brand)] text-[var(--on-brand)] py-2.5 rounded-lg text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                <Check size={15} /> {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
-              </button>
-            </div>
-          </div>
-        </div>
-        </Portal>
+        </Dialog>
       )}
     </div>
   )

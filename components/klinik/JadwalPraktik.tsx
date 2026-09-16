@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { CalendarClock, Plus, Trash2, X } from 'lucide-react'
-import Portal from '@/components/Portal'
+import { CalendarClock, Plus, Trash2 } from 'lucide-react'
+import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -161,16 +161,18 @@ export default function JadwalPraktik() {
       )}
 
       {form && (
-        <Portal>
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
-          <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[var(--brand)]">{t('Tambah Sesi Praktik', 'Add a Session')}</h3>
-              <button onClick={() => setForm(null)} className="text-[var(--ink-faint)] hover:text-[var(--ink)]">
-                <X size={18} />
-              </button>
-            </div>
-
+        <Dialog
+          lebar="sm"
+          onTutup={() => setForm(null)}
+          labelTutup={t('Tutup', 'Close')}
+          judul={t('Tambah Sesi Praktik', 'Add a Session')}
+          aksi={<>
+            <button onClick={() => setForm(null)} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+            <button onClick={simpan} disabled={sibuk || !form.unit_id || form.hari.length === 0} className={TOMBOL_UTAMA}>
+              {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
+            </button>
+          </>}
+        >
             <div className="space-y-3">
               <div>
                 <label className={L}>{t('Poli', 'Unit')} <span className="text-red-500">*</span></label>
@@ -234,19 +236,7 @@ export default function JadwalPraktik() {
               </div>
             </div>
 
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => setForm(null)}
-                className="flex-1 border border-[var(--line)] text-[var(--ink-soft)] py-2.5 rounded-lg text-sm">
-                {t('Batal', 'Cancel')}
-              </button>
-              <button onClick={simpan} disabled={sibuk || !form.unit_id || form.hari.length === 0}
-                className="flex-1 bg-[var(--brand)] text-[var(--on-brand)] py-2.5 rounded-lg text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
-              </button>
-            </div>
-          </div>
-        </div>
-        </Portal>
+        </Dialog>
       )}
     </div>
   )

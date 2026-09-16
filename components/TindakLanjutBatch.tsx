@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useLang } from '@/lib/i18n'
+import Dialog from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { bukaCetak, beritaAcaraPemusnahan } from '@/lib/cetak'
@@ -159,14 +160,13 @@ export default function TindakLanjutBatch({ batch, profil, namaApoteker, onTutup
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4" role="dialog" aria-modal="true">
-      <div className="bg-[var(--surface)] rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
-        <div className="mb-4">
-          <h2 className="text-lg font-bold text-[var(--brand)]">{t('Tindak Lanjut Batch', 'Batch Follow-up')}</h2>
-          <p className="text-xs text-[var(--ink-soft)]">
-            {nama} · Batch {batch.batch_number || '-'} · {t('kadaluarsa', 'expiry')} {tanggal(batch.expired_date) || '-'} · {t('stok', 'stock')} {angka(batch.stok_batch)}
-          </p>
-        </div>
+    <Dialog
+      lebar="md"
+      onTutup={onTutup}
+      labelTutup={t('Tutup', 'Close')}
+      judul={t('Tindak Lanjut Batch', 'Batch Follow-up')}
+      sub={`${nama} · Batch ${batch.batch_number || '-'} · ${t('kadaluarsa', 'expiry')} ${tanggal(batch.expired_date) || '-'} · ${t('stok', 'stock')} ${angka(batch.stok_batch)}`}
+    >
 
         {mode === 'pilih' && (
           <div className="space-y-3">
@@ -315,7 +315,6 @@ export default function TindakLanjutBatch({ batch, profil, namaApoteker, onTutup
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </Dialog>
   )
 }
