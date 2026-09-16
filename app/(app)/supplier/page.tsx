@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Pencil, Power, PowerOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
+import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
 import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
@@ -44,17 +45,17 @@ export default function HalamanSupplier() {
   const app = useApp()
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [memuat, setMemuat] = useState(true)
+  const { memuat, mulai, selesai } = usePemuat(app.superViewCompany)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(FORM_KOSONG)
   const [ubahId, setUbahId] = useState<string | null>(null)
   const [simpanan, setSimpanan] = useState(false)
 
   const muat = async () => {
-    setMemuat(true)
+    mulai()
     const { data } = await app.scope(supabase.from('suppliers').select('*').order('kode'))
     setSuppliers((data as Supplier[]) || [])
-    setMemuat(false)
+    selesai()
   }
 
   useEffect(() => { muat() // eslint-disable-next-line react-hooks/exhaustive-deps

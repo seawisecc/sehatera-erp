@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { AlertTriangle, Search, Eye, Pencil, Printer, Tag } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
+import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
@@ -55,7 +56,7 @@ export default function HalamanProduk() {
 
   const [produk, setProduk] = useState<any[]>([])
   const [batchAlert, setBatchAlert] = useState(0)
-  const [memuat, setMemuat] = useState(true)
+  const { memuat, mulai, selesai } = usePemuat(app.superViewCompany)
   const [sibuk, setSibuk] = useState(false)
 
   const [cari, setCari] = useState('')
@@ -74,7 +75,7 @@ export default function HalamanProduk() {
   const [detail, setDetail] = useState<any>(null)
 
   const muat = useCallback(async () => {
-    setMemuat(true)
+    mulai()
     const in60 = new Date(); in60.setDate(in60.getDate() + 60)
     const [{ data: p }, { count }] = await Promise.all([
       scope(supabase.from('products').select('*').order('kode')),
@@ -85,7 +86,7 @@ export default function HalamanProduk() {
     ])
     setProduk(p || [])
     setBatchAlert(count || 0)
-    setMemuat(false)
+    selesai()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app.superViewCompany])
 

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CalendarClock, Check, Phone, Search, UserPlus, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
+import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
 import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
@@ -56,7 +57,7 @@ export default function HalamanReservasi() {
   const [tgl, setTgl] = useState(hariIni())
   const [sesi, setSesi] = useState<Sesi[]>([])
   const [daftar, setDaftar] = useState<any[]>([])
-  const [memuat, setMemuat] = useState(true)
+  const { memuat, mulai, selesai } = usePemuat(app.superViewCompany)
   const [sibuk, setSibuk] = useState(false)
   const [galat, setGalat] = useState('')
 
@@ -79,7 +80,7 @@ export default function HalamanReservasi() {
   const scope = app.scope
 
   const muat = useCallback(async () => {
-    setMemuat(true)
+    mulai()
     setGalat('')
 
     // Dipanggil sebelum membaca, supaya angka yang muncul sudah bersih dari
@@ -98,7 +99,7 @@ export default function HalamanReservasi() {
     if (ej) setGalat(pesanError(ej))
     setSesi(((j as any[]) || []) as Sesi[])
     setDaftar((r as any[]) || [])
-    setMemuat(false)
+    selesai()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tgl, app.superViewCompany])
 

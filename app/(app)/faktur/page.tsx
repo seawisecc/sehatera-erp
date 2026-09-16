@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { CalendarClock, CreditCard, Printer, Receipt, Wallet } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
+import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
 import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
@@ -44,7 +45,7 @@ export default function HalamanFaktur() {
   const app = useApp()
 
   const [daftar, setDaftar] = useState<Faktur[]>([])
-  const [memuat, setMemuat] = useState(true)
+  const { memuat, mulai, selesai } = usePemuat(app.superViewCompany)
   const [bayar, setBayar] = useState<Faktur | null>(null)
   const [formBayar, setFormBayar] = useState({
     tanggal_bayar: new Date().toISOString().split('T')[0],
@@ -54,7 +55,7 @@ export default function HalamanFaktur() {
   const [menyimpan, setMenyimpan] = useState(false)
 
   const muat = async () => {
-    setMemuat(true)
+    mulai()
     const { data } = await app.scope(
       supabase.from('faktur').select('*, suppliers(nama_supplier), purchase_orders(nomor_po)'),
     )
@@ -68,7 +69,7 @@ export default function HalamanFaktur() {
       return new Date(a.tanggal_jatuh_tempo || 0).getTime() - new Date(b.tanggal_jatuh_tempo || 0).getTime()
     })
     setDaftar(rows)
-    setMemuat(false)
+    selesai()
   }
 
   useEffect(() => { muat() // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,7 +132,7 @@ export default function HalamanFaktur() {
           label={t('Lewat Jatuh Tempo', 'Overdue')} nilai={String(terlambat)} />
       </div>
 
-      <div className="bg-[var(--surface)]/70 backdrop-blur-sm border border-[var(--line)] shadow-sm rounded-2xl overflow-x-auto">
+      <div className="sw-geser-x sw-tabel-kartu-wadah bg-[var(--surface)]/70 backdrop-blur-sm border border-[var(--line)] shadow-sm rounded-2xl">
         {memuat ? (
           <p className="text-center text-[var(--ink-faint)] py-12 text-sm">{t('Memuat…', 'Loading…')}</p>
         ) : daftar.length === 0 ? (
@@ -140,7 +141,7 @@ export default function HalamanFaktur() {
                'No invoices yet. They are recorded automatically when goods are received in Purchasing.')}
           </p>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm sw-tabel-kartu">
             <thead>
               <tr className="bg-[var(--brand)] text-[var(--on-brand)]">
                 <th className="text-left px-4 py-3 text-xs font-medium">{t('No. Faktur', 'Invoice No.')}</th>
@@ -161,26 +162,26 @@ export default function HalamanFaktur() {
                 const dekat = !!jt && !lewat && f.status !== 'lunas' && (jt.getTime() - hariIni.getTime()) / 86400000 <= 7
                 return (
                   <tr key={f.id} className={`${TR} ${lewat ? 'bg-red-50/60' : ''}`}>
-                    <td className="px-4 py-3 num text-xs text-[var(--ink)]">{f.nomor_faktur || '-'}</td>
-                    <td className="px-4 py-3 text-[var(--ink)]">{f.suppliers?.nama_supplier || '-'}</td>
-                    <td className="px-4 py-3 num text-xs text-[var(--ink-soft)]">{f.purchase_orders?.nomor_po || '-'}</td>
-                    <td className="px-4 py-3 text-xs text-[var(--ink-soft)]">{tgl(f.tanggal_faktur)}</td>
-                    <td className="px-4 py-3 text-center text-xs text-[var(--ink-soft)] num">
+                    <td data-l={t('No. Faktur', 'Invoice No.')} className="px-4 py-3 num text-xs text-[var(--ink)]">{f.nomor_faktur || '-'}</td>
+                    <td data-utama className="px-4 py-3 text-[var(--ink)]">{f.suppliers?.nama_supplier || '-'}</td>
+                    <td data-l="PO" className="px-4 py-3 num text-xs text-[var(--ink-soft)]">{f.purchase_orders?.nomor_po || '-'}</td>
+                    <td data-l={t('Tgl Faktur', 'Invoice Date')} className="px-4 py-3 text-xs text-[var(--ink-soft)]">{tgl(f.tanggal_faktur)}</td>
+                    <td data-l="TOP" className="px-4 py-3 text-center text-xs text-[var(--ink-soft)] num">
                       {f.term_of_payment === 0 ? t('Tunai', 'Cash') : `${f.term_of_payment} ${t('hr', 'd')}`}
                     </td>
-                    <td className="px-4 py-3 text-xs">
+                    <td data-l={t('Jatuh Tempo', 'Due Date')} className="px-4 py-3 text-xs">
                       <span className={lewat ? 'text-red-600 font-semibold' : dekat ? 'text-amber-600 font-medium' : 'text-[var(--ink-soft)]'}>
                         {tgl(f.tanggal_jatuh_tempo)}
                       </span>
                       {lewat && <span className="block text-[10px] text-red-500">{t('terlambat', 'overdue')}</span>}
                     </td>
-                    <td className="px-4 py-3 text-right font-medium text-[var(--ink)] num">{rp(f.total)}</td>
-                    <td className="px-4 py-3 text-center">
+                    <td data-l="Total" className="px-4 py-3 text-right font-medium text-[var(--ink)] num">{rp(f.total)}</td>
+                    <td data-l="Status" className="px-4 py-3 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${f.status === 'lunas' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                         {f.status === 'lunas' ? t('Lunas', 'Paid') : t('Belum Lunas', 'Unpaid')}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td data-aksi className="px-4 py-3 text-center">
                       {f.status === 'lunas' ? (
                         <button onClick={() => cetakBukti(f)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--line)] text-[var(--brand)] text-xs font-medium hover:bg-[var(--surface-2)] transition">

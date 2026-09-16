@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Check, FlaskRound, Plus, RefreshCw, Trash2, Zap } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
+import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
 import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
@@ -70,7 +71,7 @@ export default function HalamanPenunjang() {
 
   const [jenis, setJenis] = useState<'semua' | 'lab' | 'radiologi'>('semua')
   const [daftar, setDaftar] = useState<Antre[]>([])
-  const [memuat, setMemuat] = useState(true)
+  const { memuat, mulai: mulaiMuat, selesai: selesaiMuat } = usePemuat(app.superViewCompany)
   const [sibuk, setSibuk] = useState(false)
   const [galat, setGalat] = useState('')
 
@@ -80,15 +81,15 @@ export default function HalamanPenunjang() {
   const [kesan, setKesan] = useState('')
 
   const muat = useCallback(async () => {
-    setMemuat(true)
+    mulaiMuat()
     setGalat('')
     const { data, error } = await supabase.rpc('antrean_penunjang', {
       p_jenis: jenis === 'semua' ? null : jenis,
     })
     if (error) setGalat(pesanError(error))
     setDaftar(((data as Antre[]) || []))
-    setMemuat(false)
-  }, [jenis])
+    selesaiMuat()
+  }, [jenis, mulaiMuat, selesaiMuat])
 
   useEffect(() => { muat() }, [muat])
 

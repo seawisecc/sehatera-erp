@@ -4,10 +4,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle, CalendarClock, Printer, Ban } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
+import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
-import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TR } from '@/lib/ui'
+import { TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TH_C, TR } from '@/lib/ui'
 import { angka, tanggal } from '@/lib/format'
 import { bukaCetak, beritaAcaraPemusnahan } from '@/lib/cetak'
 import TindakLanjutBatch, { type BatchTindakLanjut } from '@/components/TindakLanjutBatch'
@@ -37,12 +38,12 @@ export default function HalamanTindakLanjut() {
   const [batches, setBatches] = useState<any[]>([])
   const [musnah, setMusnah] = useState<any[]>([])
   const [retur, setRetur] = useState<any[]>([])
-  const [memuat, setMemuat] = useState(true)
+  const { memuat, mulai, selesai } = usePemuat(app.superViewCompany)
   const [sibuk, setSibuk] = useState(false)
   const [pilih, setPilih] = useState<BatchTindakLanjut | null>(null)
 
   const muat = useCallback(async () => {
-    setMemuat(true)
+    mulai()
     const in60 = new Date(); in60.setDate(in60.getDate() + 60)
     const [{ data: b }, { data: m }, { data: r }] = await Promise.all([
       scope(supabase.from('product_batches')
@@ -59,7 +60,7 @@ export default function HalamanTindakLanjut() {
         .order('created_at', { ascending: false })),
     ])
     setBatches(b || []); setMusnah(m || []); setRetur(r || [])
-    setMemuat(false)
+    selesai()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app.superViewCompany])
 
@@ -213,8 +214,8 @@ export default function HalamanTindakLanjut() {
       )}
 
       {tab === 'musnahkan' && (
-        <div className={TBL_WRAP}>
-          <table className={TBL}>
+        <div className={`${TBL_WRAP} ${TBL_KARTU_WADAH}`}>
+          <table className={`${TBL} ${TBL_KARTU}`}>
             <thead className={THEAD}>
               <tr>
                 <th className={TH_L}>No. BA</th>
@@ -233,18 +234,18 @@ export default function HalamanTindakLanjut() {
                 </td></tr>
               ) : musnah.map((r: any) => (
                 <tr key={r.id} className={TR}>
-                  <td className="px-4 py-3 num text-xs text-[var(--ink)]">{r.nomor_ba || '-'}</td>
-                  <td className="px-4 py-3 text-xs text-[var(--ink-soft)] num">{tanggal(r.tanggal_musnahkan) || '-'}</td>
-                  <td className="px-4 py-3 text-[var(--ink)] font-medium">{r.products?.nama_obat || '-'}</td>
-                  <td className="px-4 py-3 text-xs text-[var(--ink-soft)]">
+                  <td data-l="No. BA" className="px-4 py-3 num text-xs text-[var(--ink)]">{r.nomor_ba || '-'}</td>
+                  <td data-l={t('Tanggal', 'Date')} className="px-4 py-3 text-xs text-[var(--ink-soft)] num">{tanggal(r.tanggal_musnahkan) || '-'}</td>
+                  <td data-utama className="px-4 py-3 text-[var(--ink)] font-medium">{r.products?.nama_obat || '-'}</td>
+                  <td data-l={t('Batch', 'Batch')} className="px-4 py-3 text-xs text-[var(--ink-soft)]">
                     <span className="num">{r.product_batches?.batch_number || '-'}</span>
                     {r.product_batches?.expired_date && (
                       <span className="text-[var(--ink-faint)]"> · {tanggal(r.product_batches.expired_date)}</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-center text-[var(--ink)] font-medium num">{angka(r.qty_musnahkan)} {r.products?.satuan || ''}</td>
-                  <td className="px-4 py-3 text-xs text-[var(--ink-soft)]">{r.metode || '-'}</td>
-                  <td className="px-4 py-3 text-center">
+                  <td data-l="Qty" className="px-4 py-3 text-center text-[var(--ink)] font-medium num">{angka(r.qty_musnahkan)} {r.products?.satuan || ''}</td>
+                  <td data-l={t('Metode', 'Method')} className="px-4 py-3 text-xs text-[var(--ink-soft)]">{r.metode || '-'}</td>
+                  <td data-aksi className="px-4 py-3 text-center">
                     <button onClick={() => cetakBA(r)}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--line)] text-[var(--brand)] text-xs font-medium hover:bg-[var(--surface-2)] transition whitespace-nowrap">
                       <Printer size={13} /> {t('Cetak BA', 'Print Report')}
@@ -258,8 +259,8 @@ export default function HalamanTindakLanjut() {
       )}
 
       {tab === 'retur' && (
-        <div className={TBL_WRAP}>
-          <table className={TBL}>
+        <div className={`${TBL_WRAP} ${TBL_KARTU_WADAH}`}>
+          <table className={`${TBL} ${TBL_KARTU}`}>
             <thead className={THEAD}>
               <tr>
                 <th className={TH_L}>No. Retur</th>
@@ -280,19 +281,19 @@ export default function HalamanTindakLanjut() {
                 </td></tr>
               ) : retur.map((r: any) => (
                 <tr key={r.id} className={TR}>
-                  <td className="px-4 py-3 num text-xs text-[var(--ink)]">{r.nomor_retur || '-'}</td>
-                  <td className="px-4 py-3 text-xs text-[var(--ink-soft)] num">{tanggal(r.tanggal_retur) || '-'}</td>
-                  <td className="px-4 py-3 text-[var(--ink)] font-medium">{r.products?.nama_obat || '-'}</td>
-                  <td className="px-4 py-3 text-xs text-[var(--ink-soft)]">{r.suppliers?.nama_supplier || '-'}</td>
-                  <td className="px-4 py-3 text-xs text-[var(--ink-soft)]">
+                  <td data-l="No. Retur" className="px-4 py-3 num text-xs text-[var(--ink)]">{r.nomor_retur || '-'}</td>
+                  <td data-l={t('Tanggal', 'Date')} className="px-4 py-3 text-xs text-[var(--ink-soft)] num">{tanggal(r.tanggal_retur) || '-'}</td>
+                  <td data-utama className="px-4 py-3 text-[var(--ink)] font-medium">{r.products?.nama_obat || '-'}</td>
+                  <td data-l="Supplier" className="px-4 py-3 text-xs text-[var(--ink-soft)]">{r.suppliers?.nama_supplier || '-'}</td>
+                  <td data-l={t('Batch', 'Batch')} className="px-4 py-3 text-xs text-[var(--ink-soft)]">
                     <span className="num">{r.product_batches?.batch_number || '-'}</span>
                     {r.product_batches?.expired_date && (
                       <span className="text-[var(--ink-faint)]"> · {tanggal(r.product_batches.expired_date)}</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-center text-[var(--ink)] font-medium num">{angka(r.qty_retur)} {r.products?.satuan || ''}</td>
-                  <td className="px-4 py-3 text-xs text-[var(--ink-soft)] max-w-[220px] truncate">{r.alasan || '-'}</td>
-                  <td className="px-4 py-3 text-center">
+                  <td data-l="Qty" className="px-4 py-3 text-center text-[var(--ink)] font-medium num">{angka(r.qty_retur)} {r.products?.satuan || ''}</td>
+                  <td data-l={t('Alasan', 'Reason')} className="px-4 py-3 text-xs text-[var(--ink-soft)] max-w-[220px] truncate">{r.alasan || '-'}</td>
+                  <td data-l="Status" className="px-4 py-3 text-center">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                       r.status === 'selesai' ? 'bg-green-100 text-green-700'
                       : r.status === 'dibatalkan' ? 'bg-gray-100 text-gray-500'
@@ -300,7 +301,7 @@ export default function HalamanTindakLanjut() {
                       {r.status || 'diajukan'}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-aksi className="px-4 py-3">
                     {(!r.status || r.status === 'diajukan') ? (
                       <div className="flex items-center justify-center gap-2">
                         <button onClick={() => konfirmasiRetur(r)} disabled={sibuk}

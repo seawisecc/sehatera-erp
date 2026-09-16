@@ -4,11 +4,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle, Check, Pencil, Receipt, Truck, Wand2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
+import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
 import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
-import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
+import { TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
 import { rupiah, angka, tanggal } from '@/lib/format'
 import { bukaCetak, purchaseOrder } from '@/lib/cetak'
 
@@ -51,7 +52,7 @@ export default function HalamanPembelian() {
 
   const [poList, setPoList] = useState<any[]>([])
   const [suppliers, setSuppliers] = useState<any[]>([])
-  const [memuat, setMemuat] = useState(true)
+  const { memuat, mulai, selesai } = usePemuat(app.superViewCompany)
   const [sibuk, setSibuk] = useState(false)
 
   // Order manual
@@ -82,7 +83,7 @@ export default function HalamanPembelian() {
   const terkunci = app.isSuper && !app.superViewCompany
 
   const muat = useCallback(async () => {
-    setMemuat(true)
+    mulai()
     const [{ data: po }, { data: sup }] = await Promise.all([
       scope(supabase.from('purchase_orders')
         .select('*, suppliers(nama_supplier, kode, alamat, telepon)')
@@ -91,7 +92,7 @@ export default function HalamanPembelian() {
     ])
     setPoList(po || [])
     setSuppliers(sup || [])
-    setMemuat(false)
+    selesai()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app.superViewCompany])
 
@@ -358,8 +359,8 @@ export default function HalamanPembelian() {
         </div>
       )}
 
-      <div className={TBL_WRAP}>
-        <table className={TBL}>
+      <div className={`${TBL_WRAP} ${TBL_KARTU_WADAH}`}>
+        <table className={`${TBL} ${TBL_KARTU}`}>
           <thead className={THEAD}>
             <tr>
               <th className={TH_L}>{t('No. PO', 'PO No.')}</th>
@@ -379,14 +380,14 @@ export default function HalamanPembelian() {
               </td></tr>
             ) : poList.map((po: any) => (
               <tr key={po.id} className={TR}>
-                <td className="px-4 py-3 num text-xs text-[var(--brand)] font-medium">{po.nomor_po}</td>
-                <td className="px-4 py-3 text-[var(--ink)]">{po.suppliers?.nama_supplier || '-'}</td>
-                <td className="px-4 py-3 text-[var(--ink-soft)] num">{tanggal(po.tanggal_po || po.created_at)}</td>
-                <td className="px-4 py-3 text-right font-medium text-[var(--brand)] num">{rupiah(po.total_nilai)}</td>
-                <td className="px-4 py-3 text-center">
+                <td data-l={t('No. PO', 'PO No.')} className="px-4 py-3 num text-xs text-[var(--brand)] font-medium">{po.nomor_po}</td>
+                <td data-utama className="px-4 py-3 text-[var(--ink)]">{po.suppliers?.nama_supplier || '-'}</td>
+                <td data-l={t('Tanggal', 'Date')} className="px-4 py-3 text-[var(--ink-soft)] num">{tanggal(po.tanggal_po || po.created_at)}</td>
+                <td data-l="Total" className="px-4 py-3 text-right font-medium text-[var(--brand)] num">{rupiah(po.total_nilai)}</td>
+                <td data-l="Status" className="px-4 py-3 text-center">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_WARNA[po.status] || 'bg-gray-100 text-gray-600'}`}>{po.status}</span>
                 </td>
-                <td className="px-4 py-3 text-center">
+                <td data-aksi className="px-4 py-3 text-center">
                   <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                     <button onClick={() => cetakPO(po)} className="text-xs text-[var(--brand)] hover:underline font-medium">Print</button>
                     <span className="text-[var(--line)]">|</span>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Eye, History, Pencil, Search, Stethoscope, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
+import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
@@ -40,7 +41,7 @@ export default function HalamanPasien() {
   const app = useApp()
 
   const [daftar, setDaftar] = useState<Pasien[]>([])
-  const [memuat, setMemuat] = useState(true)
+  const { memuat, mulai, selesai } = usePemuat(app.superViewCompany)
   const [cari, setCari] = useState('')
   const [form, setForm] = useState<Pasien | null | undefined>(undefined)
   const [riwayat, setRiwayat] = useState<string | null>(null)
@@ -48,10 +49,10 @@ export default function HalamanPasien() {
   const [sibuk, setSibuk] = useState(false)
 
   const muat = useCallback(async () => {
-    setMemuat(true)
+    mulai()
     const { data } = await app.scope(supabase.from('patients').select('*').order('nama'))
     setDaftar((data as Pasien[]) || [])
-    setMemuat(false)
+    selesai()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app.superViewCompany])
 

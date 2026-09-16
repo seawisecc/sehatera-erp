@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
+import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
@@ -98,7 +99,7 @@ export default function HalamanKunjungan() {
   const app = useApp()
 
   const [antrean, setAntrean] = useState<Antrean[]>([])
-  const [memuat, setMemuat] = useState(true)
+  const { memuat, mulai, selesai } = usePemuat(app.superViewCompany)
   const [pilih, setPilih] = useState<string | null>(null)
   const [sibuk, setSibuk] = useState(false)
 
@@ -175,12 +176,12 @@ export default function HalamanKunjungan() {
   }
 
   const muat = useCallback(async () => {
-    setMemuat(true)
+    mulai()
     const { data } = await app.scope(
       supabase.from('v_antrean_hari_ini').select('*').order('dibuka_pada')
     )
     setAntrean((data as Antrean[]) || [])
-    setMemuat(false)
+    selesai()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app.superViewCompany])
 

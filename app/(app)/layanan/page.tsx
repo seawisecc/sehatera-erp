@@ -5,6 +5,7 @@ import PilihICD9 from '@/components/klinik/PilihICD9'
 import { Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
+import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
 import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
@@ -42,16 +43,16 @@ export default function HalamanLayanan() {
   const app = useApp()
 
   const [services, setServices] = useState<Layanan[]>([])
-  const [memuat, setMemuat] = useState(true)
+  const { memuat, mulai, selesai } = usePemuat(app.superViewCompany)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ nama: '', harga: 0, deskripsi: '', kode_icd9: null as string | null })
   const [edit, setEdit] = useState<Layanan | null>(null)
 
   const muat = async () => {
-    setMemuat(true)
+    mulai()
     const { data } = await app.scope(supabase.from('services').select('*').order('nama'))
     setServices((data as Layanan[]) || [])
-    setMemuat(false)
+    selesai()
   }
 
   // Dimuat ulang saat super admin berganti apotek di topbar.
