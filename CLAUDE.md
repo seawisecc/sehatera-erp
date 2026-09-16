@@ -1924,22 +1924,41 @@ yang harus disebut kalau ada yang bertanya di mana menu gantinya.
 
 ## Yang dijanjikan halaman harga, dan yang benar-benar ada
 
-Diperiksa satu per satu pada 19 Agustus 2026. Ini catatan komersial, bukan
-teknis, dan harus dibaca sebelum paket berikutnya dijual.
+Diperiksa satu per satu pada 19 Agustus 2026, dibereskan sebagian pada
+17 September 2026. Ini catatan komersial, bukan teknis, dan harus dibaca
+sebelum paket berikutnya dijual.
 
 | Dijanjikan | Kenyataan |
 | --- | --- |
 | Kuota produk, pengguna, outlet | **Ditegakkan** trigger database (0003, 0062) |
 | Multi outlet | **Ada** sejak 0062, kuotanya lewat `max_outlets` |
 | Pembelian basic vs full | **Sebagian**: hanya menu `faktur` yang dikunci |
-| Laporan basic vs full (30 vs 90 hari) | **TIDAK**: `RENTANG_LAPORAN_HARI` tidak pernah dipanggil |
-| CRM basic vs full | **TIDAK** dipakai di mana pun |
-| Modul klinik | **TIDAK**: `f.klinik` dihitung tapi tidak menggerbangi apa pun |
-| API | **TIDAK ADA sama sekali**: tidak ada satu pun endpoint publik |
+| Laporan lengkap | **Ditegakkan** sejak 17 Sep 2026: basic dibatasi 30 hari di KUERI, dan batasnya dikatakan di layar |
+| Modul klinik | **TIDAK**: `f.klinik` dihitung tapi tidak menggerbangi apa pun. Keputusan pemilik |
+| CRM / Riwayat pasien | **Dicabut dari halaman harga**, karena `f.crm` tidak menggerbangi apa pun |
+| API | **Dicabut dari halaman harga**, karena tidak ada satu pun endpoint publik |
 | Dukungan email/WA/dedicated | Janji layanan, bukan perangkat lunak |
 
-**`lockedModules()` hanya mengunci satu menu.** Itu satu-satunya tempat paket
-benar-benar menutup sesuatu. Sisanya nilai yang dihitung lalu tidak dipakai.
+**`lockedModules()` hanya mengunci satu menu.** Itu masih satu-satunya tempat
+paket menutup MENU; penegakan lain berbentuk batas di dalam layarnya sendiri.
+
+### Dua baris yang dicabut, dan kenapa dicabut alih-alih ditegakkan
+
+- **API** dijual centang di Enterprise (Rp 749.000/bln) dan Klinik, padahal
+  tidak ada satu pun endpoint publik. Lima route handler yang ada semuanya
+  internal dan dijaga sesi. Yang membeli Enterprise karena baris itu membeli
+  sesuatu yang tidak ada.
+- **Riwayat pasien** digerbangi `f.crm`, dan `f.crm` tidak menggerbangi apa pun.
+  Untuk apotek fiturnya memang belum ada; untuk klinik ia ADA tapi dibuka oleh
+  SEKTOR, bukan paket, dan sudah terwakili baris "Modul klinik". Menggerbangkan
+  ke paket juga BUKAN pilihan: itu rekam medis, dan mengunci klinik dari rekam
+  medisnya sendiri adalah hal yang tidak boleh dilakukan sistem ini.
+
+**Batas laporan harus DIKATAKAN, bukan didiamkan.** Laporan yang diam-diam
+menampilkan lebih sedikit daripada yang ada membuat apotek menyimpulkan
+penjualannya tidak tercatat, lalu mencari kesalahan di tempat yang salah.
+Angka yang hilang tanpa penjelasan adalah cara tercepat membuat orang berhenti
+memercayai seluruh layarnya. SIPNAP tidak pernah ikut dibatasi.
 
 Jangan menambah baris fitur baru di halaman harga sebelum penegakannya ada:
 yang dijual tanpa barang bukan kelalaian teknis, ia janji yang tidak ditepati.

@@ -101,14 +101,34 @@ export default function DaftarPaket({ nada = 'terang' }: { nada?: 'terang' | 'ge
           const hemat = tahunan && p.price_yearly && p.price_yearly < setahunPenuh
             ? setahunPenuh - p.price_yearly : 0
 
+          /**
+           * Tiap baris di sini adalah JANJI, dan yang dijanjikan harus benar-
+           * benar ditegakkan di suatu tempat. Dua baris dicabut pada 17
+           * September 2026 karena keduanya tidak punya barangnya:
+           *
+           * - **API.** Dijual centang di Enterprise dan Klinik, padahal tidak
+           *   ada satu pun endpoint publik. Lima route handler yang ada
+           *   (`/api/satusehat/*`, `/api/kfa`) semuanya internal, dijaga sesi,
+           *   dan tidak berbentuk API untuk pelanggan. Yang membeli Enterprise
+           *   karena baris ini membeli sesuatu yang tidak ada.
+           *
+           * - **Riwayat pasien.** Digerbangi `f.crm`, dan `f.crm` tidak
+           *   menggerbangi apa pun di seluruh aplikasi. Untuk apotek fiturnya
+           *   memang belum ada; untuk klinik ia ADA tapi dibuka oleh SEKTOR,
+           *   bukan oleh paket, dan sudah terwakili baris "Modul klinik" di
+           *   bawahnya. Menggerbangkannya ke paket juga bukan pilihan: itu
+           *   rekam medis, dan mengunci klinik dari rekam medisnya sendiri
+           *   adalah hal yang tidak boleh dilakukan sistem ini.
+           *
+           * Mengembalikannya satu baris masing-masing, begitu barangnya ada.
+           * Aturannya: jangan menambah baris di sini sebelum penegakannya ada.
+           */
           const isi: [string, boolean | string][] = [
             [t('Item obat', 'Drug items'), batas(p.max_products, t('item', 'items'))],
             [t('Pengguna', 'Users'), batas(p.max_users, t('orang', 'people'))],
             [t('Cabang', 'Outlets'), batas(p.max_outlets, t('cabang', 'outlets'))],
             [t('Laporan lengkap', 'Full reports'), f.reports === 'full'],
             [t('Pembelian & faktur lengkap', 'Full purchasing & invoices'), f.purchasing === 'full'],
-            [t('Riwayat pasien', 'Patient history'), f.crm === 'full'],
-            ['API', f.api],
             [t('Modul klinik', 'Clinic module'), f.klinik],
             [t('Bantuan', 'Support'), f.support === 'dedicated' ? t('Pendampingan khusus', 'Dedicated')
               : f.support === 'whatsapp' ? 'WhatsApp' : 'Email'],
