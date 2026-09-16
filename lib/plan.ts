@@ -77,4 +77,23 @@ export function lockedModules(f: PlanFeatures): string[] {
   return locked
 }
 
-export const RENTANG_LAPORAN_HARI = (f: PlanFeatures) => (f.reports === 'full' ? 90 : 30)
+/**
+ * Berapa hari ke belakang laporan penjualan boleh dibaca. `null` berarti TANPA
+ * BATAS.
+ *
+ * Angkanya mengikuti apa yang benar-benar dijual di `DaftarPaket`, bukan
+ * sebaliknya. Di sana barisnya berbunyi **"Laporan lengkap"** dan bentuknya
+ * ya/tidak, jadi paket yang mendapat centang memang dijanjikan LENGKAP, dan
+ * memotongnya di 90 hari berarti menjual kata yang tidak ditepati.
+ *
+ * Versi pertama fungsi ini mengembalikan 90 untuk yang penuh. Itu salah, dan
+ * salahnya tidak pernah ketahuan karena fungsinya **tidak pernah dipanggil
+ * satu kali pun** sejak ditulis: nilai yang dihitung lalu dibuang tidak punya
+ * kesempatan berbeda dari yang dijual.
+ *
+ * Yang basic dibatasi 30 hari, dan batas itu DIKATAKAN di layar Laporan.
+ * Laporan yang diam-diam menampilkan lebih sedikit daripada yang ada membuat
+ * orang mencari kesalahan di tempat yang salah.
+ */
+export const RENTANG_LAPORAN_HARI = (f: PlanFeatures): number | null =>
+  (f.reports === 'full' ? null : 30)

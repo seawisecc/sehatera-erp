@@ -1,15 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Printer } from 'lucide-react'
+import Link from 'next/link'
+import { Info, Printer } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
 import Dialog, { TOMBOL_KEDUA } from '@/components/Dialog'
+import { RENTANG_LAPORAN_HARI } from '@/lib/plan'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL_TEMPEL, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD } from '@/lib/ui'
-import { rupiah, angka, tanggalJam } from '@/lib/format'
+import { rupiah, angka, tanggalJam, tanggal, tanggalLokal } from '@/lib/format'
 import { bukaCetak, laporanSipnap, type BarisSipnap } from '@/lib/cetak'
 import Klaim from '@/components/klinik/Klaim'
 
@@ -61,13 +63,34 @@ export default function HalamanLaporan() {
 
   const scope = app.scope
 
+  /**
+   * Rentang laporan yang dibuka paket ini: 30 hari untuk yang basic, 90 untuk
+   * yang penuh. Halaman harga sudah menjualnya sejak lama; `RENTANG_LAPORAN_HARI`
+   * juga sudah ada sejak lama, dan sampai sekarang tidak pernah dipanggil satu
+   * kali pun. Yang dijual tanpa barang bukan kelalaian teknis, ia janji yang
+   * tidak ditepati.
+   */
+  const batasHari = RENTANG_LAPORAN_HARI(app.fitur)
+  const batasTanggal = useMemo(() => {
+    if (batasHari === null) return null
+    const d = new Date()
+    d.setDate(d.getDate() - batasHari)
+    return tanggalLokal(d)
+  }, [batasHari])
+
   const muat = useCallback(async () => {
     setMemuat(true)
-    const { data } = await scope(supabase.from('transactions').select('*').order('created_at', { ascending: false }))
+    // Batasnya ditegakkan di KUERI, bukan dengan menyaring hasilnya di
+    // peramban. Menyaring di peramban berarti seluruh riwayat tetap diambil
+    // dan tetap ada di dalam perangkat orangnya; yang dibatasi cuma yang
+    // digambar, dan itu bukan pembatasan.
+    let q = scope(supabase.from('transactions').select('*'))
+    if (batasTanggal) q = q.gte('created_at', batasTanggal)
+    const { data } = await q.order('created_at', { ascending: false })
     setRiwayat(data || [])
     setMemuat(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [app.superViewCompany])
+  }, [app.superViewCompany, batasTanggal])
 
   useEffect(() => { muat() }, [muat])
 
@@ -247,6 +270,37 @@ export default function HalamanLaporan() {
           </button>
         ))}
       </div>
+
+      {/*
+        Batas rentang DIKATAKAN, tidak didiamkan.
+
+        Laporan yang diam-diam menampilkan lebih sedikit daripada yang ada jauh
+        lebih berbahaya daripada laporan yang dibatasi terang-terangan: apotek
+        yang membuka riwayat tiga bulan lalu dan menemukannya kosong akan
+        menyimpulkan penjualannya memang tidak tercatat, lalu mencari
+        kesalahannya di tempat yang salah. Angka yang hilang tanpa penjelasan
+        adalah cara tercepat membuat orang berhenti memercayai seluruh layarnya.
+
+        Ditampilkan hanya pada tab yang memang membaca riwayat transaksi.
+        SIPNAP tidak ikut dibatasi: ia kewajiban hukum, bukan fitur paket.
+      */}
+      {batasTanggal && (tab === 'penjualan' || tab === 'metode') && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-4 py-2.5 text-xs text-[var(--ink-soft)]">
+          <Info size={14} className="shrink-0 text-[var(--brand-soft)]" />
+          <span>
+            {t(`Paketmu membuka riwayat ${batasHari} hari terakhir, sejak ${tanggal(batasTanggal)}.`,
+               `Your plan shows the last ${batasHari} days, from ${tanggal(batasTanggal)}.`)}
+          </span>
+          <Link href="/pengaturan?tab=langganan"
+            className="font-semibold text-[var(--brand)] underline underline-offset-2">
+            {t('Lihat paket', 'View plans')}
+          </Link>
+          <span className="w-full text-[11px] text-[var(--ink-faint)] leading-relaxed">
+            {t('Data yang lebih lama tetap tersimpan utuh dan tidak dihapus. Laporan SIPNAP tidak ikut dibatasi.',
+               'Older data stays intact and is never deleted. SIPNAP reports are not limited.')}
+          </span>
+        </div>
+      )}
 
       {(tab === 'penjualan' || tab === 'metode' || tab === 'penjamin') && (
         <div className={`${KARTU} mb-5 flex flex-wrap items-end gap-3 p-3`}>
