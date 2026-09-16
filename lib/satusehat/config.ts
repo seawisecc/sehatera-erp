@@ -47,6 +47,14 @@ export const SYS = {
   ihsPasien: 'https://fhir.kemkes.go.id/id/ihs-number',
   icd10: 'http://hl7.org/fhir/sid/icd-10',
   icd9cm: 'http://hl7.org/fhir/sid/icd-9-cm',
+  /** Observation.code untuk hasil lab dan tanda vital. */
+  loinc: 'http://loinc.org',
+  /** Observation.category. */
+  kategoriObservasi: 'http://terminology.hl7.org/CodeSystem/observation-category',
+  /** Observation.interpretation: normal, tinggi, rendah, kritis. */
+  tafsirObservasi: 'http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation',
+  /** Satuan hasil lab pada valueQuantity. */
+  ucum: 'http://unitsofmeasure.org',
 } as const
 
 /**

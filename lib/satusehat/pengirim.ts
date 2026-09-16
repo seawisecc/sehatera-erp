@@ -95,9 +95,15 @@ export async function kirimBatch(
 
     // Penanda dulu, baru laporan. Lihat alasan nomor 2 di kepala berkas.
     //
-    // TIGA jenis tulis-balik, dan masing-masing menandai kejadian yang berbeda:
-    // Encounter lahir, Condition lahir, dan Encounter selesai diperbarui. Satu
-    // penanda untuk beberapa kejadian adalah cara kehilangan salah satunya.
+    // Tiap jenis kiriman menandai kejadian yang BERBEDA: Encounter lahir,
+    // Condition lahir, Procedure lahir, MedicationRequest lahir, Observation
+    // lahir, dan Encounter selesai diperbarui. Satu penanda untuk beberapa
+    // kejadian adalah cara kehilangan salah satunya.
+    //
+    // **Menambah resource berarti menambah barisnya di sini.** Yang lupa akan
+    // terkirim dengan benar lalu dicoba ULANG selamanya, karena pemindainya
+    // mencari yang penandanya masih kosong: satu kunjungan melahirkan kembar
+    // di SatuSehat tiap kali tombolnya ditekan.
     const tulisBalik: { tabel: string; isi: Record<string, unknown> } | null =
       !b.entity_id ? null
       : b.entity === 'visits' && caraKirim(b.resource) === 'PUT'
@@ -110,6 +116,8 @@ export async function kirimBatch(
         ? { tabel: 'visit_charges', isi: { ihs_procedure_id: idLuar } }
       : b.entity === 'prescription_items' && idLuar
         ? { tabel: 'prescription_items', isi: { ihs_medicationrequest_id: idLuar } }
+      : b.entity === 'lab_results' && idLuar
+        ? { tabel: 'lab_results', isi: { ihs_observation_id: idLuar } }
       : null
 
     if (tulisBalik) {

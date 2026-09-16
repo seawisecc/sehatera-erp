@@ -39,7 +39,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   bangunEncounter, bangunConditionDiagnosis, bangunProcedure, bangunMedicationRequest,
-  statusEncounter, PayloadKurang,
+  bangunObservationLab, statusEncounter, PayloadKurang,
   type DataEncounter, type RiwayatKeadaan, type StatusKunjungan,
 } from './bangun'
 
@@ -51,7 +51,7 @@ export type HasilAntre = {
   diulang: number
   dilewati: Dilewati[]
   /** Berapa baris per tahap, supaya layarnya bisa mengatakan sedang di mana. */
-  tahap: { encounter: number; condition: number; procedure: number; resep: number; final: number }
+  tahap: { encounter: number; condition: number; procedure: number; resep: number; lab: number; final: number }
 }
 
 type BarisLog = { visit_id: string; ke: string; pada: string }
@@ -138,7 +138,7 @@ export async function antrekanKunjungan(
 ): Promise<HasilAntre> {
   const hasil: HasilAntre = {
     diantre: 0, sudahAda: 0, diulang: 0, dilewati: [],
-    tahap: { encounter: 0, condition: 0, procedure: 0, resep: 0, final: 0 },
+    tahap: { encounter: 0, condition: 0, procedure: 0, resep: 0, lab: 0, final: 0 },
   }
 
   const antre = async (
@@ -353,6 +353,74 @@ export async function antrekanKunjungan(
         hasil.dilewati.push({
           nomor: `${nomor} · ${it.nama_obat}`,
           alasan: e instanceof PayloadKurang ? e.kurang.join('; ') : (e as Error).message,
+        })
+      }
+    }
+  }
+
+  // ── TAHAP 2d: Observation (hasil laboratorium) ───────────────────────────
+  // Sejajar dengan Condition, Procedure, dan MedicationRequest: cuma butuh
+  // Encounter sudah punya nomor. SATU kiriman per PARAMETER, bukan per
+  // permintaan, karena `lab_results` sejak migrasi 0061 memang sudah satu baris
+  // per parameter berkode LOINC. Bentuk itu kebetulan persis yang diminta.
+  //
+  // **Hanya lab, tidak radiologi.** Bacaan radiologi di Sehatera naratif
+  // (`temuan`, `kesan`) dan tidak punya kode LOINC per parameter, jadi ia tidak
+  // punya bentuk Observation yang sah. Alasan lengkapnya di migrasi 0079.
+  //
+  // Hanya pemeriksaan yang sudah `selesai`. Yang masih `dikerjakan` hasilnya
+  // bisa berubah, dan hasil lab yang terlanjur terkirim lalu direvisi adalah
+  // catatan nasional yang salah tentang seseorang.
+  const { data: hasilLab, error: eLab } = await db
+    .from('lab_results')
+    .select('id,nama,kode_loinc,nilai,nilai_angka,satuan,penanda,rujukan_bawah,rujukan_atas,' +
+            'visit_penunjang!inner(id,status,jenis,visit_id,dikerjakan_oleh,selesai_pada,' +
+            'visits!inner(nomor,dokter_email,ihs_encounter_id,patients(ihs_id)))')
+    .eq('company_id', company)
+    .is('ihs_observation_id', null)
+    .eq('visit_penunjang.jenis', 'lab')
+    .eq('visit_penunjang.status', 'selesai')
+    .not('visit_penunjang.visits.ihs_encounter_id', 'is', null)
+    .limit(batas)
+  if (eLab) throw new Error(`Tahap lab gagal membaca hasil: ${eLab.message}`)
+
+  if (hasilLab?.length) {
+    const { data: orangLab } = await db
+      .from('app_users').select('email,nama,ihs_practitioner_id').eq('company_id', company)
+    const perEmailLab = new Map<string, Pasangan>()
+    for (const u of (orangLab || []) as any[]) {
+      perEmailLab.set(String(u.email).toLowerCase(), { nama: u.nama, ihs: u.ihs_practitioner_id })
+    }
+
+    for (const h of hasilLab as any[]) {
+      const pj = h.visit_penunjang
+      const nomor = String(pj?.visits?.nomor || pj?.visit_id)
+      // Yang mengerjakan pemeriksaannya, dengan dokter kunjungan sebagai
+      // cadangan. `performer` opsional pada Observation, jadi yang tidak
+      // ketemu tidak menggagalkan kirimannya.
+      const pel = perEmailLab.get(String(pj?.dikerjakan_oleh || pj?.visits?.dokter_email || '').toLowerCase())
+      try {
+        const payload = bangunObservationLab({
+          pasienIhs: pj?.visits?.patients?.ihs_id || '',
+          encounterId: pj?.visits?.ihs_encounter_id || '',
+          pelaksanaIhs: pel?.ihs || '',
+          pelaksanaNama: pel?.nama,
+          kodeLoinc: h.kode_loinc || '',
+          nama: h.nama,
+          nilai: h.nilai,
+          nilaiAngka: h.nilai_angka,
+          satuan: h.satuan,
+          penanda: h.penanda,
+          rujukanBawah: h.rujukan_bawah,
+          rujukanAtas: h.rujukan_atas,
+          selesaiPada: pj?.selesai_pada,
+        })
+        if (await antre(`observation:${h.id}`, 'Observation', payload, 'lab_results', h.id, nomor)) {
+          hasil.tahap.lab += 1
+        }
+      } catch (e) {
+        hasil.dilewati.push({
+          nomor, alasan: e instanceof PayloadKurang ? e.kurang.join('; ') : (e as Error).message,
         })
       }
     }

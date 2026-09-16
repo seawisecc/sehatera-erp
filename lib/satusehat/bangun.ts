@@ -651,3 +651,234 @@ export function bangunMedicationRequest(d: DataResep): Record<string, unknown> {
     substitution: { allowedBoolean: false },
   }
 }
+
+// ── Hasil laboratorium ───────────────────────────────────────────────────────
+
+/**
+ * Penanda hasil Sehatera dipetakan ke `Observation.interpretation`.
+ *
+ * Dibaca dari Lampiran Standar Terminologi, bagian `v3-ObservationInterpretation`.
+ * Daftarnya TERTUTUP dan pendek, sama seperti `RUTE_ATC`, jadi memetakannya
+ * aman: ini bukan kamus puluhan ribu kode seperti SNOMED atau KFA.
+ *
+ * **`kritis` dipetakan ke `AA` (Critical abnormal), bukan ke `H`/`L`.** Di
+ * Sehatera `kritis` berarti dokternya dikabari SEKARANG, bukan sekadar di luar
+ * rentang, dan itu perbedaan yang justru harus ikut terkirim: hasil kritis yang
+ * berangkat sebagai "tinggi" biasa kehilangan seluruh alasan ia ditandai.
+ */
+const TAFSIR_HASIL: Record<string, { code: string; display: string }> = {
+  normal: { code: 'N', display: 'Normal' },
+  tinggi: { code: 'H', display: 'High' },
+  rendah: { code: 'L', display: 'Low' },
+  kritis: { code: 'AA', display: 'Critical abnormal' },
+}
+
+/**
+ * Satuan hasil lab yang diketik manusia, dipetakan ke kode UCUM.
+ *
+ * Daftarnya TERTUTUP dan pendek, pola yang sama dengan `RUTE_ATC` dan
+ * `satuanSediaan`: ini bukan kamus puluhan ribu kode seperti SNOMED atau KFA.
+ *
+ * **Kenapa ini WAJIB ada, bukan sekadar penyempurna:** validator menolak
+ * `valueQuantity` yang cuma membawa `unit` tanpa `system` dan `code`, dengan
+ * `Invalid coding system: ` (RuleNumber 10012). Jadi satuan yang tidak ada di
+ * sini tidak bisa dikirim sebagai angka sama sekali; ia berangkat sebagai teks.
+ *
+ * UCUM itu SINTAKS, bukan daftar: "g/dL" memang benar-benar ekspresi UCUM-nya,
+ * jadi memetakannya bukan menebak. Yang berbahaya justru yang diketik dengan
+ * lambang: "10^3/µL" bukan UCUM, yang benar "10*3/uL". Itu yang dipetakan di
+ * sini, bukan diterjemahkan sambil jalan.
+ */
+const UCUM_LAB: Record<string, string> = {
+  'g/dl': 'g/dL',
+  'mg/dl': 'mg/dL',
+  'ug/dl': 'ug/dL',
+  'ng/ml': 'ng/mL',
+  'pg/ml': 'pg/mL',
+  '%': '%',
+  'fl': 'fL',
+  'pg': 'pg',
+  'mmol/l': 'mmol/L',
+  'umol/l': 'umol/L',
+  'meq/l': 'meq/L',
+  'u/l': 'U/L',
+  'iu/l': '[IU]/L',
+  'mm/jam': 'mm/h',
+  'mm/h': 'mm/h',
+  'mm/hour': 'mm/h',
+  '/ul': '/uL',
+  'sel/ul': '/uL',
+  '10^3/ul': '10*3/uL',
+  '10*3/ul': '10*3/uL',
+  'ribu/ul': '10*3/uL',
+  '10^6/ul': '10*6/uL',
+  '10*6/ul': '10*6/uL',
+  'juta/ul': '10*6/uL',
+  'detik': 's',
+  's': 's',
+  'ml/menit': 'mL/min',
+  'ml/min': 'mL/min',
+}
+
+/**
+ * Menormalkan satuan yang diketik lalu mencari kode UCUM-nya.
+ *
+ * Huruf mikro ditulis bermacam-macam di lapangan: µ, μ, atau u. Ketiganya
+ * diluruhkan jadi `u` sebelum dicocokkan, supaya "10^3/µL" dan "10^3/uL"
+ * tidak jadi dua satuan yang berbeda.
+ */
+export const ucumLab = (satuan: string | null | undefined): string | null => {
+  const k = String(satuan || '')
+    .trim().toLowerCase()
+    .replace(/[\u00b5\u03bc]/g, 'u')
+    .replace(/\s+/g, '')
+  return UCUM_LAB[k] || null
+}
+
+export type DataObservasiLab = {
+  pasienIhs: string
+  /** ID Encounter yang dikembalikan SatuSehat, bukan nomor kunjungan lokal. */
+  encounterId: string
+  /**
+   * Nomor IHS analis atau dokter yang mengeluarkan hasilnya.
+   *
+   * WAJIB. Dokumen resminya mendaftarkan `Observation.performer` sebagai
+   * opsional, tapi validator menolaknya dengan
+   * `Reference is mandatory : Observation.performer` (RuleNumber 10383).
+   */
+  pelaksanaIhs?: string | null
+  pelaksanaNama?: string | null
+  kodeLoinc: string
+  nama: string
+  /** Nilai apa adanya. Dipakai kalau bukan angka: positif/negatif, warna. */
+  nilai?: string | null
+  /** Diisi hanya kalau hasilnya memang angka. */
+  nilaiAngka?: number | null
+  satuan?: string | null
+  penanda?: string | null
+  rujukanBawah?: number | null
+  rujukanAtas?: number | null
+  selesaiPada?: string | null
+}
+
+/**
+ * Satu hasil parameter laboratorium sebagai `Observation`.
+ *
+ * Bentuk `lab_results` sejak migrasi 0061 sudah satu baris per parameter
+ * berkode LOINC, dan itu persis bentuk yang diminta di sini: satu Observation
+ * per parameter. Keputusan lama itu terbayar tanpa pekerjaan tambahan, sama
+ * seperti `statusHistory` pada Encounter.
+ *
+ * **Yang belum berkode LOINC DITOLAK, bukan dikirim tanpa kode.**
+ * `Observation.code` wajib, dan menebak kode LOINC dilarang di project ini
+ * dengan alasan yang sama seperti ICD dan KFA: payload-nya akan sah,
+ * kirimannya diterima, dan yang salah cuma isinya.
+ *
+ * **Angka dikirim sebagai `valueQuantity`, sisanya `valueString`.** Hasil
+ * seperti "positif" atau "kuning keruh" tidak punya nilai numerik, dan
+ * memaksanya jadi angka berarti mengarang. `nilai_angka` di database memang
+ * sudah dipisah untuk ini sejak awal.
+ */
+export function bangunObservationLab(d: DataObservasiLab): Record<string, unknown> {
+  const kurang: string[] = []
+  if (!d.pasienIhs) kurang.push('pasien belum punya nomor IHS')
+  if (!d.encounterId) kurang.push('kunjungannya belum terkirim, jadi belum punya id Encounter di SatuSehat')
+  if (!d.kodeLoinc) kurang.push(`parameter "${d.nama}" belum punya kode LOINC di Pengaturan > Tarif Penunjang`)
+  if (d.nilaiAngka === null || d.nilaiAngka === undefined) {
+    if (!String(d.nilai || '').trim()) kurang.push(`parameter "${d.nama}" belum ada hasilnya`)
+  }
+  // `Observation.performer` WAJIB menurut validator (RuleNumber 10383), walau
+  // dokumen resminya mendaftarkannya sebagai opsional. Lihat catatan di bawah.
+  if (!d.pelaksanaIhs) {
+    kurang.push('yang mengerjakan pemeriksaan belum punya nomor IHS di Pengaturan > Perizinan Tenaga Kesehatan')
+  }
+  if (kurang.length) throw new PayloadKurang(kurang)
+
+  const ucum = ucumLab(d.satuan)
+  // Angka hanya berangkat sebagai `valueQuantity` kalau satuannya punya kode
+  // UCUM. Kalau tidak, ia berangkat sebagai TEKS beserta satuannya: validator
+  // menolak `valueQuantity` tanpa `system`+`code`, dan menebak kode UCUM untuk
+  // satuan yang tidak dikenali berarti melaporkan angka dalam satuan yang
+  // salah. "Hb 11,2" yang terbaca sebagai mmol/L alih-alih g/dL bukan angka
+  // yang kurang rapi, ia angka yang keliru.
+  const angka = (d.nilaiAngka !== null && d.nilaiAngka !== undefined)
+    && (!!ucum || !d.satuan)
+  const tafsir = TAFSIR_HASIL[String(d.penanda || '').trim().toLowerCase()]
+
+  /**
+   * Nilai apa adanya untuk yang tidak bisa jadi angka.
+   *
+   * Dua hal jatuh ke sini: hasil yang memang bukan angka ("Positif", "Kuning
+   * keruh"), dan angka bersatuan yang tidak punya kode UCUM. Yang kedua tetap
+   * membawa satuannya supaya tidak kehilangan artinya.
+   */
+  const teks = angka ? '' : (
+    d.nilaiAngka !== null && d.nilaiAngka !== undefined
+      ? `${d.nilaiAngka}${d.satuan ? ' ' + d.satuan : ''}`
+      : String(d.nilai).trim()
+  )
+
+  /**
+   * Rentang rujukan ikut kalau ada. Ia yang membuat "Hb 11,2" bisa dibaca
+   * sebagai rendah oleh sistem lain tanpa mengulang penilaian kita, dan ia
+   * memang disimpan per hasil, bukan per katalog, karena rentang bayi berbeda
+   * dari dewasa dan perempuan berbeda dari laki-laki.
+   */
+  const punyaRujukan = d.rujukanBawah !== null && d.rujukanBawah !== undefined
+    || d.rujukanAtas !== null && d.rujukanAtas !== undefined
+
+  return bersih({
+    resourceType: 'Observation',
+    // `final`: yang dikirim cuma pemeriksaan yang sudah diselesaikan analis.
+    // Yang masih `dikerjakan` tidak pernah sampai ke sini.
+    status: 'final',
+    category: [{
+      coding: [{
+        system: SYS.kategoriObservasi,
+        code: 'laboratory',
+        display: 'Laboratory',
+      }],
+    }],
+    code: {
+      coding: [{ system: SYS.loinc, code: d.kodeLoinc, display: d.nama }],
+      text: d.nama,
+    },
+    subject: { reference: `Patient/${d.pasienIhs}` },
+    encounter: { reference: `Encounter/${d.encounterId}` },
+    ...(waktuUtc(d.selesaiPada) ? { effectiveDateTime: waktuUtc(d.selesaiPada) } : {}),
+    // `issued` WAJIB (RuleNumber 10296), walau dokumennya menyebutnya opsional.
+    // Yang tidak punya waktu selesai memakai waktu kirim: yang salah sedikit
+    // masih jauh lebih baik daripada payload yang ditolak seluruhnya.
+    issued: waktuUtc(d.selesaiPada) || waktuUtc(new Date().toISOString()),
+    performer: [ref('Practitioner', d.pelaksanaIhs!, d.pelaksanaNama)],
+    ...(angka
+      ? {
+          valueQuantity: bersih({
+            value: d.nilaiAngka,
+            unit: d.satuan,
+            ...(ucum ? { system: SYS.ucum, code: ucum } : {}),
+          }),
+        }
+      : { valueString: teks }),
+    ...(tafsir
+      ? {
+          interpretation: [{
+            coding: [{ system: SYS.tafsirObservasi, code: tafsir.code, display: tafsir.display }],
+          }],
+        }
+      : {}),
+    // Rentang rujukan hanya ikut kalau satuannya punya kode UCUM: `low` dan
+    // `high` adalah Quantity juga, dan validator menolak keduanya tanpa
+    // `system`+`code` (RuleNumber 10381 dan 10382).
+    ...(punyaRujukan && ucum
+      ? {
+          referenceRange: [bersih({
+            ...(d.rujukanBawah !== null && d.rujukanBawah !== undefined
+              ? { low: { value: d.rujukanBawah, unit: d.satuan, system: SYS.ucum, code: ucum } } : {}),
+            ...(d.rujukanAtas !== null && d.rujukanAtas !== undefined
+              ? { high: { value: d.rujukanAtas, unit: d.satuan, system: SYS.ucum, code: ucum } } : {}),
+          })],
+        }
+      : {}),
+  })
+}

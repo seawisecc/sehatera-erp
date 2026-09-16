@@ -21,6 +21,7 @@ import {
   statusEncounter, uraiFrekuensi, ruteAtc, satuanSediaan,
   PayloadKurang, KODE, systemEncounter,
   type DataEncounter, type DataDiagnosis, type DataProcedure, type DataResep,
+  bangunObservationLab, ucumLab,
 } from './bangun'
 
 let gagal = 0
@@ -257,6 +258,100 @@ cekTolak('tanpa kode KFA', () => bangunMedicationRequest({ ...resep, kodeKfa: ''
 cekTolak('rute tidak dikenali', () => bangunMedicationRequest({ ...resep, rute: 'tempel di jidat' }), 'rute')
 cekTolak('frekuensi tidak terurai', () => bangunMedicationRequest({ ...resep, frekuensi: 'kalau perlu' }), 'frekuensi')
 cekTolak('tanpa dokter', () => bangunMedicationRequest({ ...resep, dokterIhs: '' }), 'Perizinan Tenaga Kesehatan')
+
+// ── Observation: hasil laboratorium ─────────────────────────────────────────
+//
+// Bentuknya satu Observation per PARAMETER, bukan per permintaan, karena
+// `lab_results` memang sudah satu baris per parameter berkode LOINC sejak
+// migrasi 0061.
+
+const lab = {
+  pasienIhs: 'P02478375538',
+  encounterId: 'enc-1234',
+  pelaksanaIhs: 'N10000001',
+  pelaksanaNama: 'Ni Luh Analis',
+  kodeLoinc: '718-7',
+  nama: 'Hemoglobin',
+  nilaiAngka: 11.2,
+  satuan: 'g/dL',
+  penanda: 'rendah',
+  rujukanBawah: 12,
+  rujukanAtas: 16,
+  selesaiPada: '2026-08-25T16:50:00+08:00',
+}
+
+const ob = bangunObservationLab(lab) as any
+cek('resourceType Observation', ob.resourceType === 'Observation')
+cek('status final', ob.status === 'final')
+cek('category laboratory', ob.category[0].coding[0].code === 'laboratory')
+cek('code memakai LOINC', ob.code.coding[0].system === 'http://loinc.org')
+cek('kode LOINC terbawa', ob.code.coding[0].code === '718-7')
+cek('subject pasien', ob.subject.reference === 'Patient/P02478375538')
+cek('encounter menunjuk kunjungan', ob.encounter.reference === 'Encounter/enc-1234')
+// WITA dikurangi delapan jam. Klinik contoh project ini di Denpasar, jadi
+// selisihnya cukup besar untuk memindahkan tanggal.
+cek('effectiveDateTime jadi UTC', ob.effectiveDateTime === '2026-08-25T08:50:00+00:00')
+cek('issued ikut terisi', ob.issued === '2026-08-25T08:50:00+00:00')
+cek('performer analis', ob.performer[0].reference === 'Practitioner/N10000001')
+// Keduanya WAJIB menurut validator walau dokumennya menyebutnya opsional.
+cek('issued selalu ada', typeof ob.issued === 'string' && ob.issued.endsWith('+00:00'))
+cek('performer selalu ada', Array.isArray(ob.performer) && ob.performer.length === 1)
+
+// valueQuantity menuntut system DAN code. Yang cuma membawa `unit` ditolak
+// dengan `Invalid coding system: ` (10012).
+cek('valueQuantity bersystem UCUM', ob.valueQuantity.system === 'http://unitsofmeasure.org')
+cek('kode UCUM g/dL', ob.valueQuantity.code === 'g/dL')
+cek('referenceRange low bersystem', ob.referenceRange[0].low.system === 'http://unitsofmeasure.org')
+cek('referenceRange high berkode', ob.referenceRange[0].high.code === 'g/dL')
+
+// Huruf mikro ditulis bermacam-macam di lapangan; ketiganya satu satuan.
+cek('mikro dinormalkan', ucumLab('10^3/\u00b5L') === '10*3/uL')
+cek('mm/jam jadi mm/h', ucumLab('mm/jam') === 'mm/h')
+cek('satuan asing tidak dipetakan', ucumLab('butir per sendok') === null)
+
+// Satuan tanpa kode UCUM TIDAK dikirim sebagai angka: menebak kodenya berarti
+// melaporkan angka dalam satuan yang salah.
+const satuanAsing = bangunObservationLab({ ...lab, satuan: 'butir per sendok' }) as any
+cek('satuan asing jadi teks, bukan angka', satuanAsing.valueQuantity === undefined)
+cek('teksnya membawa satuannya', satuanAsing.valueString === '11.2 butir per sendok')
+cek('tanpa UCUM tidak ada referenceRange', satuanAsing.referenceRange === undefined)
+
+// Angka berangkat sebagai valueQuantity, bukan teks.
+cek('nilai angka jadi valueQuantity', ob.valueQuantity.value === 11.2)
+cek('satuan terbawa', ob.valueQuantity.unit === 'g/dL')
+cek('tidak ada valueString saat angka', ob.valueString === undefined)
+
+// Penanda Sehatera jadi interpretation berkode.
+cek('rendah jadi L', ob.interpretation[0].coding[0].code === 'L')
+cek('rentang rujukan ikut', ob.referenceRange[0].low.value === 12 && ob.referenceRange[0].high.value === 16)
+
+// `kritis` TIDAK dilebur jadi tinggi/rendah: di Sehatera ia berarti dokternya
+// dikabari sekarang, dan itu perbedaan yang harus ikut terkirim.
+const kritis = bangunObservationLab({ ...lab, penanda: 'kritis' }) as any
+cek('kritis jadi AA, bukan H/L', kritis.interpretation[0].coding[0].code === 'AA')
+
+// Hasil yang bukan angka: "positif", "kuning keruh". Memaksanya jadi angka
+// berarti mengarang, dan `nilai_angka` memang dipisah di database untuk ini.
+const teks = bangunObservationLab({
+  ...lab, kodeLoinc: '5802-4', nama: 'Nitrit urine',
+  nilaiAngka: null, nilai: 'Positif', satuan: null, penanda: 'tinggi',
+  rujukanBawah: null, rujukanAtas: null,
+}) as any
+cek('hasil non-angka jadi valueString', teks.valueString === 'Positif')
+cek('tidak ada valueQuantity saat teks', teks.valueQuantity === undefined)
+cek('tanpa rentang tidak ada referenceRange', teks.referenceRange === undefined)
+
+// `performer` ternyata WAJIB, ditemukan dengan mengirim, bukan dengan membaca.
+cekTolak('tanpa nomor IHS analis',
+  () => bangunObservationLab({ ...lab, pelaksanaIhs: '' }), 'Perizinan Tenaga Kesehatan')
+
+// Yang ditolak. Menebak kode LOINC dilarang dengan alasan yang sama seperti
+// ICD dan KFA: payload-nya akan sah dan yang salah cuma isinya.
+cekTolak('tanpa kode LOINC', () => bangunObservationLab({ ...lab, kodeLoinc: '' }), 'LOINC')
+cekTolak('tanpa nomor IHS pasien', () => bangunObservationLab({ ...lab, pasienIhs: '' }), 'IHS')
+cekTolak('kunjungan belum terkirim', () => bangunObservationLab({ ...lab, encounterId: '' }), 'Encounter')
+cekTolak('belum ada hasilnya',
+  () => bangunObservationLab({ ...lab, nilaiAngka: null, nilai: '   ' }), 'hasil')
 
 console.log(gagal === 0 ? 'SEMUA UJI LULUS' : `GAGAL: ${gagal} uji`)
 process.exit(gagal === 0 ? 0 : 1)

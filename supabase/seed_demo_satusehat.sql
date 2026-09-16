@@ -33,6 +33,7 @@ declare
   c_email text := 'dr.alexander.uji@rexco.test';
   c_nik_d text := '7209061211900001';   -- dr. Alexander, daftar contoh Kemenkes
   c_nik_p text := '9271060312000001';   -- Ardianto Putra, daftar contoh Kemenkes
+  v_pen  uuid;
 begin
   select id into v_co from public.companies where nama = 'Klinik Rexco 88' limit 1;
   if v_co is null then
@@ -102,6 +103,37 @@ begin
   insert into public.visit_diagnoses (company_id, visit_id, kode_icd10, nama, tipe)
   values (v_co, v_vis, 'J06.9', 'Acute upper respiratory infection, unspecified', 'primer')
   on conflict do nothing;
+
+  -- ── 4. Satu pemeriksaan lab yang sudah keluar hasilnya ───────────────────
+  -- Ditambahkan supaya Observation punya sesuatu untuk dikirim. Tanpa ini
+  -- pemindainya benar tapi selalu menemukan nol baris, dan "0 masuk antrean"
+  -- tidak bisa dibedakan dari pemindai yang rusak: bentuk kegagalan yang
+  -- paling menyesatkan, karena ia terlihat seperti pekerjaan yang selesai.
+  --
+  -- Dua parameter, sengaja berbeda bentuknya: satu ANGKA dengan rentang
+  -- rujukan dan penanda, satu TEKS tanpa keduanya. Hasil lab yang semuanya
+  -- angka tidak pernah menunjukkan bahwa `valueString` juga harus benar.
+  select id into v_pen from public.visit_penunjang
+   where visit_id = v_vis and jenis = 'lab' limit 1;
+
+  if v_pen is null then
+    insert into public.visit_penunjang
+      (company_id, visit_id, unit_id, jenis, nama, catatan_klinis,
+       status, diminta_oleh, dikerjakan_oleh, selesai_pada)
+    values
+      (v_co, v_vis, v_unit, 'lab', 'Darah Lengkap', 'Uji pengiriman SatuSehat',
+       'selesai', c_email, c_email, now())
+    returning id into v_pen;
+
+    insert into public.lab_results
+      (company_id, penunjang_id, kode_loinc, nama, nilai, nilai_angka, satuan,
+       rujukan_bawah, rujukan_atas, penanda, urutan, dicatat_oleh)
+    values
+      (v_co, v_pen, '718-7', 'Hemoglobin', '11.2', 11.2, 'g/dL',
+       12, 16, 'rendah', 1, c_email),
+      (v_co, v_pen, '5802-4', 'Nitrit urine', 'Negatif', null, null,
+       null, null, 'normal', 2, c_email);
+  end if;
 
   -- Tanpa resep, jadi boleh melompat langsung ke selesai (migrasi 0040).
   if v_stat <> 'selesai' then

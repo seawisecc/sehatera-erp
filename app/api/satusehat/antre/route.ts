@@ -33,7 +33,7 @@ export async function POST(req: Request) {
           // memberi tahu apakah itu tiga kunjungan atau satu kunjungan yang
           // sedang menempuh tahap berikutnya.
           (h.diantre
-            ? ` (${h.tahap.encounter} kunjungan baru, ${h.tahap.condition} diagnosis, ${h.tahap.procedure} tindakan, ${h.tahap.resep} obat, ${h.tahap.final} penutupan)`
+            ? ` (${h.tahap.encounter} kunjungan baru, ${h.tahap.condition} diagnosis, ${h.tahap.procedure} tindakan, ${h.tahap.resep} obat, ${h.tahap.lab} hasil lab, ${h.tahap.final} penutupan)`
             : '') +
           (h.diulang ? `, ${h.diulang} yang dulu gagal dicoba lagi dengan bentuk yang sudah dibetulkan` : '') +
           (h.sudahAda ? `, ${h.sudahAda} sudah antre sebelumnya` : '') +

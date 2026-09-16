@@ -770,7 +770,7 @@ menarik:
 | 3 | Layar antrean ruang tunggu + panggilan suara | **selesai** (migrasi 0041..0044) |
 | 4 | ICD-10 resmi dan ICD-9-CM untuk tindakan | **selesai** (migrasi 0025..0029) |
 | 5 | Reservasi | **selesai** (migrasi 0054) |
-| 6 | Kirim ke SatuSehat | **BERJALAN di sandbox**: Encounter, Condition, Procedure, MedicationRequest terbukti diterima |
+| 6 | Kirim ke SatuSehat | **BERJALAN di sandbox**: Encounter, Condition, Procedure, MedicationRequest, Observation terbukti diterima |
 | 6b | Kirim ke BPJS | belum, kredensialnya belum ada |
 
 ### Hak akses per sub-modul: SELESAI (migrasi 0039)
@@ -1171,6 +1171,77 @@ yang masih `antre` TIDAK ikut diperbarui (0075 hanya membangkitkan yang
 `ditinggalkan`), jadi selama pengembangan barisnya dibuang tangan. Di produksi
 perilakunya benar: payload yang salah gagal berkali-kali sampai `ditinggalkan`,
 lalu hidup lagi dengan bentuk yang sudah dibetulkan.
+
+## Hasil lab berangkat, dan rantainya BERHENTI di Observation
+
+Migrasi 0079. Dibaca dari `satusehat.kemkes.go.id/platform/docs` pada
+**16 September 2026**: halaman FHIR > Observation, FHIR > DiagnosticReport,
+FHIR > Specimen, dan Panduan Interoperabilitas > Resume Medis - Rawat Jalan
+bab 10 dan 11.
+
+Pemeriksaan penunjang berangkat sebagai RANTAI, bukan satu kiriman:
+
+| | Urutannya |
+| --- | --- |
+| Lab | ServiceRequest &rarr; Specimen &rarr; Observation &rarr; DiagnosticReport |
+| Radiologi | ServiceRequest &rarr; Observation &rarr; DiagnosticReport &rarr; ImagingStudy |
+
+**Sehatera cuma bisa mengisi Observation, dan itu bukan soal menulis kode.**
+
+- **`Specimen.type` memakai SNOMED-CT**, dan Sehatera tidak menyimpan data
+  spesimen sama sekali. Menambah kolomnya mudah; yang dilarang adalah MENEBAK
+  kode SNOMED-nya, aturan yang sama yang membuat `serviceType` pada Encounter
+  dan `Procedure.category` sengaja tidak dikirim.
+- **`ImagingStudy` menuntut DICOM** lewat DICOM router dari PACS. Klinik
+  pratama tidak punya PACS, dan bacaan radiologi di Sehatera memang naratif
+  (`temuan`, `kesan`) justru karena itu keputusan sadar di migrasi 0061.
+
+Jadi yang dikirim HANYA hasil lab sebagai Observation, satu kiriman per
+PARAMETER. `lab_results` sejak 0061 sudah satu baris per parameter berkode
+LOINC, jadi bentuk itu kebetulan persis yang diminta: keputusan lama terbayar
+lagi tanpa pekerjaan tambahan, seperti `statusHistory` pada Encounter.
+**Radiologi tidak dikirim sama sekali**: bacaannya tidak punya kode LOINC per
+parameter, jadi ia tidak punya bentuk Observation yang sah.
+
+### Empat aturan validator yang TIDAK ada di dokumentasinya
+
+Ditemukan 16 September 2026 dengan menembak sandbox memakai lima bentuk
+payload, cara yang sama yang membedah `dispenseRequest.quantity` di 0078.
+
+| Rule | Bunyi | Artinya |
+| --- | --- | --- |
+| 10296 | Element not found: Observation.issued | **WAJIB**, walau dokumennya menyebutnya opsional |
+| 10383 | Reference is mandatory : Observation.performer | **WAJIB**, walau dokumennya menyebutnya opsional |
+| 10012 | Invalid coding system: (kosong) | `valueQuantity` menuntut `system` DAN `code`, bukan cuma `unit` |
+| 10381/10382 | Invalid coding system: (kosong) | `referenceRange.low` dan `.high` juga Quantity, dan menuntut hal yang sama |
+
+**Dua elemen yang didaftarkan dokumen sebagai opsional ternyata wajib.** Pola
+yang persis sama dengan Encounter di migrasi 0073, dan itu sekarang sudah dua
+kali: **daftar "opsional" di dokumen SatuSehat tidak bisa dipercaya sebelum
+dikirim sungguhan.**
+
+`valueQuantity` yang cuma membawa `unit` DITOLAK, jadi `UCUM_LAB` bukan
+penyempurna melainkan syarat: satuan yang tidak ada di sana tidak bisa dikirim
+sebagai angka sama sekali. Yang begitu berangkat sebagai `valueString` beserta
+satuannya ("11.2 butir per sendok"), bukan sebagai angka bersatuan tebakan.
+Hb 11,2 yang terbaca sebagai mmol/L alih-alih g/dL bukan angka yang kurang
+rapi, ia angka yang keliru.
+
+**UCUM itu SINTAKS, bukan daftar**, jadi memetakan "g/dL" bukan menebak: itu
+memang ekspresi UCUM-nya. Yang berbahaya justru yang ditulis dengan lambang,
+"10^3/µL", yang UCUM-nya "10*3/uL". Huruf mikro (µ, μ, u) diluruhkan dulu.
+
+### Terbukti sampai
+
+16 September 2026, sandbox, kunjungan `KJG/2026/0027`: dua parameter berangkat
+sebagai dua Observation dan keduanya diterima, satu `valueQuantity` (Hemoglobin
+11,2 g/dL, rendah, berikut rentang rujukan) dan satu `valueString` (Nitrit
+urine, Negatif). Nomornya tersimpan di `lab_results.ihs_observation_id`.
+
+**Menambah resource berarti menambah barisnya di `pengirim.ts`.** Yang lupa
+akan terkirim dengan benar lalu dicoba ULANG selamanya, karena pemindainya
+mencari yang penandanya masih kosong: satu kunjungan melahirkan kembar di
+SatuSehat tiap kali tombolnya ditekan.
 
 ## Kode KFA: empat namespace, dan pencarinya tidak boleh memilih sendiri
 
@@ -2096,11 +2167,19 @@ mengirim ke lingkungan yang salah. **Jangan menulis kode baru yang membacanya.**
 
 ## Yang belum ada
 
-**SatuSehat sudah BERJALAN di sandbox.** Empat resource terbukti diterima
-validator Kemenkes: Encounter, Condition, Procedure, MedicationRequest. Yang
-belum: hasil lab dan radiologi (DiagnosticReport dan Observation), pemicu
-otomatis (sekarang dua tombol ditekan tangan karena project ini belum punya
-penjadwal), dan pengisian kode KFA untuk 24 obat sisanya.
+**SatuSehat sudah BERJALAN di sandbox.** Lima resource terbukti diterima
+validator Kemenkes: Encounter, Condition, Procedure, MedicationRequest, dan
+Observation (hasil lab).
+
+Yang belum, dan alasannya masing-masing berbeda:
+
+- **DiagnosticReport** menunggu Specimen, yang menunggu data spesimen yang
+  klinik memang belum pernah dimintai DAN kode SNOMED yang dilarang ditebak.
+- **Radiologi** menunggu ImagingStudy, yang menuntut DICOM router dari PACS.
+  Klinik pratama tidak punya PACS.
+- **Pemicu otomatis**: sekarang dua tombol ditekan tangan karena project ini
+  belum punya penjadwal.
+- **Kode KFA untuk 24 obat sisanya**, diisi lewat pencari di Pengaturan.
 
 BPJS belum sama sekali: kredensialnya belum ada. Tempat menyimpannya sudah
 siap sejak 0055.
