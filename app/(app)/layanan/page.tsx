@@ -9,7 +9,7 @@ import { useLang } from '@/lib/i18n'
 import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
-import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
+import { TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
 
 /**
  * Layanan Jasa: racikan resep, cek gula darah, tensi, dan sejenisnya.
@@ -181,8 +181,8 @@ export default function HalamanLayanan() {
         </div>
       )}
 
-      <div className={TBL_WRAP}>
-        <table className={TBL}>
+      <div className={`${TBL_WRAP} ${TBL_KARTU_WADAH}`}>
+        <table className={`${TBL} ${TBL_KARTU}`}>
           <thead className={THEAD}>
             <tr>
               <th className={TH_L}>{t('Nama Layanan', 'Service Name')}</th>
@@ -201,7 +201,7 @@ export default function HalamanLayanan() {
               </td></tr>
             ) : services.map(s => (
               <tr key={s.id} className={TR}>
-                <td className="px-4 py-3 font-medium text-[var(--ink)]">
+                <td data-utama className="px-4 py-3 font-medium text-[var(--ink)]">
                   {s.nama}
                   {app.sektor !== 'apotek' && s.kode_icd9 && (
                     <span className="num ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--surface-2)] text-[var(--ink-soft)]"
@@ -210,14 +210,14 @@ export default function HalamanLayanan() {
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-right text-[var(--ink)] num">Rp {(s.harga || 0).toLocaleString('id-ID')}</td>
-                <td className="px-4 py-3 text-[var(--ink-soft)] text-xs max-w-[280px] truncate">{s.deskripsi || '-'}</td>
-                <td className="px-4 py-3 text-center">
+                <td data-l={t('Tarif', 'Fee')} className="px-4 py-3 text-right text-[var(--ink)] num">Rp {(s.harga || 0).toLocaleString('id-ID')}</td>
+                <td data-l={t('Deskripsi', 'Description')} className="px-4 py-3 text-[var(--ink-soft)] text-xs max-w-[280px] truncate">{s.deskripsi || '-'}</td>
+                <td data-l="Status" className="px-4 py-3 text-center">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                     {s.status === 'aktif' ? t('Aktif', 'Active') : t('Nonaktif', 'Inactive')}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td data-aksi className="px-4 py-3">
                   <div className="flex items-center justify-center gap-1">
                     <button onClick={() => setEdit({ ...s })} title="Edit" className="p-1.5 rounded-lg text-[var(--brand)] hover:bg-[var(--surface-2)] transition"><Pencil size={14} /></button>
                     <button onClick={() => hapus(s)} title={t('Hapus', 'Delete')} className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition"><Trash2 size={14} /></button>

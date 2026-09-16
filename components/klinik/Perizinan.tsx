@@ -9,7 +9,7 @@ import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
-import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TR, TD } from '@/lib/ui'
+import { TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TH_C, TR, TD } from '@/lib/ui'
 import { tanggal } from '@/lib/format'
 
 /**
@@ -174,8 +174,8 @@ export default function Perizinan() {
         </div>
       )}
 
-      <div className={TBL_WRAP}>
-        <table className={TBL}>
+      <div className={`${TBL_WRAP} ${TBL_KARTU_WADAH}`}>
+        <table className={`${TBL} ${TBL_KARTU}`}>
           <thead className={THEAD}>
             <tr>
               <th className={TH_L}>{t('Nama', 'Name')}</th>
@@ -200,7 +200,7 @@ export default function Perizinan() {
               const k = keadaan(n)
               return (
                 <tr key={n.id} className={TR}>
-                  <td className={TD}>
+                  <td data-utama className={TD}>
                     <p className="font-medium text-[var(--ink)]">{n.nama || n.email}</p>
                     <p className="text-[11px] text-[var(--ink-faint)]">
                       {n.email}
@@ -232,10 +232,10 @@ export default function Perizinan() {
                       </p>
                     )}
                   </td>
-                  <td className={TD + ' text-[var(--ink-soft)] text-xs'}>
+                  <td data-l={t('Peran', 'Role')} className={TD + ' text-[var(--ink-soft)] text-xs'}>
                     {LABEL_PERAN[n.role]?.[lang === 'en' ? 1 : 0] || n.role}
                   </td>
-                  <td className={TD + ' num text-xs text-[var(--ink-soft)]'}>
+                  <td data-l="STR" className={TD + ' num text-xs text-[var(--ink-soft)]'}>
                     {n.nomor_str || '-'}
                     {n.str_sampai && (
                       <div className={`text-[10px] ${(n.str_sisa_hari ?? 1) < 0 ? 'text-red-700 font-semibold' : 'text-[var(--ink-faint)]'}`}>
@@ -243,16 +243,16 @@ export default function Perizinan() {
                       </div>
                     )}
                   </td>
-                  <td className={TD + ' num text-xs text-[var(--ink)]'}>
+                  <td data-l="SIP / SIPA" className={TD + ' num text-xs text-[var(--ink)]'}>
                     {n.nomor_sip || <span className="text-[var(--ink-faint)]">-</span>}
                     {n.sip_sampai && (
                       <div className="text-[10px] text-[var(--ink-faint)]">{tanggal(n.sip_sampai)}</div>
                     )}
                   </td>
-                  <td className={TD + ' text-center'}>
+                  <td data-l={t('Masa berlaku', 'Validity')} className={TD + ' text-center'}>
                     <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${k.kelas}`}>{k.teks}</span>
                   </td>
-                  <td className={TD}>
+                  <td data-aksi className={TD}>
                     <div className="flex items-center justify-center">
                       <TombolIkon label={t('Isi atau ubah perizinan', 'Fill in or edit licence')}
                         onClick={() => setForm({

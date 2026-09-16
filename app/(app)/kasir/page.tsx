@@ -1,14 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, HeartPulse, Search } from 'lucide-react'
+import { AlertTriangle, HeartPulse, Search, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
 import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
-import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
+import { TBL_WRAP, TBL, TBL_KARTU, TBL_KARTU_WADAH, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
 import { rupiah, angka, tanggalJam } from '@/lib/format'
 import { bukaCetak, strukPenjualan } from '@/lib/cetak'
 
@@ -91,6 +91,7 @@ export default function HalamanKasir() {
 
   const cariRef = useRef<HTMLInputElement>(null)
   const bayarRef = useRef<HTMLInputElement>(null)
+  const ringkasanRef = useRef<HTMLDivElement>(null)
 
   const terkunciSuper = app.isSuper && !app.superViewCompany
   const terkunciLangganan = app.langganan.terkunci
@@ -459,8 +460,20 @@ export default function HalamanKasir() {
   const KARTU = 'bg-[var(--surface)]/70 backdrop-blur-sm border border-[var(--line)] rounded-xl shadow-sm'
   const adaHasil = hasil.obat.length > 0 || hasil.jasa.length > 0
 
+  /**
+   * Membawa layar ke ringkasan, lalu menaruh kursor di kotak Bayar.
+   *
+   * Fokusnya ditunda sampai gulungannya selesai: memfokuskan kotak isian
+   * SEBELUM itu membuat peramban melompat sendiri ke sana dengan caranya
+   * sendiri, dan gerakan yang dibatalkan di tengah terbaca sebagai kedipan.
+   */
+  const keRingkasan = () => {
+    ringkasanRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.setTimeout(() => bayarRef.current?.focus(), 350)
+  }
+
   return (
-    <div>
+    <div className="pb-20 lg:pb-0">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-[var(--ink)] mb-1">{t('Kasir', 'Cashier')}</h1>
         <p className="text-[var(--ink-soft)] text-sm">
@@ -548,8 +561,8 @@ export default function HalamanKasir() {
             )}
           </div>
 
-          <div className={TBL_WRAP}>
-            <table className={TBL}>
+          <div className={`${TBL_WRAP} ${TBL_KARTU_WADAH}`}>
+            <table className={`${TBL} ${TBL_KARTU}`}>
               <thead className={THEAD}>
                 <tr>
                   <th className={TH_L}>{t('Produk', 'Product')}</th>
@@ -566,7 +579,7 @@ export default function HalamanKasir() {
                   </td></tr>
                 ) : berkelompok.flatMap(g => [
                   ...(berkelompok.length > 1 ? [(
-                    <tr key={'h-' + g.id} className="bg-[var(--surface-2)]/60">
+                    <tr key={'h-' + g.id} data-grup className="bg-[var(--surface-2)]/60">
                       <td colSpan={3} className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--ink-soft)]">
                         {labelKelompok[g.id]}
                       </td>
@@ -578,7 +591,7 @@ export default function HalamanKasir() {
                   )] : []),
                   ...g.isi.map(item => (
                   <tr key={item.id} className={TR}>
-                    <td className="px-4 py-3">
+                    <td data-utama className="px-4 py-3">
                       <div className="font-medium text-[var(--ink)]">{item.nama_obat}</div>
                       <div className="text-xs text-[var(--ink-faint)]">
                         {item.is_jasa
@@ -586,11 +599,11 @@ export default function HalamanKasir() {
                           : <>{item.kode ? <span className="num">{item.kode} · </span> : null}<span className="num">{t('stok', 'stock')} {angka(item.stok_total)}</span></>}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td data-l="Qty" className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
                         <button onClick={() => ubahJumlah(item.id, item.jumlah - 1)}
                           aria-label={t('Kurangi', 'Decrease')}
-                          className="w-6 h-6 rounded bg-[var(--surface-2)] text-[var(--brand)] font-bold text-xs">−</button>
+                          className="sw-tap w-8 h-8 rounded-lg bg-[var(--surface-2)] text-[var(--brand)] font-bold text-sm">−</button>
                         <input type="number" min={1} max={item.is_jasa ? undefined : item.stok_total} value={item.jumlah}
                           onChange={e => ubahJumlah(item.id, +e.target.value)}
                           className="w-14 text-center text-sm border border-[var(--line)] rounded px-1 py-0.5 num focus:outline-none focus:ring-1 focus:ring-[var(--brand)]" />
@@ -601,15 +614,22 @@ export default function HalamanKasir() {
                           ubahJumlah(item.id, item.jumlah + 1)
                         }}
                           aria-label={t('Tambah', 'Increase')}
-                          className="w-6 h-6 rounded bg-[var(--surface-2)] text-[var(--brand)] font-bold text-xs">+</button>
+                          className="sw-tap w-8 h-8 rounded-lg bg-[var(--surface-2)] text-[var(--brand)] font-bold text-sm">+</button>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right text-[var(--ink-soft)] num">{rupiah(item.harga_jual)}</td>
-                    <td className="px-4 py-3 text-right font-medium text-[var(--ink)] num">{rupiah(item.harga_jual * item.jumlah)}</td>
-                    <td className="px-4 py-3 text-center">
+                    <td data-l={t('Harga', 'Price')} className="px-4 py-3 text-right text-[var(--ink-soft)] num">{rupiah(item.harga_jual)}</td>
+                    <td data-l="Subtotal" className="px-4 py-3 text-right font-medium text-[var(--ink)] num">{rupiah(item.harga_jual * item.jumlah)}</td>
+                    <td data-aksi className="px-4 py-3 text-center">
+                      {/* Keterangannya muncul hanya saat barisnya sudah jadi
+                          kartu. Di dalam tabel ia cuma menambah lebar kolom
+                          yang sudah sempit; di dalam kartu, ikon sendirian di
+                          satu baris kosong terbaca seperti sisa tata letak. */}
                       <button onClick={() => setKeranjang(keranjang.filter(k => k.id !== item.id))}
-                        aria-label={t('Hapus', 'Remove')}
-                        className="text-red-400 hover:text-red-600 text-xs">✕</button>
+                        aria-label={t('Hapus dari keranjang', 'Remove from cart')}
+                        className="sw-tap inline-flex items-center justify-center gap-1.5 w-8 h-8 sm:w-8 max-sm:w-auto max-sm:px-3 max-sm:h-9 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50 transition max-sm:border max-sm:border-red-200">
+                        <Trash2 size={15} />
+                        <span className="hidden max-sm:inline text-xs font-medium">{t('Hapus', 'Remove')}</span>
+                      </button>
                     </td>
                   </tr>
                   )),
@@ -620,7 +640,7 @@ export default function HalamanKasir() {
         </div>
 
         <div className="lg:col-span-2">
-          <div className={`${KARTU} p-5 lg:sticky lg:top-4`}>
+          <div ref={ringkasanRef} className={`${KARTU} p-5 lg:sticky lg:top-4 scroll-mt-4`}>
             <h3 className="font-semibold text-[var(--ink)] mb-4">{t('Ringkasan Transaksi', 'Transaction Summary')}</h3>
 
             <div className="space-y-2 mb-4">
@@ -894,6 +914,42 @@ export default function HalamanKasir() {
           </div>
         </div>
       </div>
+
+      {/*
+        Bilah bayar yang menempel di tepi bawah, hanya di bawah 1024px.
+
+        Di layar lebar kartu ringkasan sudah `sticky` di kolom kanan, jadi Total
+        dan tombol Proses selalu terlihat. Di telepon kolom itu jatuh ke BAWAH
+        keranjang: dengan satu obat saja halamannya sudah 1350px pada layar
+        820px, dan dengan enam obat kasir mengetik jumlah tanpa pernah melihat
+        angka yang sedang ia tagihkan.
+
+        Ia sengaja tidak memproses transaksinya sendiri, cuma mengantar ke sana.
+        Yang memproses tetap satu tombol di ringkasan, karena pembayaran
+        menuntut metode dan nominal yang kotaknya ada di situ, dan jalan kedua
+        menuju `apply_transaction` berarti dua tempat yang harus benar.
+      */}
+      {keranjang.length > 0 && !struk && (
+        <div className="sw-bilah-bayar">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-[11px] text-[var(--ink-faint)] leading-none">
+                {angka(keranjang.reduce((a, b) => a + b.jumlah, 0))} {t('item', 'items')}
+              </p>
+              <p className="text-lg font-bold text-[var(--brand)] num leading-tight">{rupiah(total)}</p>
+            </div>
+            <button
+              onClick={keRingkasan}
+              disabled={terkunciLangganan || terkunciSuper}
+              className="sw-tap ml-auto shrink-0 px-6 py-3 rounded-xl bg-[var(--brand)] text-[var(--on-brand)] text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50"
+            >
+              {terkunciLangganan ? t('Langganan berakhir', 'Subscription ended')
+                : terkunciSuper ? t('Pilih apotek dulu', 'Select a pharmacy first')
+                : t('Bayar', 'Pay')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {struk && (
         <Dialog

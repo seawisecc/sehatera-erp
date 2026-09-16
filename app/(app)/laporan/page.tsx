@@ -8,7 +8,7 @@ import { useLang } from '@/lib/i18n'
 import Dialog, { TOMBOL_KEDUA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
-import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD } from '@/lib/ui'
+import { TBL_WRAP, TBL_TEMPEL, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD } from '@/lib/ui'
 import { rupiah, angka, tanggalJam } from '@/lib/format'
 import { bukaCetak, laporanSipnap, type BarisSipnap } from '@/lib/cetak'
 import Klaim from '@/components/klinik/Klaim'
@@ -231,7 +231,7 @@ export default function HalamanLaporan() {
            'Sales reports and SIPNAP reports (Narcotics, Psychotropics, Precursors)')}
       </p>
 
-      <div className="flex gap-1 mb-5">
+      <div className="sw-geser-x flex gap-1 mb-5 pb-1">
         {([
           { id: 'penjualan', label: t('Penjualan', 'Sales') },
           { id: 'metode', label: t('Metode Bayar', 'Payment Methods') },
@@ -242,7 +242,7 @@ export default function HalamanLaporan() {
           { id: 'sipnap', label: 'SIPNAP' },
         ] as const).map(x => (
           <button key={x.id} onClick={() => setTab(x.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${tab === x.id ? 'bg-[var(--brand)] text-[var(--on-brand)]' : 'text-[var(--ink-soft)] hover:bg-[var(--surface)]/60'}`}>
+            className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium transition ${tab === x.id ? 'bg-[var(--brand)] text-[var(--on-brand)]' : 'text-[var(--ink-soft)] hover:bg-[var(--surface)]/60'}`}>
             {x.label}
           </button>
         ))}
@@ -303,7 +303,7 @@ export default function HalamanLaporan() {
           </div>
 
           <div className={TBL_WRAP}>
-            <table className={TBL}>
+            <table className={`${TBL} ${TBL_TEMPEL}`}>
               <thead className={THEAD}>
                 <tr>
                   <th className={TH_L}>{t('Penjamin', 'Payer')}</th>
@@ -370,7 +370,7 @@ export default function HalamanLaporan() {
           </div>
 
           <div className={TBL_WRAP}>
-            <table className={TBL}>
+            <table className={`${TBL} ${TBL_TEMPEL}`}>
               <thead className={THEAD}>
                 <tr>
                   <th className={TH_L}>{t('Metode Pembayaran', 'Payment Method')}</th>
@@ -445,7 +445,7 @@ export default function HalamanLaporan() {
       {tab === 'penjualan' && (
         <>
           <div className={TBL_WRAP}>
-            <table className={TBL}>
+            <table className={`${TBL} ${TBL_TEMPEL}`}>
               <thead className={THEAD}>
                 <tr>
                   <th className={TH_L}>{t('No. Transaksi', 'Transaction No.')}</th>

@@ -7,7 +7,25 @@
  */
 
 // ── Tabel seragam ──
-export const TBL_WRAP = 'bg-[var(--surface)]/80 backdrop-blur-sm border border-[var(--line)] rounded-2xl shadow-sm overflow-x-auto'
+export const TBL_WRAP = 'sw-geser-x bg-[var(--surface)]/80 backdrop-blur-sm border border-[var(--line)] rounded-2xl shadow-sm'
+
+/**
+ * Tabel yang barisnya jadi KARTU di bawah 640px.
+ *
+ * Dipasangkan: `TBL_WRAP + ' ' + TBL_KARTU_WADAH` pada pembungkusnya, dan
+ * `TBL + ' ' + TBL_KARTU` pada tabelnya. Tiap `<td>` lalu menyebutkan nama
+ * kolomnya lewat `data-l`, satu sel menandai dirinya `data-utama` sebagai
+ * judul kartu, dan sel tombolnya `data-aksi`. Aturannya di `app/globals.css`.
+ *
+ * Dipakai pada tabel yang dibaca per BARIS: daftar pasien, produk, supplier.
+ * Tabel yang dibaca per KOLOM (laporan, rekap angka) memakai `TBL_TEMPEL`
+ * sebagai gantinya: kartu membongkar susunan yang justru jadi gunanya.
+ */
+export const TBL_KARTU       = 'sw-tabel-kartu'
+export const TBL_KARTU_WADAH = 'sw-tabel-kartu-wadah'
+
+/** Kolom pertama menempel saat tabelnya digeser mendatar. */
+export const TBL_TEMPEL = 'sw-kolom-tempel'
 export const TBL      = 'w-full text-sm border-collapse'
 export const THEAD    = 'bg-[var(--surface-2)] border-b border-[var(--line)]'
 export const TH       = 'px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--ink-faint)] whitespace-nowrap'

@@ -8,7 +8,7 @@ import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
-import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD, KATEGORI_BADGE } from '@/lib/ui'
+import { TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD, KATEGORI_BADGE } from '@/lib/ui'
 import { rupiah, angka } from '@/lib/format'
 import PilihKfa from '@/components/klinik/PilihKfa'
 import DetailProduk from '@/components/produk/DetailProduk'
@@ -275,8 +275,8 @@ export default function HalamanProduk() {
         )}
       </div>
 
-      <div className={TBL_WRAP}>
-        <table className={TBL}>
+      <div className={`${TBL_WRAP} ${TBL_KARTU_WADAH}`}>
+        <table className={`${TBL} ${TBL_KARTU}`}>
           <thead className={THEAD}>
             <tr>
               <th className={TH_L}>{t('Kode', 'Code')}</th>
@@ -307,30 +307,30 @@ export default function HalamanProduk() {
                 : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/20'
               return (
                 <tr key={p.id} className={TR}>
-                  <td className={TD}><span className="num text-xs text-[var(--ink-faint)]">{p.kode}</span></td>
-                  <td className={TD}>
+                  <td data-l={t('Kode', 'Code')} className={TD}><span className="num text-xs text-[var(--ink-faint)]">{p.kode}</span></td>
+                  <td data-utama className={TD}>
                     <div className="font-medium text-[var(--ink)] leading-tight">{p.nama_obat}</div>
                     {p.nama_generik && <div className="text-xs text-[var(--ink-faint)] leading-tight mt-0.5">{p.nama_generik}</div>}
                   </td>
-                  <td className={TD}>
+                  <td data-l={t('Kategori', 'Category')} className={TD}>
                     <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${KATEGORI_BADGE[p.kategori] || KATEGORI_BADGE.lainnya}`}>
                       {KATEGORI[p.kategori] || p.kategori}
                     </span>
                   </td>
-                  <td className={TD + ' text-[var(--ink-soft)]'}>{p.satuan}</td>
-                  <td className={TD + ' text-right font-medium text-[var(--ink)] num whitespace-nowrap'}>{rupiah(p.harga_jual)}</td>
-                  <td className={TD + ' text-center'}>
+                  <td data-l={t('Satuan', 'Unit')} className={TD + ' text-[var(--ink-soft)]'}>{p.satuan}</td>
+                  <td data-l={t('H. Jual', 'Sell Price')} className={TD + ' text-right font-medium text-[var(--ink)] num whitespace-nowrap'}>{rupiah(p.harga_jual)}</td>
+                  <td data-l={t('Stok', 'Stock')} className={TD + ' text-center'}>
                     <span className={`inline-block min-w-[2.25rem] px-2 py-0.5 rounded-full text-xs font-semibold num ${stokCls}`}>
                       {angka(p.stok_total)}
                     </span>
                   </td>
-                  <td className={TD + ' text-center'}>
+                  <td data-l="Status" className={TD + ' text-center'}>
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${p.status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${p.status === 'aktif' ? 'bg-green-500' : 'bg-gray-400'}`} />
                       {p.status === 'aktif' ? t('Aktif', 'Active') : t('Nonaktif', 'Inactive')}
                     </span>
                   </td>
-                  <td className={TD + ' text-right whitespace-nowrap'}>
+                  <td data-aksi className={TD + ' text-right whitespace-nowrap'}>
                     <div className="inline-flex items-center gap-1.5">
                       <TombolIkon label={t('Lihat detail & batch', 'View details & batches')}
                         onClick={() => setDetail(p)}>

@@ -35,6 +35,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false)
 
   /**
+   * Spanduk langganan dibiarkan ringkas sesudah sekali dibaca.
+   *
+   * Nilai awalnya `true` supaya render pertama di server dan di peramban
+   * sama; kalau dibaca dari localStorage saat itu juga, halaman pertama
+   * terlukis dengan spanduk terbuka lalu mengatup sendiri, dan yang terlihat
+   * adalah seluruh halaman melompat ke atas persis saat orang mulai membaca.
+   */
+  const [ringkasBanner, setRingkasBanner] = useState(true)
+  useEffect(() => {
+    try { setRingkasBanner(localStorage.getItem('sw_banner_ringkas') !== '0') } catch {}
+  }, [])
+  useEffect(() => {
+    try { localStorage.setItem('sw_banner_ringkas', ringkasBanner ? '1' : '0') } catch {}
+  }, [ringkasBanner])
+
+  /**
    * Pilihan lipat sidebar milik PENGGUNA, terpisah dari lipat otomatis.
    *
    * Tanpa pemisahan ini, mode fokus menimpa pilihan orang secara permanen:
@@ -251,24 +267,55 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </header>
 
           <div className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8">
+            {/*
+              Spanduk langganan MENGECIL di telepon, tidak hilang.
+
+              Penjelasan lengkapnya lima baris, dan di layar 414px lima baris
+              itu memakan seperlima tinggi layar DI SETIAP HALAMAN: judul
+              halaman sendiri jadi berada di bawah lipatan. Padahal isinya
+              menenangkan, bukan mendesak ("data Anda aman, yang berhenti
+              hanya transaksi baru"), jadi ia perlu dibaca sekali, bukan tiap
+              kali pindah layar.
+
+              Di telepon yang tampil judulnya saja beserta tautannya; kalimat
+              panjangnya dibuka dengan menekan spanduknya. Di layar lebar
+              ruangnya memang ada, jadi tidak ada yang disembunyikan. Yang
+              TIDAK berubah: nada merahnya, `role="alert"`-nya, dan jalan
+              keluarnya, karena itu isi sebenarnya dari spanduk ini.
+            */}
             {banner && (
-              <div
+              <details
+                open={ringkasBanner === false}
+                onToggle={e => setRingkasBanner(!(e.currentTarget as HTMLDetailsElement).open)}
                 role={banner.nada === 'berhenti' ? 'alert' : undefined}
-                className={`mb-4 rounded-xl border px-4 py-3 flex items-start gap-3 ${
+                className={`group mb-4 rounded-xl border px-4 py-3 ${
                   banner.nada === 'berhenti' ? 'border-red-300 bg-red-50 text-red-900'
                   : banner.nada === 'peringatan' ? 'border-amber-300 bg-amber-50 text-amber-900'
                   : 'border-[var(--line)] bg-[var(--surface-2)] text-[var(--ink)]'
                 }`}
               >
-                <AlertTriangle size={17} className="shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">{banner.judul}</p>
-                  <p className="text-xs mt-0.5 leading-relaxed opacity-90">{banner.isi}</p>
-                </div>
-                <Link href="/pengaturan?tab=langganan" className="ml-auto shrink-0 self-center text-xs font-semibold underline underline-offset-2 whitespace-nowrap">
-                  {t('Lihat langganan', 'View subscription')}
-                </Link>
-              </div>
+                <summary className="flex items-center gap-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden md:cursor-default">
+                  <AlertTriangle size={17} className="shrink-0" />
+                  <p className="text-sm font-semibold min-w-0 flex-1">{banner.judul}</p>
+                  <Link
+                    href="/pengaturan?tab=langganan"
+                    onClick={e => e.stopPropagation()}
+                    className="shrink-0 text-xs font-semibold underline underline-offset-2 whitespace-nowrap"
+                  >
+                    {t('Lihat langganan', 'View subscription')}
+                  </Link>
+                  <ChevronRight
+                    size={15}
+                    aria-hidden="true"
+                    className="md:hidden shrink-0 opacity-60 group-open:rotate-90"
+                    style={{ transition: 'transform var(--t-quick) var(--ease)' }}
+                  />
+                </summary>
+                {/* Di layar lebar keterangannya selalu terlihat, tidak ikut
+                    keadaan buka-tutup `<details>`. */}
+                <p className="hidden md:block text-xs mt-1 ml-8 leading-relaxed opacity-90">{banner.isi}</p>
+                <p className="md:hidden text-xs mt-2 leading-relaxed opacity-90">{banner.isi}</p>
+              </details>
             )}
 
             {children}

@@ -9,7 +9,7 @@ import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import TombolIkon from '@/components/TombolIkon'
 import { pesanError } from '@/lib/session'
-import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TR } from '@/lib/ui'
+import { TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TH_C, TR } from '@/lib/ui'
 
 /**
  * Supplier: daftar PBF dan distributor apotek.
@@ -112,8 +112,8 @@ export default function HalamanSupplier() {
         </button>
       </div>
 
-      <div className={TBL_WRAP}>
-        <table className={TBL}>
+      <div className={`${TBL_WRAP} ${TBL_KARTU_WADAH}`}>
+        <table className={`${TBL} ${TBL_KARTU}`}>
           <thead className={THEAD}>
             <tr>
               <th className={TH_L}>{t('Kode', 'Code')}</th>
@@ -133,16 +133,16 @@ export default function HalamanSupplier() {
               </td></tr>
             ) : suppliers.map(s => (
               <tr key={s.id} className={TR}>
-                <td className="px-4 py-3 num text-xs text-[var(--ink-soft)]">{s.kode || '-'}</td>
-                <td className="px-4 py-3 font-medium text-[var(--ink)]">{s.nama_supplier}</td>
-                <td className="px-4 py-3 text-[var(--ink-soft)]">{s.jenis}</td>
-                <td className="px-4 py-3 text-[var(--ink-soft)] num">{s.telepon || '-'}</td>
-                <td className="px-4 py-3 text-center">
+                <td data-l={t('Kode', 'Code')} className="px-4 py-3 num text-xs text-[var(--ink-soft)]">{s.kode || '-'}</td>
+                <td data-utama className="px-4 py-3 font-medium text-[var(--ink)]">{s.nama_supplier}</td>
+                <td data-l={t('Jenis', 'Type')} className="px-4 py-3 text-[var(--ink-soft)]">{s.jenis}</td>
+                <td data-l={t('Telepon', 'Phone')} className="px-4 py-3 text-[var(--ink-soft)] num">{s.telepon || '-'}</td>
+                <td data-l="Status" className="px-4 py-3 text-center">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                     {s.status === 'aktif' ? t('Aktif', 'Active') : t('Nonaktif', 'Inactive')}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td data-aksi className="px-4 py-3">
                   <div className="flex items-center justify-center gap-1.5">
                     <TombolIkon label={t('Ubah data supplier', 'Edit supplier')}
                       onClick={() => {

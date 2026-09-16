@@ -7,7 +7,7 @@ import { useLang } from '@/lib/i18n'
 import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
-import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TH_R, TR } from '@/lib/ui'
+import { TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TH_C, TH_R, TR } from '@/lib/ui'
 import { rupiah, tanggal, tanggalInput } from '@/lib/format'
 import JejakAudit from '@/components/JejakAudit'
 import Tagihan from '@/components/klien/Tagihan'
@@ -153,7 +153,7 @@ export default function HalamanKlien() {
         </p>
       </div>
 
-      <div className="flex gap-1 mb-5">
+      <div className="sw-geser-x flex gap-1 mb-5 pb-1">
         {([
           { id: 'daftar',  label: t('Daftar Klien', 'Client List') },
           { id: 'tagihan', label: t('Tagihan', 'Invoices') },
@@ -161,7 +161,7 @@ export default function HalamanKlien() {
           { id: 'jejak',   label: t('Jejak Audit', 'Audit Trail') },
         ] as const).map(x => (
           <button key={x.id} onClick={() => setTab(x.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${tab === x.id ? 'bg-[var(--brand)] text-[var(--on-brand)]' : 'text-[var(--ink-soft)] hover:bg-[var(--surface)]/60'}`}>
+            className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium transition ${tab === x.id ? 'bg-[var(--brand)] text-[var(--on-brand)]' : 'text-[var(--ink-soft)] hover:bg-[var(--surface)]/60'}`}>
             {x.label}
           </button>
         ))}
@@ -196,8 +196,8 @@ export default function HalamanKlien() {
         </div>
       </div>
 
-      <div className={TBL_WRAP}>
-        <table className={TBL}>
+      <div className={`${TBL_WRAP} ${TBL_KARTU_WADAH}`}>
+        <table className={`${TBL} ${TBL_KARTU}`}>
           <thead className={THEAD}>
             <tr>
               <th className={TH_L}>{t('Faskes', 'Facility')}</th>
@@ -221,15 +221,15 @@ export default function HalamanKlien() {
               const [cls, label] = LENCANA[c.status] || LENCANA.inactive
               return (
                 <tr key={c.id} className={TR}>
-                  <td className="px-4 py-3">
+                  <td data-utama className="px-4 py-3">
                     <p className="font-semibold text-[var(--ink)]">{c.nama}</p>
                     <p className="text-xs text-[var(--ink-faint)] num">{c.slug || '-'}</p>
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-l="Admin" className="px-4 py-3">
                     <p className="text-[var(--ink)]">{c.admin_nama || '-'}</p>
                     <p className="text-xs text-[var(--ink-faint)]">{c.admin_email || '-'}</p>
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-l={t('Paket', 'Plan')} className="px-4 py-3">
                     <p className="text-[var(--ink)]">
                       {c.plans?.name || <span className="text-[var(--ink-faint)]">{t('Belum berpaket', 'No plan')}</span>}
                     </p>
@@ -239,15 +239,15 @@ export default function HalamanKlien() {
                       </p>
                     ) : null}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td data-l="Status" className="px-4 py-3 text-center">
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>{label}</span>
                   </td>
-                  <td className="px-4 py-3 text-[var(--ink-soft)] num">
+                  <td data-l={t('Aktif Sampai', 'Active Until')} className="px-4 py-3 text-[var(--ink-soft)] num">
                     {!iso
                       ? <span className="text-[var(--ink-faint)]">{t('Tanpa batas', 'Unlimited')}</span>
                       : <span className={lewat ? 'text-red-600 font-medium' : ''}>{tanggal(iso)}</span>}
                   </td>
-                  <td className="px-4 py-3">
+                  <td data-aksi className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => ubahStatus(c)}

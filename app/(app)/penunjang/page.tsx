@@ -201,13 +201,13 @@ export default function HalamanPenunjang() {
         </div>
       </div>
 
-      <div className="flex gap-1 mb-5">
+      <div className="sw-geser-x flex gap-1 mb-5 pb-1">
         {([
           { id: 'antrean' as const, label: t('Antrean kerja', 'Worklist') },
           { id: 'tarif' as const,   label: t('Tarif & paket pemeriksaan', 'Tariffs & panels') },
         ]).map(x => (
           <button key={x.id} onClick={() => setTab(x.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
+            className={`shrink-0 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium transition ${
               tab === x.id ? 'bg-[var(--brand)] text-[var(--on-brand)]'
                            : 'text-[var(--ink-soft)] hover:bg-[var(--surface)]/60'
             }`}>

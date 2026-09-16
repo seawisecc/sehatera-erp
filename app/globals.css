@@ -708,3 +708,229 @@ select {
   :root { --nav-bawah: 62px; }
 }
 .sw-atas-nav { bottom: calc(1rem + var(--nav-bawah) + env(safe-area-inset-bottom)); }
+
+/* ============================================================
+   Tabel di layar sempit: baris jadi kartu
+   ============================================================
+
+   Daftar pasien lebarnya 811px di layar 380px. Tidak ada yang rusak: tabelnya
+   punya pembungkus gulung dan bisa digeser mendatar. Tapi yang terbaca sekali
+   pandang cuma 47% dari tiap baris, dan kolom yang dipakai MEMILIH orangnya
+   (NIK, telepon) justru yang berada di luar layar. Jadi urutan kerjanya jadi:
+   geser kanan, baca, geser kiri, baca lagi, dan begitu untuk tiap baris.
+
+   Yang tidak bisa dilakukan menggulung mendatar adalah MEMBANDINGKAN, dan
+   itulah gunanya bentuk tabel. Begitu ia tidak bisa dibandingkan, bentuk
+   tabelnya cuma biaya. Di bawah 640px tiap baris jadi satu kartu yang seluruh
+   isinya terbaca tanpa digeser.
+
+   Dipasang lewat kelas dan atribut, bukan dengan menulis ulang JSX-nya jadi
+   dua cabang. Dua cabang berarti dua tempat yang harus benar, dan yang kedua
+   akan ketinggalan pada perbaikan berikutnya: itu pola yang sudah menggigit
+   berkali-kali di project ini.
+
+   Cara pakainya:
+     <table className={TBL + ' ' + TBL_KARTU}>
+       <td data-l="NIK">…</td>        label muncul di kiri saat jadi kartu
+       <td data-utama>…</td>          jadi judul kartu, tanpa label
+       <td data-aksi>…</td>           baris tombol, menempel di dasar kartu
+   ============================================================ */
+
+@media (max-width: 639px) {
+  .sw-tabel-kartu,
+  .sw-tabel-kartu thead,
+  .sw-tabel-kartu tbody,
+  .sw-tabel-kartu tr,
+  .sw-tabel-kartu td {
+    display: block;
+    width: auto;
+  }
+
+  /* Judul kolom sudah pindah ke tiap sel lewat `data-l`. Disembunyikan dengan
+     cara yang tetap terbaca pembaca layar sama sekali tidak perlu: sel yang
+     membawa labelnya sendiri sudah lengkap, dan judul yang ikut dibacakan
+     justru membuat tiap kartu diawali enam kata yang sama. */
+  .sw-tabel-kartu thead { display: none; }
+
+  /* Kartunya flex TEGAK, bukan blok, supaya urutan selnya bisa diatur ulang
+     tanpa menyentuh urutan kolom tabelnya. Di tabel, nomor dokumen wajar
+     berada di kolom pertama; di kartu yang harus dibaca lebih dulu adalah
+     NAMANYA. Tanpa `order`, tiap kartu diawali "NO. RM" dan nama orangnya
+     baru muncul di baris kedua. */
+  .sw-tabel-kartu tr {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: var(--surface);
+  }
+  .sw-tabel-kartu td[data-utama] { order: -1; }
+  .sw-tabel-kartu td[data-aksi]  { order: 99; }
+  .sw-tabel-kartu tr:last-child { margin-bottom: 0; }
+
+  .sw-tabel-kartu td {
+    padding: 4px 0;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    text-align: left !important;
+  }
+
+  /* Label kolom di kiri, isinya di kanan. Lebarnya TETAP supaya isi seluruh
+     kartu tetap berbaris di satu garis: label yang lebarnya mengikuti teksnya
+     membuat tiap baris mulai di tempat berbeda, dan mata kehilangan pegangan
+     persis seperti pada tabel tanpa kolom. */
+  .sw-tabel-kartu td[data-l]::before {
+    content: attr(data-l);
+    flex: none;
+    width: 7.5rem;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+  }
+
+  /* Judul kartu: nama obat, nama pasien, nomor dokumen. Selebar kartu, tanpa
+     label, dan diberi garis pemisah supaya jelas ia menaungi sisanya. */
+  .sw-tabel-kartu td[data-utama] {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    padding: 0 0 8px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  /* Baris tombol, didorong ke dasar kartu dan direntangkan. Tombol ikon
+     sebesar 32px yang berdesakan di ujung kanan baris tabel adalah bentuk
+     yang hanya masuk akal untuk tetikus. */
+  .sw-tabel-kartu td[data-aksi] {
+    display: flex;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 10px 0 0;
+    margin-top: 6px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .sw-tabel-kartu td[data-aksi]::before { content: none; }
+  /* Isi sel tombol sering dibungkus lagi dengan `justify-center`, yang di
+     kartu selebar layar mendorong keempat tombolnya ke tengah dan jauh dari
+     ibu jari. Di kartu mereka berbaris dari kiri dan tumbuh jadi seukuran
+     jari. */
+  .sw-tabel-kartu td[data-aksi] > * {
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  /* Tombol ikon di dalam kartu tumbuh jadi seukuran jari. Yang membawa
+     keterangan di sebelah ikonnya dibiarkan selebar isinya. */
+  .sw-tabel-kartu td[data-aksi] button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* Sel kosong tidak menyisakan baris kosong di dalam kartu. */
+  .sw-tabel-kartu td:empty { display: none; }
+
+  /* Baris JUDUL KELOMPOK (keranjang kasir: administrasi, tindakan, obat)
+     bukan kartu, melainkan label yang menaungi kartu-kartu di bawahnya.
+     Tanpa pengecualian ini ia jadi kartu kosong bergaris di antara kartu
+     berisi, dan yang terbaca justru seperti baris yang datanya gagal dimuat. */
+  .sw-tabel-kartu tr[data-grup] {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 10px 2px 4px;
+    margin-bottom: 0;
+  }
+  .sw-tabel-kartu tr[data-grup] td { padding: 0; display: block; }
+  .sw-tabel-kartu tr[data-grup] td::before { content: none; }
+  .sw-tabel-kartu tr[data-grup] td:empty { display: none; }
+
+  /* Baris "belum ada isinya" memakai colSpan dan bukan kartu. */
+  .sw-tabel-kartu td[colspan] {
+    display: block;
+    text-align: center !important;
+    padding: 24px 0;
+  }
+  .sw-tabel-kartu td[colspan]::before { content: none; }
+
+  /* Pembungkusnya berhenti jadi kotak bergaris: kartunya sendiri yang
+     bergaris sekarang, dan bingkai di sekeliling kumpulan kartu cuma
+     menyempitkan lebar yang justru langka. */
+  .sw-tabel-kartu-wadah {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/**
+ * Tabel angka: kolom pertama menempel, bukan jadi kartu.
+ *
+ * Laporan dibaca dengan MEMBANDINGKAN satu kolom angka dari atas ke bawah,
+ * dan kartu justru membongkar susunan itu. Yang dibutuhkan cuma satu hal:
+ * tahu baris mana yang sedang dibaca saat digeser ke kolom paling kanan.
+ */
+.sw-kolom-tempel thead th:first-child,
+.sw-kolom-tempel tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  /* Nomor dokumen TIDAK dibungkus. Dibiarkan membungkus, "TRX-20260819-0159"
+     jatuh jadi tiga baris dan tiap baris tabel jadi tiga kali lebih tinggi;
+     yang tadinya tujuh baris terlihat sekaligus tinggal dua. */
+  white-space: nowrap;
+  /* Garis dan bayangan tipis di tepi kanannya. Kolom yang menempel MENUTUPI
+     kolom di belakangnya saat digeser, dan tanpa tepi yang terlihat angka
+     yang terpotong di baliknya terbaca seperti data yang rusak, bukan seperti
+     sesuatu yang sedang tertutup. */
+  border-right: 1px solid var(--line-soft);
+  box-shadow: 6px 0 8px -6px color-mix(in oklab, var(--ink) 22%, transparent);
+}
+.sw-kolom-tempel thead th:first-child { background: var(--surface-2); z-index: 2; }
+
+
+/**
+ * Bilah bayar kasir, menempel di tepi bawah layar telepon.
+ *
+ * Di layar lebar, ringkasan transaksi duduk di kolom kanan yang `sticky`, jadi
+ * Total dan tombol Proses selalu terlihat sambil keranjangnya diisi. Di telepon
+ * kolom itu jatuh KE BAWAH keranjang, dan halaman kasir dengan satu obat saja
+ * sudah setinggi 1350px pada layar 820px. Dengan enam obat, Total berada dua
+ * layar di bawah, dan kasir mengetik jumlah tanpa pernah melihat angka yang
+ * sedang ia tagihkan.
+ *
+ * Bilah ini membawa angkanya ke tempat yang selalu terlihat. Ia sengaja TIDAK
+ * memproses transaksi: yang memprosesnya tetap satu tombol di ringkasan, karena
+ * pembayaran menuntut metode dan nominal yang isinya ada di sana. Dua jalan
+ * menuju `apply_transaction` berarti dua tempat yang harus benar.
+ */
+.sw-bilah-bayar {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: var(--nav-bawah);
+  z-index: 35;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: color-mix(in oklab, var(--surface) 96%, transparent);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px -18px color-mix(in oklab, var(--ink) 60%, transparent);
+}
+@supports (backdrop-filter: blur(1px)) {
+  .sw-bilah-bayar { -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+}
+@media (min-width: 1024px) { .sw-bilah-bayar { display: none; } }

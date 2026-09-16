@@ -7,7 +7,7 @@ import { useLang } from '@/lib/i18n'
 import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
-import { TBL_WRAP, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
+import { TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
 import { rupiah, tanggal } from '@/lib/format'
 
 /**
@@ -132,8 +132,8 @@ export default function Tagihan() {
         </div>
       )}
 
-      <div className={TBL_WRAP}>
-        <table className={TBL}>
+      <div className={`${TBL_WRAP} ${TBL_KARTU_WADAH}`}>
+        <table className={`${TBL} ${TBL_KARTU}`}>
           <thead className={THEAD}>
             <tr>
               <th className={TH_L}>No.</th>
@@ -156,16 +156,16 @@ export default function Tagihan() {
               </td></tr>
             ) : tersaring.map((b: any) => (
               <tr key={b.id} className={TR}>
-                <td className="px-4 py-3 num text-xs text-[var(--brand)] font-medium">{b.nomor || '-'}</td>
-                <td className="px-4 py-3 text-[var(--ink)]">{b.companies?.nama || '-'}</td>
-                <td className="px-4 py-3 text-[var(--ink-soft)] text-xs">
+                <td data-l="No." className="px-4 py-3 num text-xs text-[var(--brand)] font-medium">{b.nomor || '-'}</td>
+                <td data-utama className="px-4 py-3 text-[var(--ink)]">{b.companies?.nama || '-'}</td>
+                <td data-l={t('Paket', 'Plan')} className="px-4 py-3 text-[var(--ink-soft)] text-xs">
                   {b.plans?.name || '-'} · {b.siklus}
                 </td>
-                <td className="px-4 py-3 text-[var(--ink-soft)] text-xs num">
+                <td data-l={t('Periode', 'Period')} className="px-4 py-3 text-[var(--ink-soft)] text-xs num">
                   {tanggal(b.periode_mulai)} &rarr; {tanggal(b.periode_selesai)}
                 </td>
-                <td className="px-4 py-3 text-right font-medium text-[var(--ink)] num">{rupiah(b.jumlah)}</td>
-                <td className="px-4 py-3 text-center">
+                <td data-l={t('Jumlah', 'Amount')} className="px-4 py-3 text-right font-medium text-[var(--ink)] num">{rupiah(b.jumlah)}</td>
+                <td data-l="Status" className="px-4 py-3 text-center">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${WARNA[b.status] || ''}`}>
                     {b.status === 'belum_bayar' ? t('Belum bayar', 'Unpaid')
                       : b.status === 'lunas' ? t('Lunas', 'Paid') : t('Dibatalkan', 'Cancelled')}
@@ -174,7 +174,7 @@ export default function Tagihan() {
                     <p className="text-[10px] text-[var(--ink-faint)] mt-0.5 num">{tanggal(b.dibayar_pada)}</p>
                   )}
                 </td>
-                <td className="px-4 py-3 text-center">
+                <td data-aksi className="px-4 py-3 text-center">
                   {b.status === 'belum_bayar' ? (
                     <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                       <button onClick={() => lunasi(b)} disabled={sibuk}

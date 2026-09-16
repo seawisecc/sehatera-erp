@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
-import { TBL_WRAP, TBL, THEAD, TH_L, TR } from '@/lib/ui'
+import { TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TR } from '@/lib/ui'
 import { tanggalJam } from '@/lib/format'
 
 /**
@@ -86,8 +86,8 @@ export default function JejakAudit({ tampilkanFaskes = false }: { tampilkanFaske
 
   return (
     <div>
-      <div className={TBL_WRAP}>
-        <table className={TBL}>
+      <div className={`${TBL_WRAP} ${TBL_KARTU_WADAH}`}>
+        <table className={`${TBL} ${TBL_KARTU}`}>
           <thead className={THEAD}>
             <tr>
               <th className={TH_L}>{t('Waktu', 'Time')}</th>
@@ -109,17 +109,17 @@ export default function JejakAudit({ tampilkanFaskes = false }: { tampilkanFaske
               </td></tr>
             ) : baris.map((r: any) => (
               <tr key={r.id} className={TR}>
-                <td className="px-4 py-3 text-xs text-[var(--ink-soft)] num whitespace-nowrap">{tanggalJam(r.created_at)}</td>
+                <td data-l={t('Waktu', 'Time')} className="px-4 py-3 text-xs text-[var(--ink-soft)] num whitespace-nowrap">{tanggalJam(r.created_at)}</td>
                 {tampilkanFaskes && (
-                  <td className="px-4 py-3 text-sm text-[var(--ink)]">{namaFaskes(r.company_id)}</td>
+                  <td data-l={t('Faskes', 'Facility')} className="px-4 py-3 text-sm text-[var(--ink)]">{namaFaskes(r.company_id)}</td>
                 )}
-                <td className="px-4 py-3">
+                <td data-utama className="px-4 py-3">
                   <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${NADA[r.action] || 'bg-[var(--surface-2)] text-[var(--ink-soft)]'}`}>
                     {labelAksi(r.action, t)}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-xs text-[var(--ink-soft)]">{r.actor_email || '-'}</td>
-                <td className="px-4 py-3 text-xs text-[var(--ink-soft)] max-w-[24rem] truncate">{ringkas(r)}</td>
+                <td data-l={t('Oleh', 'By')} className="px-4 py-3 text-xs text-[var(--ink-soft)]">{r.actor_email || '-'}</td>
+                <td data-l={t('Keterangan', 'Detail')} className="px-4 py-3 text-xs text-[var(--ink-soft)] max-w-[24rem] truncate">{ringkas(r)}</td>
               </tr>
             ))}
           </tbody>

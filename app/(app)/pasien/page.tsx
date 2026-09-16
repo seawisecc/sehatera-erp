@@ -7,7 +7,7 @@ import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
-import { TBL_WRAP, TBL, THEAD, TH_L, TH_C, TR } from '@/lib/ui'
+import { TBL_WRAP, TBL, TBL_KARTU, TBL_KARTU_WADAH, THEAD, TH_L, TH_C, TR } from '@/lib/ui'
 import { tanggal } from '@/lib/format'
 import FormPasien, { type Pasien } from '@/components/klinik/FormPasien'
 import RiwayatPasien from '@/components/klinik/RiwayatPasien'
@@ -129,8 +129,8 @@ export default function HalamanPasien() {
           placeholder={t('Cari nama, NIK, no. rekam medis, atau telepon…', 'Search name, ID number, medical record no., or phone…')} />
       </div>
 
-      <div className={TBL_WRAP}>
-        <table className={TBL}>
+      <div className={`${TBL_WRAP} ${TBL_KARTU_WADAH}`}>
+        <table className={`${TBL} ${TBL_KARTU}`}>
           <thead className={THEAD}>
             <tr>
               <th className={TH_L}>No. RM</th>
@@ -155,8 +155,8 @@ export default function HalamanPasien() {
               const u = umur(p.tanggal_lahir)
               return (
                 <tr key={p.id} className={TR}>
-                  <td className="px-4 py-3 num text-xs text-[var(--brand)] font-medium">{p.nomor_rm || '-'}</td>
-                  <td className="px-4 py-3">
+                  <td data-l={t('No. RM', 'MRN')} className="px-4 py-3 num text-xs text-[var(--brand)] font-medium">{p.nomor_rm || '-'}</td>
+                  <td data-utama className="px-4 py-3">
                     {/* Menekan nama membuka BACAAN, bukan formulir ubah.
                         Dulu keduanya satu tindakan, jadi orang yang cuma ingin
                         memastikan nomor telepon berada satu ketikan dari
@@ -192,12 +192,12 @@ export default function HalamanPasien() {
                       </p>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-[var(--ink-soft)] text-xs num">
+                  <td data-l={t('Lahir', 'Born')} className="px-4 py-3 text-[var(--ink-soft)] text-xs num">
                     {tanggal(p.tanggal_lahir) || '-'}{u !== null ? ` · ${u} ${t('th', 'y')}` : ''}
                   </td>
-                  <td className="px-4 py-3 text-[var(--ink-soft)] text-xs num">{p.nik || '-'}</td>
-                  <td className="px-4 py-3 text-[var(--ink-soft)] text-xs num">{p.telepon || '-'}</td>
-                  <td className="px-4 py-3">
+                  <td data-l="NIK" className="px-4 py-3 text-[var(--ink-soft)] text-xs num">{p.nik || '-'}</td>
+                  <td data-l={t('Telepon', 'Phone')} className="px-4 py-3 text-[var(--ink-soft)] text-xs num">{p.telepon || '-'}</td>
+                  <td data-aksi className="px-4 py-3">
                     {/* Ikon saja, keterangannya muncul saat disentuh tetikus.
                         Urutannya mengikuti seberapa sering dipakai, bukan
                         seberapa penting: yang paling sering dilakukan dari
