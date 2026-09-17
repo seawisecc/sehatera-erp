@@ -48,7 +48,46 @@ import { antrekanKunjungan } from '@/lib/satusehat/antre'
 import { kirimBatch, type BarisAntrean } from '@/lib/satusehat/pengirim'
 import type { Konteks } from '@/lib/satusehat/klien'
 
-/** Lebih longgar daripada bawaan, tapi jauh di bawah batas Vercel. */
+/**
+ * ## Penjadwalnya SEDANG DIMATIKAN, dan itu keputusan sadar
+ *
+ * `vercel.json` sudah DIBUANG, jadi Vercel tidak memanggil rute ini sendiri.
+ * Yang dimatikan cuma PEMICUNYA; rutenya, penjaganya, dan seluruh jalur
+ * kirimnya tetap utuh dan tetap terbukti jalan.
+ *
+ * Tiga alasan, dan ketiganya bisa berubah kapan saja:
+ *
+ * 1. **Belum ada faskes berkredensial produksi**, jadi penjadwalnya toh cuma
+ *    menjawab `faskes: 0` tiap hari.
+ * 2. **Akun Vercel project ini paket Hobby**, dan Hobby menolak DEPLOY yang
+ *    cron-nya lebih sering daripada sekali sehari:
+ *
+ *        Hobby accounts are limited to daily cron jobs.
+ *
+ *    Yang ditolak bukan cron-nya melainkan SELURUH deploy-nya, jadi satu baris
+ *    jadwal yang terlalu rapat menahan semua perubahan lain ikut naik. Itu
+ *    sudah terjadi sekali dan memakan beberapa jam sebelum ketahuan.
+ * 3. **Pengiriman otomatis ke sistem nasional sebaiknya dinyalakan sengaja**,
+ *    bukan menyala sendiri pada hari kredensial produksi pertama dipasang.
+ *
+ * ### Menyalakannya lagi
+ *
+ * Buat `vercel.json` di akar project:
+ *
+ *     { "crons": [{ "path": "/api/cron/satusehat", "schedule": "0 16 * * *" }] }
+ *
+ * `0 16 * * *` = 23:00 WIB, sesudah klinik tutup. Lebih sering daripada sekali
+ * sehari menuntut Vercel Pro.
+ *
+ * Atau, tanpa menyentuh Vercel sama sekali: panggil rute ini dari penjadwal
+ * luar (GitHub Actions, cron-job.org) dengan header
+ * `Authorization: Bearer <CRON_SECRET>`. Bisa begitu justru karena pintunya
+ * rahasia bersama dan bukan sesi, jadi ia tidak terikat pada siapa yang
+ * memanggil maupun dari mana.
+ *
+ * Selama dimatikan, kedua tombol di Pengaturan > SatuSehat & BPJS tetap
+ * bekerja persis seperti sebelumnya.
+ */
 export const maxDuration = 120
 
 /**
@@ -58,8 +97,15 @@ export const maxDuration = 120
  */
 const ANGGARAN_MS = 90_000
 
-/** Kecil, karena ini berulang tiap lima belas menit dan bukan sekali tekan. */
-const BATAS_KIRIM = 10
+/**
+ * Berapa baris antrean dikuras per faskes per putaran.
+ *
+ * Disetel untuk putaran yang JARANG: selama penjadwalnya dimatikan, tiap
+ * panggilan adalah satu-satunya kesempatan hari itu. Tetap dibatasi karena
+ * satu permintaan punya batas waktu, dan sisanya tidak hilang: ia ikut
+ * panggilan berikutnya, atau ikut tombol yang ditekan kapan saja.
+ */
+const BATAS_KIRIM = 40
 
 /**
  * Membandingkan rahasia tanpa membocorkan panjangnya lewat waktu.

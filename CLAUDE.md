@@ -1026,15 +1026,43 @@ orang yang sudah ada di sana melahirkan dua nomor IHS untuk satu manusia.
 membedakannya: ketemu, tidak ada di MPI, dan gagal menanyakan. Yang ketiga
 bukan bukti bahwa orangnya belum terdaftar.
 
-## Penjadwal pertama, dan ia tidak boleh memakai pintu yang sama
+## Penjadwal pertama, dan ia SEDANG DIMATIKAN
 
-Migrasi 0080 plus `app/api/cron/satusehat/route.ts` dan `vercel.json`. Sampai
-sekarang semua yang berkala dipicu orang yang membuka layar:
+Migrasi 0080 plus `app/api/cron/satusehat/route.ts`. Rutenya ada, terbukti
+jalan, dan **pemicunya dicabut atas permintaan pemilik 17 September 2026**:
+`vercel.json` dibuang, jadi Vercel tidak memanggilnya sendiri.
+
+Tiga alasan, dan ketiganya bisa berubah kapan saja:
+
+1. **Belum ada faskes berkredensial produksi**, jadi penjadwalnya toh cuma
+   menjawab `faskes: 0` tiap hari.
+2. **Akun Vercel project ini paket Hobby**, dan Hobby menolak DEPLOY yang
+   cron-nya lebih sering daripada sekali sehari. Yang ditolak bukan cron-nya
+   melainkan SELURUH deploy-nya, jadi satu baris jadwal yang terlalu rapat
+   menahan semua perubahan lain ikut naik. Itu sudah terjadi sekali dan
+   memakan beberapa jam sebelum ketahuan. **Kalau suatu hari deploy berhenti
+   tanpa sebab yang jelas, `vercel.json` adalah tempat pertama yang dilihat.**
+3. **Pengiriman otomatis ke sistem nasional sebaiknya dinyalakan sengaja**,
+   bukan menyala sendiri pada hari kredensial produksi pertama dipasang.
+
+Menyalakannya lagi: buat `vercel.json` berisi satu entri cron ke
+`/api/cron/satusehat`. Jadwal yang aman di Hobby `0 16 * * *` (23:00 WIB,
+sesudah klinik tutup); lebih sering menuntut Vercel Pro. Atau panggil rutenya
+dari penjadwal luar dengan header `Authorization: Bearer <CRON_SECRET>`, yang
+bisa dilakukan justru karena pintunya rahasia bersama dan bukan sesi.
+
+Selama dimatikan, kedua tombol di Pengaturan > SatuSehat & BPJS tetap bekerja
+persis seperti sebelumnya.
+
+### Bentuknya, yang tetap berlaku begitu dinyalakan lagi
+
+Sampai sebelum ini semua yang berkala dipicu orang yang membuka layar:
 `hanguskan_reservasi_lewat` berjalan saat layar Reservasi dibuka, dan
 pengiriman SatuSehat dipicu dua tombol. Untuk reservasi itu masih bisa hidup,
 karena yang perlu tahu memang membukanya tiap pagi. Untuk sistem nasional
 tidak: kunjungan yang ditutup Jumat sore tidak boleh menunggu sampai ada yang
-kebetulan menekan tombol hari Senin.
+kebetulan menekan tombol hari Senin. Itu alasan rutenya tetap ada walau
+pemicunya dicabut.
 
 **Penjadwal memakai pintunya sendiri, bukan pintu yang dilonggarkan.**
 `siapkanSatuSehat()` memeriksa hak lewat SESI pemanggil, dan itu memang benar
@@ -1050,16 +1078,15 @@ yang membaca tabel hari ini akan membaca kolom yang ditambahkan besok, dan
 kolom yang ditambahkan ke tabel kredensial hampir selalu rahasia.
 
 **Anggarannya DETIK, bukan jumlah faskes.** Jumlah klien akan bertambah tanpa
-ada yang mengubah angka di sini; yang belum kebagian ikut putaran berikutnya
-lima belas menit lagi, dan tidak ada yang hilang karena antreannya memang
-antrean.
+ada yang mengubah angka di sini; yang belum kebagian ikut panggilan
+berikutnya, dan tidak ada yang hilang karena antreannya memang antrean.
 
 **Kegagalan satu faskes tidak menghentikan yang lain.** Tiap faskes dibungkus
 `try`-nya sendiri: satu klinik yang kredensialnya kedaluwarsa tidak boleh
 menghentikan pengiriman seluruh klien. Kegagalan yang sebabnya ada di tenant
 lain adalah yang paling sulit dilacak.
 
-**Hanya `produksi` yang dijadwalkan.** Sandbox tempat orang mencoba, dan yang
+**Hanya `produksi` yang diambil.** Sandbox tempat orang mencoba, dan yang
 mencoba perlu melihat jawabannya sendiri. Konsekuensinya disebut supaya tidak
 mengagetkan: klinik contoh Rexco 88 yang cuma punya kredensial sandbox tidak
 akan pernah dikirimi penjadwal, dan itu perilaku yang benar.
@@ -1070,8 +1097,8 @@ PERTAMA penjadwal ini pernah berjalan sungguhan adalah saat ia berjalan atas
 data produksi klinik orang.
 
 `CRON_SECRET` tanpa awalan `NEXT_PUBLIC_`, alasan yang sama dengan service role
-key. Tanpa nama itu di env project, Vercel tidak mengirim header-nya sama
-sekali dan rutenya menolak semua panggilan.
+key. Ia sudah terpasang di env Production Vercel, jadi menyalakan penjadwalnya
+lagi tidak menuntut menyiapkan apa pun selain jadwalnya sendiri.
 
 ## Antrean kirim: idempoten, dan menyerah itu keadaan
 
