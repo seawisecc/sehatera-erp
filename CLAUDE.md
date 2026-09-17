@@ -1025,6 +1025,53 @@ orang yang sudah ada di sana melahirkan dua nomor IHS untuk satu manusia.
 membedakannya: ketemu, tidak ada di MPI, dan gagal menanyakan. Yang ketiga
 bukan bukti bahwa orangnya belum terdaftar.
 
+## Penjadwal pertama, dan ia tidak boleh memakai pintu yang sama
+
+Migrasi 0080 plus `app/api/cron/satusehat/route.ts` dan `vercel.json`. Sampai
+sekarang semua yang berkala dipicu orang yang membuka layar:
+`hanguskan_reservasi_lewat` berjalan saat layar Reservasi dibuka, dan
+pengiriman SatuSehat dipicu dua tombol. Untuk reservasi itu masih bisa hidup,
+karena yang perlu tahu memang membukanya tiap pagi. Untuk sistem nasional
+tidak: kunjungan yang ditutup Jumat sore tidak boleh menunggu sampai ada yang
+kebetulan menekan tombol hari Senin.
+
+**Penjadwal memakai pintunya sendiri, bukan pintu yang dilonggarkan.**
+`siapkanSatuSehat()` memeriksa hak lewat SESI pemanggil, dan itu memang benar
+untuk tombol. Penjadwal tidak punya pemanggil, jadi ia dijaga `CRON_SECRET`
+yang dikirim Vercel di header. Yang TIDAK dilakukan adalah membuat endpoint
+lama bisa dipanggil tanpa sesi; itu membuka pintu yang sekarang dijaga untuk
+semua orang. Perbandingan rahasianya `timingSafeEqual`, bukan `===`.
+
+**Daftar faskesnya lewat fungsi, bukan membaca tabel.**
+`faskes_kirim_terjadwal()` mengembalikan `company_id` SAJA. `service_role`
+sebenarnya bisa membaca `faskes_credentials` langsung, dan itu justru alasannya:
+yang membaca tabel hari ini akan membaca kolom yang ditambahkan besok, dan
+kolom yang ditambahkan ke tabel kredensial hampir selalu rahasia.
+
+**Anggarannya DETIK, bukan jumlah faskes.** Jumlah klien akan bertambah tanpa
+ada yang mengubah angka di sini; yang belum kebagian ikut putaran berikutnya
+lima belas menit lagi, dan tidak ada yang hilang karena antreannya memang
+antrean.
+
+**Kegagalan satu faskes tidak menghentikan yang lain.** Tiap faskes dibungkus
+`try`-nya sendiri: satu klinik yang kredensialnya kedaluwarsa tidak boleh
+menghentikan pengiriman seluruh klien. Kegagalan yang sebabnya ada di tenant
+lain adalah yang paling sulit dilacak.
+
+**Hanya `produksi` yang dijadwalkan.** Sandbox tempat orang mencoba, dan yang
+mencoba perlu melihat jawabannya sendiri. Konsekuensinya disebut supaya tidak
+mengagetkan: klinik contoh Rexco 88 yang cuma punya kredensial sandbox tidak
+akan pernah dikirimi penjadwal, dan itu perilaku yang benar.
+
+Sandbox tetap bisa dipicu tangan lewat `?lingkungan=sandbox` oleh yang memegang
+`CRON_SECRET`. Itu bukan kelonggaran melainkan syarat: tanpa jalan itu, kali
+PERTAMA penjadwal ini pernah berjalan sungguhan adalah saat ia berjalan atas
+data produksi klinik orang.
+
+`CRON_SECRET` tanpa awalan `NEXT_PUBLIC_`, alasan yang sama dengan service role
+key. Tanpa nama itu di env project, Vercel tidak mengirim header-nya sama
+sekali dan rutenya menolak semua panggilan.
+
 ## Antrean kirim: idempoten, dan menyerah itu keadaan
 
 Migrasi 0056, bentuknya mengikuti `webhook_events` dari 0013.
@@ -1294,6 +1341,66 @@ terima, dan itu tidak muncul sebagai galat di mana pun: payload-nya sah,
 kirimannya diterima, dan yang salah cuma isinya. Alasan yang sama dengan kenapa
 kode SNOMED dan ICD tidak pernah ditebak di sini. Layarnya mengatakan ini apa
 adanya di bawah daftar hasilnya.
+
+### Pencarian KFA: bertanya lebih spesifik justru MENGHILANGKAN jawabannya
+
+Diperbaiki 17 September 2026 sesudah dibuktikan dengan menembak kamusnya.
+Tiga hal yang salah, dan ketiganya membuat yang mencari dengan benar mendapat
+hasil paling buruk:
+
+**1. Kekuatan yang ikut diketik membunuh pencariannya.**
+
+| Dikirim ke kamus | Hasil | Zat tunggal |
+| --- | --- | --- |
+| `Paracetamol 500 mg` | 60 | **0** |
+| `Paracetamol` | 60 | 7, termasuk `92001267 Paracetamol 500 mg Tablet` |
+
+Obatnya ADA; pencariannya yang menyembunyikannya. Sekarang yang dikirim ke
+kamus cuma nama zatnya (`kataKunci()`), dan kekuatannya dipakai MENILAI di
+sisi kita, bukan menyaring di sisi sana.
+
+**2. Peringkat bawaannya menaikkan obat KOMBINASI.** Yang dicari orang hampir
+selalu obat tunggal, jadi tiap zat tambahan dihukum, dan hukumannya sengaja
+lebih besar daripada bonus "namanya diawali yang diketik": `Amlodipine 10 mg /
+Indapamide` diawali persis oleh yang diketik, dan tanpa itu ia mengalahkan
+`Amlodipine Besilate 10 mg` yang justru obatnya.
+
+**3. Nama Indonesia tidak dikenali.** Masalah yang sama persis dengan ICD-10,
+dan ini kedua kalinya: **ejaan bisa diselesaikan mesin, KOSAKATA tidak.**
+"Asam mefenamat" bukan salah eja dari "Mefenamic Acid" (0 hasil tunggal versus
+4). `NAMA_ZAT` di `app/api/kfa/route.ts` adalah `icd_kata` versi obat, dan
+**tempat pertama yang dilihat kalau ada keluhan "obatnya tidak ketemu"**.
+
+Sesudah ketiganya: Paracetamol, Amlodipine, Asam mefenamat, CTM, dan Cetirizine
+semuanya mengembalikan obat tunggal yang benar di peringkat pertama. Amlodipine
+mengembalikan `92000407`, persis kode yang dulu dipilih tangan.
+
+### Kenapa 24 kode KFA TETAP tidak diisi otomatis
+
+Sesudah pencariannya diperbaiki, 25 obat data contoh dijalankan sekaligus.
+18 peringkat pertamanya benar. **Enam di antaranya salah total:**
+
+| Obat | Peringkat 1 |
+| --- | --- |
+| Oralit (glukosa + elektrolit) | Glucosamine Hydrochloride 250 mg |
+| Alkohol swab (isopropil 70%) | Alendronate Sodium **70 mg** Tablet |
+| Antasida DOEN | N(2)-L-Alanyl-L-Glutamine Infus |
+| Pseudoefedrin HCl 30 mg | Benzydamine HCl 3 mg Tablet Hisap |
+| Vitamin B Kompleks | Vitamin B12 50 mcg saja |
+| Kasa steril | Sterile Water for Irrigation |
+
+Ditambah yang bentuk sediaannya meleset walau zatnya benar: Ketoconazole KRIM
+dijawab `Scalp Solution`.
+
+Alkohol swab cocok dengan Alendronate **karena sama-sama mengandung angka 70**.
+Kalau peringkat pertama dipasang otomatis, yang tercatat di sistem nasional
+adalah pasien menerima obat yang tidak pernah ia terima, dan itu tidak pernah
+muncul sebagai galat: payload-nya sah, kirimannya diterima, dan yang salah cuma
+isinya.
+
+**Jadi pencariannya dipercepat, keputusannya tetap manusia.** Itu juga sebabnya
+`products.satuan` tidak dipakai menebak bentuk sediaan: isinya kemasan (Strip,
+Box), bukan `Tablet Salut Selaput`.
 
 ### Impor CSV produk pernah membuang kolom diam-diam
 
