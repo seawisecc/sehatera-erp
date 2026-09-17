@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle, ArrowLeft, ArrowRight, Check, CheckCircle2, FileText, Pill, Receipt,
@@ -534,11 +535,47 @@ export default function HalamanKunjungan() {
             )}
           </p>
         </div>
+        {/*
+          Tombolnya dimatikan kalau paketnya belum membuka modul klinik, dan
+          alasannya disebut di tempat tombolnya.
+
+          Yang MENOLAK tetap database (`wajib_modul_klinik()`, SH008): kalau
+          berkas ini yang jadi penjaga, alamat fungsinya tetap bisa dipanggil
+          langsung dengan kunci anon yang ada di dalam peramban tiap pengguna.
+          Yang di sini cuma supaya tidak ada yang mengisi formulir pendaftaran
+          sampai selesai lalu ditolak di ujungnya.
+
+          Layarnya sendiri TIDAK disembunyikan. Pasien yang sudah terdaftar
+          hari ini tetap harus bisa diperiksa sampai pulang, dan rekam medis
+          lama tetap harus bisa dibaca: yang dikunci paket cuma yang BARU.
+        */}
         <button onClick={() => { setBukaDaftar(true); setCariPasien('') }}
-          className="shrink-0 inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">
+          disabled={!app.fitur.klinik}
+          title={app.fitur.klinik ? undefined
+            : t('Paket fasilitas ini belum membuka modul klinik.',
+                'This facility plan does not include the clinic module.')}
+          className="shrink-0 inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition disabled:opacity-40 disabled:cursor-not-allowed">
           <UserPlus size={15} /> {t('Daftarkan Kunjungan', 'Register a Visit')}
         </button>
       </div>
+
+      {!app.fitur.klinik && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-xs text-amber-900">
+          <AlertTriangle size={14} className="shrink-0" />
+          <span className="font-semibold">
+            {t('Kunjungan baru tidak bisa dibuat dengan paket ini.',
+               'New visits cannot be created on this plan.')}
+          </span>
+          <span>
+            {t('Pasien yang sudah terdaftar tetap bisa diperiksa sampai selesai, dan rekam medis lama tetap bisa dibuka, dicetak, serta ditambahi adendum.',
+               'Patients already registered can still be seen through to the end, and existing records stay readable, printable, and open to addenda.')}
+          </span>
+          <Link href="/pengaturan?tab=langganan"
+            className="font-semibold underline underline-offset-2">
+            {t('Lihat paket', 'View plans')}
+          </Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,300px)_1fr] gap-4">
 

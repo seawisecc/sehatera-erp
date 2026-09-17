@@ -267,8 +267,15 @@ export default function HalamanReservasi() {
         <div className="flex items-center gap-2">
           <input type="date" value={tgl} onChange={e => setTgl(e.target.value)} className={inputCls + ' w-auto'} />
           {bolehTulis && (
-            <button onClick={() => setBuka(true)} disabled={sesi.length === 0}
-              className="inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-40">
+            // Dimatikan kalau paketnya belum membuka modul klinik. Yang
+            // menolak tetap database (`wajib_modul_klinik()`, SH008); ini cuma
+            // supaya tidak ada yang mengisi formulirnya lalu ditolak di ujung.
+            <button onClick={() => setBuka(true)}
+              disabled={sesi.length === 0 || !app.fitur.klinik}
+              title={app.fitur.klinik ? undefined
+                : t('Paket fasilitas ini belum membuka modul klinik.',
+                    'This facility plan does not include the clinic module.')}
+              className="inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-40 disabled:cursor-not-allowed">
               <CalendarClock size={16} /> {t('Buat Reservasi', 'New Appointment')}
             </button>
           )}

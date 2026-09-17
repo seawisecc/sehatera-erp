@@ -74,6 +74,28 @@ export function readPlanFeatures(raw: unknown): PlanFeatures {
 export function lockedModules(f: PlanFeatures): string[] {
   const locked: string[] = []
   if (f.purchasing === 'basic') locked.push('faktur')
+
+  /**
+   * **Modul klinik SENGAJA tidak dikunci di sini**, walau paket memang
+   * menggerbanginya sejak migrasi 0081.
+   *
+   * Menyembunyikan menu adalah alat yang terlalu kasar untuk gerbang ini.
+   * Yang dikunci paket cuma MEMBUAT yang baru, bukan membaca yang lama, dan
+   * menu yang hilang mengunci dua-duanya:
+   *
+   * - Menyembunyikan **Pasien** ikut menutup tombol Riwayat, dan itu salah
+   *   satu dari DUA pintu ke rekam medis kunjungan lama. Pintu kedua itu
+   *   sempat tidak ada sama sekali dan akibatnya rekam medis yang sudah
+   *   tercatat tidak bisa dibuka lagi oleh siapa pun; datanya utuh, cuma
+   *   tidak terjangkau.
+   * - Menyembunyikan **Kunjungan** menelantarkan pasien yang SUDAH terdaftar
+   *   hari itu, di tengah konsultasi, di depan dokternya.
+   *
+   * Jadi layarnya tetap terbuka dan yang menolak tetap database
+   * (`wajib_modul_klinik()`, SH008). Yang ditambahkan di layar cuma tombol
+   * "daftarkan" yang dimatikan beserta alasannya, supaya tidak ada yang
+   * mengisi formulir sepuluh menit lalu ditolak di ujung.
+   */
   return locked
 }
 

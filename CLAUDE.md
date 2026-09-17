@@ -187,6 +187,7 @@ ditampilkan apa adanya: lihat `pesanError()` di `lib/session.ts`.
 | `SH005` | Stok tidak cukup |
 | `SH006` | Obat golongan tanpa identitas pasien / nomor resep |
 | `SH007` | Peran tidak berhak atas sub-modul yang diminta |
+| `SH008` | Paket faskes belum membuka modul klinik |
 
 **RLS menyaring baris, bukan kolom.** Policy yang mengizinkan pemilik apotek
 memperbarui profilnya otomatis mengizinkan ia menulis `status` dan tanggal
@@ -2029,6 +2030,62 @@ selama Rexco 88 sendirian ia tidak pernah terlihat dan pemiliknya mengira
 fiturnya belum ada. Pintunya tetap **Pengaturan > Outlet & Cabang**, dan itu
 yang harus disebut kalau ada yang bertanya di mana menu gantinya.
 
+## Gerbang modul klinik: mengunci yang BARU, bukan yang lama
+
+Migrasi 0081, disetujui pemilik 17 September 2026. `plans.features->>'klinik'`
+sudah ada sejak paket dibangun, `lib/plan.ts` menghitungnya, dan `DaftarPaket`
+menampilkannya. Yang tidak pernah ada: satu pun tempat yang MEMERIKSANYA.
+Siapa pun yang mendaftar bersektor `klinik` mendapat seluruh modul klinik
+memakai paket Starter Rp 99.000 sekalipun, jadi tidak ada alasan siapa pun
+membayar paket Klinik.
+
+**Yang dikunci MEMBUAT yang baru, bukan MEMBACA yang lama.** Ini keputusan
+paling menentukan di migrasi itu. Klinik yang paketnya turun tetap bisa
+membuka, membaca, mencetak, dan menambahi adendum seluruh rekam medis yang
+sudah ada. Yang berhenti cuma lahirnya kunjungan baru dan reservasi baru.
+
+Alasannya sama persis dengan kenapa masa aktif habis tidak mengunci aplikasi:
+rekam medis adalah dokumen hukum PASIEN, bukan barang sewaan, dan klinik yang
+tidak bisa membacanya karena tagihannya telat sedang melanggar kewajibannya
+kepada orang yang tidak ikut dalam urusan tagihan itu. Aturan yang sama
+membuat SIPNAP tidak pernah masuk `lockedModules`.
+
+**Hanya DUA pintu yang dijaga**, dan keduanya pintu MASUK:
+`daftar_kunjungan()` dan `buat_reservasi()`. Rekam medis, resep, penunjang,
+tarif, dan klaim sengaja TIDAK dijaga: semuanya bekerja di atas kunjungan yang
+sudah ada, jadi mereka berhenti melahirkan yang baru dengan sendirinya begitu
+pintu masuknya tertutup, sementara pasien yang SEDANG diperiksa hari itu tetap
+bisa diselesaikan sampai bayar. Menjaga kesepuluh fungsi satu per satu justru
+menelantarkan pasien di tengah konsultasi, di depan dokternya.
+`supabase/uji/0081` memeriksa keenam fungsi baca itu TETAP tidak digerbangi.
+
+**Menyembunyikan menu sengaja TIDAK dipakai.** Alatnya terlalu kasar: menu
+Pasien yang hilang ikut menutup tombol Riwayat, yaitu salah satu dari dua
+pintu ke rekam medis kunjungan lama, dan menu Kunjungan yang hilang
+menelantarkan pasien yang sudah terdaftar hari itu. Yang ditambahkan di layar
+cuma tombol "daftarkan" yang dimatikan beserta alasannya.
+
+**Faskes tanpa paket sama sekali tetap lolos.** Yang belum dipasangi paket
+biasanya baru mendaftar atau sedang disiapkan tangan, dan mengunci mereka
+berarti mengunci orang yang belum sempat ditawari apa pun.
+
+### Menyulam penjaga ke fungsi yang sudah ada
+
+Migrasi 0081 memasang penjaganya dengan `replace()` atas `pg_get_functiondef()`,
+bukan dengan menyalin badan fungsinya dari berkas migrasi lama: berkas cuma
+tahu keadaan saat ia ditulis, aturan yang sama dengan `pg_get_viewdef`.
+
+**Jangkarnya BERBEDA di kedua fungsi, dan itu hampir membuat migrasinya gagal
+diam-diam.** `daftar_kunjungan` memakai `v_company` dengan pesan "Akun ini
+belum terhubung...", sementara `buat_reservasi` memakai `v_co` dengan pesan
+"Fasilitas tidak ditemukan.". Jangkar yang meleset membuat `replace()` tidak
+melakukan apa pun: fungsinya ditulis ulang persis seperti semula, migrasinya
+melapor BERHASIL, dan pintunya tetap terbuka tanpa satu galat pun.
+
+Karena itu pemasangnya MEMBACA ULANG definisinya dari database sesudah
+menulis, lalu `raise exception` kalau penjaganya tidak ada di sana. Yang
+menyulam teks harus memeriksa jahitannya sendiri.
+
 ## Yang dijanjikan halaman harga, dan yang benar-benar ada
 
 Diperiksa satu per satu pada 19 Agustus 2026, dibereskan sebagian pada
@@ -2041,7 +2098,7 @@ sebelum paket berikutnya dijual.
 | Multi outlet | **Ada** sejak 0062, kuotanya lewat `max_outlets` |
 | Pembelian basic vs full | **Sebagian**: hanya menu `faktur` yang dikunci |
 | Laporan lengkap | **Ditegakkan** sejak 17 Sep 2026: basic dibatasi 30 hari di KUERI, dan batasnya dikatakan di layar |
-| Modul klinik | **TIDAK**: `f.klinik` dihitung tapi tidak menggerbangi apa pun. Keputusan pemilik |
+| Modul klinik | **Ditegakkan** sejak migrasi 0081: kunjungan & reservasi BARU ditolak SH008, membaca yang lama tetap terbuka |
 | CRM / Riwayat pasien | **Dicabut dari halaman harga**, karena `f.crm` tidak menggerbangi apa pun |
 | API | **Dicabut dari halaman harga**, karena tidak ada satu pun endpoint publik |
 | Dukungan email/WA/dedicated | Janji layanan, bukan perangkat lunak |
@@ -2273,16 +2330,10 @@ harus menerjemahkannya sendiri jadi SH004.**
 
 ## Dua hal yang BELUM diperbaiki, dan alasannya
 
-**`PlanFeatures.klinik` tidak menggerbangi apa pun.** `lib/plan.ts`
-menghitungnya (`f.klinik === true`) dan `DaftarPaket` menampilkannya, tapi
-`lockedModules()` hanya mengunci `faktur`. Artinya seluruh modul klinik: rekam
-medis, e-resep, antrean, reservasi: terbuka untuk faskes mana pun yang
-sektornya `klinik`, tanpa memandang paket. Belum berdampak karena paket Klinik
-masih `is_public = false`, jadi belum ada yang bisa membelinya, tapi ini yang
-menentukan pendapatan begitu dijual. Sengaja tidak saya kunci sepihak:
-menyalakannya sekarang akan mengunci klinik contoh yang sedang dipakai
-mencoba, dan cara menguncinya (menyembunyikan menu? menolak mendaftar sebagai
-klinik?) itu keputusan pemilik.
+**`PlanFeatures.klinik` sekarang MENGGERBANGI, sejak migrasi 0081.** Lihat
+bagian "Gerbang modul klinik" di bawah. Yang dikunci cuma membuat kunjungan
+dan reservasi BARU; membaca, mencetak, dan menambahi adendum rekam medis lama
+tetap terbuka selamanya.
 
 **`settings.ihs_organization_id` dan `faskes_credentials.publik->>'organization_id'`
 adalah dua tempat untuk satu fakta.** Yang benar tempatnya di kredensial:
