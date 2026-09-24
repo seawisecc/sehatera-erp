@@ -114,6 +114,10 @@ memasang lubang keamanan yang sudah ditutup.
 | `0076_procedure_ke_satusehat` | `visit_charges.ihs_procedure_id` |
 | `0077_kode_kfa_obat` | `products.kode_kfa` beserta constraint bentuknya |
 | `0078_resep_ke_satusehat` | `prescription_items.ihs_medicationrequest_id` |
+| `0079_hasil_lab_ke_satusehat` | `lab_results.ihs_observation_id` |
+| `0080_daftar_faskes_terjadwal` | `faskes_kirim_terjadwal()` untuk penjadwal |
+| `0081_gerbang_modul_klinik` | Kunjungan & reservasi BARU ditolak SH008 tanpa paket klinik |
+| `0082_hak_data_api_eksplisit` | Grant Data API seluruh tabel, view, dan sequence ditulis sendiri |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -165,6 +169,41 @@ exists` satu per satu, bukan satu CREATE TABLE yang rapi. Alasannya di header
 migrasi 0001: `create table if not exists` pada tabel yang sudah ada tidak
 melakukan apa pun dan tidak mengeluh, jadi migrasi berbentuk CREATE TABLE saja
 akan melapor "berhasil" sambil meninggalkan database persis seperti semula.
+
+### Tabel baru WAJIB membawa grant-nya sendiri
+
+**Mulai 30 Oktober 2026 Supabase tidak lagi memberi hak Data API secara
+otomatis** pada tabel baru di skema public, termasuk yang lahir dari migrasi
+(project baru, preview branch, `supabase db reset`). Lupa menulis grant tidak
+menggagalkan migrasinya: tabelnya ada, dan aplikasi membacanya sebagai
+`permission denied`. Migrasi 0082 menuliskan hak seluruh tabel lama, disalin
+dari keadaan produksi, bukan dirancang ulang.
+
+Tiap migrasi yang membuat tabel menulis ini di migrasi yang SAMA:
+
+```sql
+alter table public.x enable row level security;
+grant select, insert, update, delete on public.x to authenticated, service_role;
+-- anon HANYA kalau memang dibaca sebelum masuk, dan itu diputuskan, bukan ikut.
+```
+
+- **Jangan memasang `alter default privileges` untuk menghidupkan lagi
+  pemberian otomatisnya.** Itu persis yang sedang dibuang: tabel yang lahir
+  terbuka tanpa ada yang memutuskannya.
+- **View tidak tunduk pada RLS seperti tabel.** `v_antrean_hari_ini` dan
+  `v_resep_menunggu` sengaja tanpa anon; view baru juga tanpa anon.
+- **Sequence yang dipakai nilai bawaan kolom butuh `grant usage, select`**,
+  karena `nextval()` berjalan sebagai peran yang meng-INSERT.
+- `supabase/uji/0082_hak_data_api.sql` menghitung dari katalog, jadi tabel
+  baru ikut diperiksa tanpa didaftarkan. Jalankan sesudah tiap migrasi yang
+  membuat tabel.
+
+Pengumumannya menyebut tabel saja. Fungsi yang hanya dipanggil server
+(`ambil_kredensial`, `ambil_antrean_kirim`, `tandai_terkirim`, `tandai_gagal`,
+`faskes_kirim_terjadwal`) dicabut dari `anon`/`authenticated` dan bergantung
+pada hak EXECUTE bawaan untuk `service_role`. Kalau Supabase memperluas
+kebijakan ini ke fungsi, merekalah yang pertama berhenti, dan pengiriman
+SatuSehat ikut berhenti.
 
 ## Aturan yang tidak boleh dilanggar
 
