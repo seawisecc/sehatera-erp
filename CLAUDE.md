@@ -125,6 +125,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0087_waktu_apotek_berzona` | Sembilan `created_at` apotek jadi timestamptz: jam tidak lagi mundur 8 jam |
 | `0088_email_wajib_dikonfirmasi` | Trigger `auto_confirm_email` di `auth.users` dicabut: email wajib dikonfirmasi |
 | `0089_stok_opname` | `stock_opnames`, `stock_opname_items`, empat fungsi opname, `stok.opname(.final)` di `boleh()` |
+| `0090_peran_ikut_outlet` | `peran_saya()` dan `my_context()` membaca peran di outlet yang sedang dibuka |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -2432,17 +2433,27 @@ yang pernah memusnahkan narkotika tidak sama dengan stok fisiknya. Sejak
 28 September 2026 pemusnahan, retur `selesai`, dan selisih opname final ikut
 masuk, baik ke saldo awal maupun rincian bulan berjalan.
 
-**Yang MASIH tidak masuk SIPNAP: stok awal hasil impor CSV** (`importStok` di
-Pengaturan > Migrasi). Ia menulis batch tanpa `po_id` dan tanpa catatan
-gerakan apa pun, jadi apotek yang memulai Sehatera dengan stok narkotika yang
-sudah ada punya saldo awal SIPNAP nol. Perbaikan yang benar adalah mencatat
-impor stok awal sebagai gerakan bertanggal; sampai itu ada, opname pertama
-sesudah impor tidak menolong karena selisihnya nol.
+**Saldo SIPNAP dijangkarkan ke stok sistem dan dihitung MUNDUR** (28 September
+2026): saldo akhir bulan = `stok_total` sekarang dikurangi penerimaan
+sesudah bulan itu, ditambah pengeluaran sesudah bulan itu; saldo awal
+diturunkan dari sana. Cara lama menjumlah maju dari nol, jadi stok yang masuk
+tanpa gerakan (impor stok awal, stok awal saat menambah produk, data lama)
+tidak pernah terhitung. Buktinya di Rexco 88: Codein 10 mg stok sistem 40,
+SIPNAP cara lama melapor saldo akhir 0. Dengan jangkar, saldo akhir SIPNAP
+selalu jatuh tepat pada stok sistem, dari mana pun stoknya datang.
 
-**Temuan terkait yang belum dibetulkan: `peran_saya()` tidak mengenal
-outlet.** Ia mengambil `app_users.role` dengan `limit 1` tanpa memandang
-`auth_company_id()`, padahal sejak 0065 satu orang boleh berbeda peran di tiap
-outlet. Peran yang dipakai `boleh()` bisa peran dari outlet lain.
+Konsekuensinya satu: **stok sistem harus benar**, karena kini ia yang jadi
+pegangan. Itu sebabnya menyunting angka stok di layar Produk DITUTUP: kolomnya
+hanya dibaca dan menunjuk ke Stok Opname. Stok awal saat MENAMBAH produk tetap
+boleh diisi.
+
+**`peran_saya()` sudah mengenal outlet (0090).** Dulu ia mengambil peran dari
+baris app_users mana saja, jadi kasir di cabang B bisa lolos memakai hak
+apotekernya di cabang A. Kini peran dibaca untuk `auth_company_id()`, dengan
+urutan yang sama dengan `my_context()`: pemilik faskes itu dulu, lalu baris
+app_users di faskes itu. `supabase/uji/0090` menguji satu orang berpindah
+outlet lewat `request.jwt.claims`, cara yang bisa dipakai uji lain yang butuh
+identitas pengguna.
 
 ## Tidak ada `alert`, `confirm`, atau `prompt` di aplikasi ini
 

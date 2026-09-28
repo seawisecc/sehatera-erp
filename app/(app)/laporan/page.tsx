@@ -181,7 +181,6 @@ export default function HalamanLaporan() {
     const awalBulan = new Date(tahun, bulan - 1, 1)
     const akhirBulan = new Date(tahun, bulan, 1)
     const diBulanIni = (d: any) => { const x = new Date(d); return x >= awalBulan && x < akhirBulan }
-    const sebelum = (d: any) => new Date(d) < awalBulan
     const fmt = (d: any) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''
     const fmtED = (d: any) => d ? new Date(d).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }) : '-'
 
@@ -194,9 +193,10 @@ export default function HalamanLaporan() {
     }
     const ids = prods.map((p: any) => p.id)
 
-    // Saldo awal dihitung dari SELURUH riwayat sebelum bulan itu, jadi kueri
-    // ini tumbuh terus sepanjang umur apotek. Tanpa `semua()` laporan wajib
-    // narkotika mulai salah diam-diam begitu riwayatnya lewat 1.000 baris.
+    // Saldo dihitung mundur dari stok sekarang, jadi kueri ini mengambil
+    // seluruh gerakan dari awal bulan itu sampai hari ini, dan riwayatnya
+    // tumbuh terus. Tanpa `semua()` laporan wajib narkotika mulai salah
+    // diam-diam begitu riwayatnya lewat 1.000 baris.
     //
     // Sampai 28 September 2026 hanya penerimaan PO dan penjualan yang
     // dihitung. Pemusnahan dan retur memotong stok tanpa pernah muncul di
@@ -259,7 +259,25 @@ export default function HalamanLaporan() {
       const jumlah = (xs: { jml: number }[]) => xs.reduce((a, r) => a + r.jml, 0)
       const urut = <T extends { waktu: string }>(xs: T[]) => [...xs].sort((a, b) => new Date(a.waktu).getTime() - new Date(b.waktu).getTime())
 
-      const awal = jumlah(masuk.filter(r => sebelum(r.waktu))) - jumlah(keluar.filter(r => sebelum(r.waktu)))
+      // Saldo DIJANGKARKAN ke stok yang sebenarnya, lalu dihitung MUNDUR.
+      //
+      // Versi sebelumnya menjumlahkan maju dari nol: seluruh penerimaan
+      // dikurangi seluruh pengeluaran sebelum bulan itu. Stok yang masuk tanpa
+      // gerakan (impor stok awal saat pindah ke Sehatera, stok awal saat
+      // menambah produk, data lama) tidak pernah terhitung, jadi apotek yang
+      // memulai dengan narkotika di rak melapor saldo awal nol. Menambal satu
+      // jalan masuk hanya menunggu jalan berikutnya.
+      //
+      // Mundur dari `stok_total` membuat saldo akhir SIPNAP selalu jatuh tepat
+      // pada stok sistem, dari mana pun stok itu datang. Template cetaknya
+      // menghitung akhir = awal + masuk - keluar, jadi cukup awalnya.
+      const sesudah = (d: string) => new Date(d) >= akhirBulan
+      const akhirBulanIni = (p.stok_total ?? 0)
+        - jumlah(masuk.filter(r => sesudah(r.waktu)))
+        + jumlah(keluar.filter(r => sesudah(r.waktu)))
+      const awal = akhirBulanIni
+        - jumlah(masuk.filter(r => diBulanIni(r.waktu)))
+        + jumlah(keluar.filter(r => diBulanIni(r.waktu)))
 
       return {
         nama: p.nama_obat,

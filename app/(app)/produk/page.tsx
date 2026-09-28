@@ -159,7 +159,9 @@ export default function HalamanProduk() {
     const { error } = await supabase.from('products').update({
       nama_obat: edit.nama_obat, nama_generik: edit.nama_generik,
       kandungan: edit.kandungan, harga_beli: edit.harga_beli,
-      harga_jual: edit.harga_jual, stok_total: edit.stok_total,
+      // stok_total sengaja TIDAK ikut: stok berubah lewat Pembelian, Kasir,
+      // Tindak Lanjut, atau Stok Opname, masing-masing dengan jejaknya.
+      harga_jual: edit.harga_jual,
       stok_minimum: edit.stok_minimum,
       // Kosong disimpan sebagai null, bukan string kosong: indeks unik
       // barcode melewatkan null, dan dua produk berbarcode "" akan bertabrakan
@@ -524,8 +526,14 @@ export default function HalamanProduk() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Stok', 'Stock')}</label>
-                  <input type="number" min={0} value={edit.stok_total ?? 0}
-                    onChange={e => setEdit({ ...edit, stok_total: +e.target.value })} className={inputCls + ' num'} />
+                  {/* Hanya dibaca. Menyunting angka stok di sini dulu adalah satu-
+                      satunya cara membetulkan selisih: tanpa alasan, tanpa jejak,
+                      dan batch tidak ikut. Sejak ada Stok Opname (0089), jalannya
+                      di sana. */}
+                  <div className={inputCls + ' num bg-[var(--surface-2)] text-[var(--ink-soft)] flex items-center justify-between gap-2'}>
+                    <span>{angka(edit.stok_total ?? 0)}</span>
+                    <a href="/opname" className="text-[11px] font-medium text-[var(--brand)] hover:underline whitespace-nowrap">{t('Ubah lewat Stok Opname', 'Change via Stock Take')}</a>
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-[var(--ink-soft)] mb-1 block">{t('Stok Minimum', 'Min Stock')}</label>
@@ -533,13 +541,6 @@ export default function HalamanProduk() {
                     onChange={e => setEdit({ ...edit, stok_minimum: +e.target.value })} className={inputCls + ' num'} />
                 </div>
               </div>
-
-              {edit.stok_total !== produk.find(p => p.id === edit.id)?.stok_total && (
-                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 leading-relaxed">
-                  {t('Kamu mengubah stok langsung. Ini penyesuaian manual: jumlah batch tidak ikut berubah, jadi angkanya bisa berbeda dari yang dibaca laporan SIPNAP. Untuk barang masuk pakai Pembelian, untuk barang keluar pakai Tindak Lanjut.',
-                     'You are editing stock directly. This is a manual adjustment: batch totals do not follow, so the figure can diverge from what SIPNAP reads. Use Purchasing for goods in and Follow-up for goods out.')}
-                </p>
-              )}
 
               <div className="border-t border-[var(--line-soft)] pt-3">
                 <label className="text-xs font-medium text-[var(--ink-soft)] mb-2 block">
