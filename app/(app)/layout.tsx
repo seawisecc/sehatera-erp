@@ -20,11 +20,14 @@ import { UmpanProvider } from '@/components/Umpan'
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={<Memuat />}>
-      <AppProvider>
-        <UmpanProvider>
+      {/* Umpan di LUAR AppProvider, supaya kerangka aplikasi sendiri bisa
+          memakai kabar() alih-alih alert() saat akun dinonaktifkan atau
+          undangan gagal diterima. */}
+      <UmpanProvider>
+        <AppProvider>
           <Gerbang>{children}</Gerbang>
-        </UmpanProvider>
-      </AppProvider>
+        </AppProvider>
+      </UmpanProvider>
     </Suspense>
   )
 }

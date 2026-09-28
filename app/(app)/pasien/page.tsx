@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Eye, History, Pencil, Search, Stethoscope, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useBertahap, TombolLagi } from '@/lib/bertahap'
 import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { usePemuat } from '@/lib/pemuat'
@@ -66,6 +67,7 @@ export default function HalamanPasien() {
       [p.nama, p.nik, p.nomor_rm, p.telepon, p.nomor_penjamin, p.nomor_bpjs, p.nomor_polis, p.kerabat_telepon]
         .some(v => (v || '').toString().toLowerCase().includes(q)))
   }, [daftar, cari])
+  const bertahap = useBertahap(tersaring)
 
   const simpan = async (isi: any, id: string | null) => {
     setSibuk(true)
@@ -153,7 +155,7 @@ export default function HalamanPasien() {
                       'No patients registered yet. Add the first one with the button above.')
                   : t('Tidak ada yang cocok dengan pencarian ini.', 'Nothing matches this search.')}
               </td></tr>
-            ) : tersaring.map(p => {
+            ) : bertahap.tampil.map(p => {
               const u = umur(p.tanggal_lahir)
               return (
                 <tr key={p.id} className={TR}>
@@ -235,6 +237,7 @@ export default function HalamanPasien() {
             })}
           </tbody>
         </table>
+        <TombolLagi {...bertahap} />
       </div>
 
       {form !== undefined && (

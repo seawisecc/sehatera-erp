@@ -1,5 +1,6 @@
 'use client'
 
+import { GALAT_BACA } from '@/lib/supabase'
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { AlertTriangle, Check, Info, X } from 'lucide-react'
 import Portal from '@/components/Portal'
@@ -88,6 +89,29 @@ export function UmpanProvider({ children }: { children: React.ReactNode }) {
     const lama = jenis === 'galat' ? 9000 : 4000
     setTimeout(() => setPesan(p => p.filter(x => x.id !== id)), lama)
   }, [])
+
+  /* Bacaan yang gagal diumumkan oleh klien Supabase (lib/supabase.ts).
+     Satu halaman bisa menjalankan belasan kueri sekaligus, jadi pesan yang
+     sama ditahan 10 detik: sepuluh kotak merah untuk satu jaringan yang
+     putus membuat orang berhenti membacanya. */
+  const terakhirGalat = useRef(0)
+  useEffect(() => {
+    const dengar = (e: Event) => {
+      const { status } = (e as CustomEvent<{ status: number; tabel: string }>).detail || {}
+      const kini = Date.now()
+      if (kini - terakhirGalat.current < 10000) return
+      terakhirGalat.current = kini
+      const inggris = document.documentElement.lang === 'en'
+      kabar(status === 401
+        ? (inggris ? 'Your session has ended. Sign in again so the data on this screen is complete.'
+                   : 'Sesi sudah berakhir. Masuk ulang supaya data di layar ini lengkap.')
+        : (inggris ? `Part of the data failed to load (code ${status}), so this screen may be incomplete. Reload the page; if it persists, contact the Seawise team.`
+                   : `Sebagian data gagal dimuat (kode ${status}), jadi isi layar ini mungkin tidak lengkap. Muat ulang halaman; kalau tetap, hubungi tim Seawise.`),
+        'galat')
+    }
+    window.addEventListener(GALAT_BACA, dengar)
+    return () => window.removeEventListener(GALAT_BACA, dengar)
+  }, [kabar])
 
   const konfirmasi = useCallback((opsi: Konfirmasi) =>
     new Promise<boolean>(res => setKonf({ ...opsi, jawab: res })), [])

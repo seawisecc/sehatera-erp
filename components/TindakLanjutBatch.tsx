@@ -7,7 +7,7 @@ import Dialog from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { bukaCetak, beritaAcaraPemusnahan } from '@/lib/cetak'
-import { angka, tanggal } from '@/lib/format'
+import { angka, tanggal, tanggalLokal } from '@/lib/format'
 
 /**
  * Tindak lanjut satu batch yang mendekati atau melewati kadaluarsa.
@@ -58,7 +58,7 @@ export default function TindakLanjutBatch({ batch, profil, namaApoteker, onTutup
   const [suppliers, setSuppliers] = useState<any[]>([])
 
   const [musnah, setMusnah] = useState({
-    tanggal_musnahkan: new Date().toISOString().split('T')[0],
+    tanggal_musnahkan: tanggalLokal(),
     qty_musnahkan: batch.stok_batch,
     metode: 'Dibakar',
     saksi_1: namaApoteker || '',
@@ -67,7 +67,7 @@ export default function TindakLanjutBatch({ batch, profil, namaApoteker, onTutup
   })
   const [retur, setRetur] = useState({
     supplier_id: '',
-    tanggal_retur: new Date().toISOString().split('T')[0],
+    tanggal_retur: tanggalLokal(),
     qty_retur: batch.stok_batch,
     alasan: 'Produk mendekati atau melebihi tanggal kadaluarsa',
   })

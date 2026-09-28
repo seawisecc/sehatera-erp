@@ -10,7 +10,7 @@ import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TH_C, TR } from '@/lib/ui'
-import { angka, tanggal } from '@/lib/format'
+import { angka, tanggal, tanggalLokal } from '@/lib/format'
 import { bukaCetak, beritaAcaraPemusnahan } from '@/lib/cetak'
 import TindakLanjutBatch, { type BatchTindakLanjut } from '@/components/TindakLanjutBatch'
 
@@ -49,7 +49,7 @@ export default function HalamanTindakLanjut() {
     const [{ data: b }, { data: m }, { data: r }] = await Promise.all([
       semua(() => scope(supabase.from('product_batches')
         .select('*, products(nama_obat, kode, satuan)')
-        .lte('expired_date', in60.toISOString().split('T')[0])
+        .lte('expired_date', tanggalLokal(in60))
         .gt('stok_batch', 0)
         .is('ditindaklanjuti_pada', null)
         .order('expired_date'))),

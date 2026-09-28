@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { CalendarClock, CreditCard, Printer, Receipt, Wallet } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { tanggalLokal } from '@/lib/format'
 import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { usePemuat } from '@/lib/pemuat'
@@ -49,7 +50,7 @@ export default function HalamanFaktur() {
   const { memuat, mulai, selesai } = usePemuat(app.superViewCompany)
   const [bayar, setBayar] = useState<Faktur | null>(null)
   const [formBayar, setFormBayar] = useState({
-    tanggal_bayar: new Date().toISOString().split('T')[0],
+    tanggal_bayar: tanggalLokal(),
     metode_bayar: 'Transfer',
     catatan_bayar: '',
   })
@@ -190,7 +191,7 @@ export default function HalamanFaktur() {
                         </button>
                       ) : (
                         <button onClick={() => {
-                          setFormBayar({ tanggal_bayar: new Date().toISOString().split('T')[0], metode_bayar: 'Transfer', catatan_bayar: '' })
+                          setFormBayar({ tanggal_bayar: tanggalLokal(), metode_bayar: 'Transfer', catatan_bayar: '' })
                           setBayar(f)
                         }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--brand)] text-[var(--on-brand)] text-xs font-medium hover:bg-[var(--brand-hover)] transition">

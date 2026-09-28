@@ -13,6 +13,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try { const s = localStorage.getItem('sw_lang'); if (s === 'en' || s === 'id') setLangState(s) } catch {}
   }, [])
+  // `<html lang>` ikut bahasa yang dipilih: pembaca layar memakainya untuk
+  // memilih suara, dan pesan yang dibangun di luar React (Umpan) membacanya.
+  useEffect(() => { document.documentElement.lang = lang }, [lang])
   const setLang = (l: Lang) => { setLangState(l); try { localStorage.setItem('sw_lang', l) } catch {} }
   const t = (id: string, en: string) => (lang === 'en' ? en : id)
   return <LangCtx.Provider value={{ lang, setLang, t }}>{children}</LangCtx.Provider>

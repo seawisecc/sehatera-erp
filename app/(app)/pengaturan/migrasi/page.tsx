@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, ClipboardList, Download, PackageOpen, Pill, Receipt, Truck, Upload } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { tanggalLokal } from '@/lib/format'
 import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -190,10 +191,10 @@ export default function HalamanMigrasi() {
         if (cid) sq = sq.eq('company_id', cid)
         const { data: sup } = await sq.maybeSingle()
         if (!sup) { gagal.push(r.nomor_faktur + '→' + r.nama_supplier); continue }
-        const tf = r.tanggal_faktur || new Date().toISOString().split('T')[0]
+        const tf = r.tanggal_faktur || tanggalLokal()
         const top = +(r.term_of_payment || 0) || 0
         let jt = r.tanggal_jatuh_tempo
-        if (!jt) { const d = new Date(tf); d.setDate(d.getDate() + top); jt = d.toISOString().split('T')[0] }
+        if (!jt) { const d = new Date(tf); d.setDate(d.getDate() + top); jt = tanggalLokal(d) }
         await supabase.from('faktur').insert([{ nomor_faktur: r.nomor_faktur.trim(), supplier_id: sup.id, tanggal_faktur: tf, term_of_payment: top, tanggal_jatuh_tempo: jt, total: +(r.total || 0) || 0, status: 'belum_bayar', ...(cid ? { company_id: cid } : {}) }])
         ok++
       }

@@ -11,7 +11,7 @@ import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
-import { rupiah, angka, tanggal } from '@/lib/format'
+import { rupiah, angka, tanggal, tanggalLokal } from '@/lib/format'
 import { bukaCetak, purchaseOrder } from '@/lib/cetak'
 
 /**
@@ -74,7 +74,7 @@ export default function HalamanPembelian() {
   const [barisTerima, setBarisTerima] = useState<BarisTerima[]>([])
   const [faktur, setFaktur] = useState({
     nomor_faktur: '',
-    tanggal_faktur: new Date().toISOString().split('T')[0],
+    tanggal_faktur: tanggalLokal(),
     term_of_payment: 30,
   })
 
@@ -255,7 +255,7 @@ export default function HalamanPembelian() {
       expired_date: it.expired_date || '',
       harga_beli: it.harga_beli || 0,
     })))
-    setFaktur({ nomor_faktur: '', tanggal_faktur: new Date().toISOString().split('T')[0], term_of_payment: 30 })
+    setFaktur({ nomor_faktur: '', tanggal_faktur: tanggalLokal(), term_of_payment: 30 })
     setTerima(po)
   }
 

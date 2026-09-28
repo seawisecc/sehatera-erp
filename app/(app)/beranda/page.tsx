@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase'
 import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
-import { rupiah, angka, desimal } from '@/lib/format'
+import { rupiah, angka, desimal, tanggalLokal } from '@/lib/format'
 
 /**
  * Beranda: ringkasan satu layar.
@@ -189,7 +189,7 @@ export default function HalamanBeranda() {
       semua(() => scope(supabase.from('products').select('nama_obat,kode,stok_total,stok_minimum').order('stok_total'))),
       scope(supabase.from('product_batches')
         .select('batch_number,expired_date,stok_batch,products(nama_obat)')
-        .lte('expired_date', in60.toISOString().split('T')[0])
+        .lte('expired_date', tanggalLokal(in60))
         .gt('stok_batch', 0).is('ditindaklanjuti_pada', null).order('expired_date')),
       semua(() => scope(supabase.from('faktur')
         .select('nomor_faktur,tanggal_jatuh_tempo,total,status,suppliers(nama_supplier)')

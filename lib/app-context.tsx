@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { useUmpan } from '@/components/Umpan'
 import { supabase } from './supabase'
 import { getSessionContext, pesanError, KUNCI_UNDANGAN, type SessionContext } from './session'
 import { FULL_PLAN, lockedModules, type PlanFeatures } from './plan'
@@ -132,9 +133,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   // ── Sesi ──
+  const { kabar } = useUmpan()
+
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      // getSession() dibaca dari penyimpanan lokal, bukan ditanyakan ke server
+      // Auth. Keasliannya tetap diperiksa: my_context() di bawah memvalidasi
+      // token di server, dan yang tidak sah dijawab signedIn=false lalu
+      // dikeluarkan. Yang dihemat satu putaran jaringan (~150-200 ms ke
+      // Singapura) di SETIAP halaman yang dibuka, sebelum apa pun tampil.
+      const { data: { session: sesi } } = await supabase.auth.getSession()
+      const user = sesi?.user
       if (!user) { window.location.href = '/'; return }
       setAuthName((user.user_metadata as any)?.nama_lengkap || user.email || '')
 
@@ -166,7 +175,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const { error } = await supabase.rpc('terima_undangan', { p_token: token })
           try { localStorage.removeItem(KUNCI_UNDANGAN) } catch {}
           if (error) {
-            alert(pesanError(error))
+            kabar(pesanError(error), 'galat')
           } else {
             ctx = await getSessionContext()
           }
@@ -183,8 +192,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (ctx.memberStatus && ctx.memberStatus !== 'aktif') {
-        alert(t('Akun Anda dinonaktifkan. Hubungi pemilik apotek.', 'Your account has been deactivated. Contact the pharmacy owner.'))
-        await supabase.auth.signOut(); window.location.href = '/'; return
+        // Pesannya perlu sempat dibaca sebelum halaman berpindah; tanpa jeda
+        // orangnya cuma melihat dirinya terlempar ke halaman masuk.
+        kabar(t('Akun Anda dinonaktifkan. Hubungi pemilik faskes.', 'Your account has been deactivated. Contact the facility owner.'), 'galat')
+        await supabase.auth.signOut()
+        setTimeout(() => { window.location.href = '/' }, 4000)
+        return
       }
 
       if (ctx.company) {

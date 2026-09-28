@@ -2279,6 +2279,27 @@ sekarang disaring lewat transaksinya (`transactions!inner(...)` lalu
 `.gte('transactions.created_at', ...)`). Menarik per halaman tanpa saringan
 itu hanya mengubah angka yang salah jadi halaman yang lambat.
 
+## Bacaan yang gagal tidak boleh tampil sebagai "belum ada data"
+
+Audit 28 September 2026 menemukan 51 kueri baca yang membuang galatnya
+(`const { data } = await ...`). Menambalnya satu per satu akan ketinggalan
+di tempat ke-52, jadi penjaganya di klien Supabase (`lib/supabase.ts`): tiap
+GET/HEAD ke REST yang dijawab bukan 2xx mengirim event `GALAT_BACA`, dan
+`UmpanProvider` menampilkannya sebagai kabar galat (satu per 10 detik).
+Tulisan dan RPC tidak ikut; jalur itu membaca galatnya sendiri.
+
+Karena itu **`UmpanProvider` membungkus `AppProvider`, bukan sebaliknya**:
+kerangka aplikasi sendiri memakai `kabar()`, tidak lagi `alert()`.
+
+Kerangka membaca sesi lewat `getSession()` (lokal), bukan `getUser()` (ke
+server Auth). Keasliannya tetap diperiksa `my_context()` di server; yang
+dihemat satu putaran jaringan di tiap halaman yang dibuka.
+
+**Daftar panjang digambar bertahap** (`lib/bertahap.tsx`): 100 baris, lalu
+tombol "Tampilkan lagi". Yang dibatasi hanya yang DIGAMBAR, bukan yang
+dicari, jadi saringan tetap berjalan atas seluruh daftar. Dipakai di Produk
+dan Pasien; layar daftar baru yang bisa berisi ribuan baris ikut memakainya.
+
 ## Tidak ada `alert`, `confirm`, atau `prompt` di aplikasi ini
 
 Semuanya lewat `components/Umpan.tsx`: `kabar()`, `konfirmasi()`, `tanya()`.

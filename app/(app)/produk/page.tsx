@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, Search, Eye, Pencil, Printer, Tag } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useBertahap, TombolLagi } from '@/lib/bertahap'
 import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { usePemuat } from '@/lib/pemuat'
@@ -11,7 +12,7 @@ import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD, KATEGORI_BADGE } from '@/lib/ui'
-import { rupiah, angka } from '@/lib/format'
+import { rupiah, angka, tanggalLokal } from '@/lib/format'
 import PilihKfa from '@/components/klinik/PilihKfa'
 import DetailProduk from '@/components/produk/DetailProduk'
 import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
@@ -81,7 +82,7 @@ export default function HalamanProduk() {
     const [{ data: p }, { count }] = await Promise.all([
       semua(() => scope(supabase.from('products').select('*').order('kode'))),
       scope(supabase.from('product_batches').select('*', { count: 'exact', head: true })
-        .lte('expired_date', in60.toISOString().split('T')[0])
+        .lte('expired_date', tanggalLokal(in60))
         .gt('stok_batch', 0)
         .is('ditindaklanjuti_pada', null)),
     ])
@@ -112,6 +113,7 @@ export default function HalamanProduk() {
       return true
     })
   }, [produk, cari, fKategori, fStok, fStatus])
+  const bertahap = useBertahap(tersaring)
 
   const simpanBaru = async () => {
     if (!form.nama_obat.trim()) { kabar(t('Nama obat wajib diisi.', 'Drug name is required.')); return }
@@ -300,7 +302,7 @@ export default function HalamanProduk() {
                   ? t('Belum ada produk. Tambahkan yang pertama lewat tombol di atas.', 'No products yet. Add the first one with the button above.')
                   : t('Tidak ada produk yang cocok dengan saringan ini.', 'No products match this filter.')}
               </td></tr>
-            ) : tersaring.map(p => {
+            ) : bertahap.tampil.map(p => {
               const habis = (p.stok_total ?? 0) <= 0
               const minim = !habis && (p.stok_total ?? 0) <= (p.stok_minimum ?? 0)
               const stokCls = habis
@@ -353,6 +355,7 @@ export default function HalamanProduk() {
             })}
           </tbody>
         </table>
+        <TombolLagi {...bertahap} />
       </div>
 
       {/* ── Tambah produk ── */}
