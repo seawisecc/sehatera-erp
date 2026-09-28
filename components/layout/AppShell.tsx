@@ -4,11 +4,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import {
-  AlertTriangle, ChevronRight, CreditCard, Eye, LayoutGrid, LogOut, Menu, Settings, ShieldCheck, X,
+  AlertTriangle, ChevronRight, CreditCard, Eye, KeyRound, LayoutGrid, LogOut, Menu, Settings, ShieldCheck, X,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import PemilihOutlet from '@/components/PemilihOutlet'
+import GantiSandi from '@/components/GantiSandi'
+import KeluarDiam from '@/components/KeluarDiam'
 import { TombolInstal } from '@/components/PWA'
 import { useLang, LangToggle } from '@/lib/i18n'
 import { ThemeToggle } from '@/lib/theme'
@@ -32,6 +34,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [gantiSandi, setGantiSandi] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
 
   /**
@@ -282,6 +285,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       <Link href="/pengaturan?tab=langganan" className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--ink-mid)] hover:bg-[var(--surface-2)]">
                         <CreditCard size={15} /> {t('Langganan', 'Subscription')}
                       </Link>
+                      <button onClick={() => { setAccountOpen(false); setGantiSandi(true) }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--ink-mid)] hover:bg-[var(--surface-2)] text-left">
+                        <KeyRound size={15} /> {t('Ganti kata sandi', 'Change password')}
+                      </button>
                       <button onClick={keluar} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--accent)] hover:bg-[var(--surface-2)] text-left border-t border-[var(--line-soft)]">
                         <LogOut size={15} /> {t('Keluar', 'Sign out')}
                       </button>
@@ -359,7 +366,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         authName={app.authName}
         role={app.currentRole}
         keluar={keluar}
+        gantiSandi={() => { setMoreOpen(false); setGantiSandi(true) }}
       />
+
+      {gantiSandi && app.session?.email && (
+        <GantiSandi email={app.session.email} onTutup={() => setGantiSandi(false)} />
+      )}
+      <KeluarDiam />
     </div>
   )
 }
@@ -414,11 +427,11 @@ function ItemNav({ item, aktif, ciut, lang }: { item: MenuItem; aktif: boolean; 
 }
 
 function NavBawah({
-  nav, pathname, lang, moreOpen, setMoreOpen, authName, role, keluar,
+  nav, pathname, lang, moreOpen, setMoreOpen, authName, role, keluar, gantiSandi,
 }: {
   nav: MenuItem[]; pathname: string; lang: string
   moreOpen: boolean; setMoreOpen: (v: boolean) => void
-  authName: string; role: string | null; keluar: () => void
+  authName: string; role: string | null; keluar: () => void; gantiSandi: () => void
 }) {
   const { t } = useLang()
   const utama = nav.slice(0, 4)
@@ -493,6 +506,10 @@ function NavBawah({
                   <LogOut size={15} /> {t('Keluar', 'Sign out')}
                 </button>
               </div>
+              <button onClick={gantiSandi}
+                className="inline-flex items-center gap-2 text-sm text-[var(--ink-mid)] font-medium">
+                <KeyRound size={15} /> {t('Ganti kata sandi', 'Change password')}
+              </button>
               <div className="flex items-center gap-2">
                 <TombolInstal />
                 <LangToggle />

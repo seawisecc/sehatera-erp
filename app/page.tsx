@@ -44,7 +44,14 @@ export default function Auth() {
       return () => dengar.subscription.unsubscribe()
     }
     // "Minta tautan baru" dari halaman /atur-sandi membuka formulir ini langsung.
-    if (new URLSearchParams(window.location.search).get('lupa') === '1') setMode('lupa')
+    const q = new URLSearchParams(window.location.search)
+    if (q.get('lupa') === '1') setMode('lupa')
+    // Dikeluarkan KeluarDiam sesudah lama tidak aktif. Dikatakan, supaya tidak
+    // terbaca sebagai aplikasi yang tiba-tiba membuang sesinya.
+    if (q.get('keluar') === 'diam') {
+      setInfo(t('Anda dikeluarkan otomatis karena tidak ada aktivitas selama 2 jam. Silakan masuk lagi.',
+                'You were signed out automatically after 2 hours without activity. Please sign in again.'))
+    }
   }, [])
 
   /**

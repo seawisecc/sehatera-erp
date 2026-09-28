@@ -2384,6 +2384,19 @@ tautan di SETIAP email Auth mengarah ke laptop pengembang); Redirect URL
 MENYALA dan sejak migrasi 0088 benar-benar berlaku; minimal sandi 8.
 Perlindungan sandi bocor dan batas sesi TIDAK tersedia di paket Free.
 
+**Ganti kata sandi dari dalam aplikasi** (`components/GantiSandi.tsx`, menu
+akun) MEMINTA SANDI LAMA lewat `signInWithPassword` sebelum `updateUser`.
+Komputer klinik dipakai bergantian; tanpa itu siapa pun di depan sesi orang
+lain bisa mengganti sandinya dan mengunci pemiliknya di luar.
+
+**Keluar otomatis sesudah 2 jam diam** (`components/KeluarDiam.tsx`), karena
+batas sesi Supabase hanya ada di paket Pro. Waktu aktivitas terakhir
+disimpan di localStorage (`sw_aktif_terakhir`) supaya SEMUA tab berbagi satu
+jam: kasir yang bekerja di tab Kasir tidak dikeluarkan karena tab lain diam.
+Peringatan satu menit sebelumnya, dan halaman masuk menjelaskan
+(`/?keluar=diam`). Mengganti sandi mencabut sesi lain di perangkat mana pun;
+itu perilaku Supabase dan memang benar.
+
 **Lupa kata sandi** lahir di hari yang sama: `/?lupa=1` dan `/atur-sandi`.
 Jawaban formulirnya sama untuk email terdaftar maupun tidak, supaya ia tidak
 bisa dipakai menebak siapa yang punya akun. Minimal sandi 8, di pendaftaran
