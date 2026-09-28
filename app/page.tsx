@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useLang, LangToggle } from '../lib/i18n'
 import { ThemeToggle } from '../lib/theme'
@@ -15,7 +15,55 @@ const inputCls =
 
 export default function Auth() {
   const { t } = useLang()
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [mode, setMode] = useState<'login' | 'signup' | 'lupa'>('login')
+
+  // Lupa sandi
+  const [lEmail, setLEmail] = useState('')
+  const [lSibuk, setLSibuk] = useState(false)
+  const [lTerkirim, setLTerkirim] = useState(false)
+  const [lGalat, setLGalat] = useState('')
+
+  useEffect(() => {
+    // Tautan pemulihan yang mendarat di SINI, bukan di /atur-sandi, terjadi
+    // kalau alamat /atur-sandi belum masuk daftar Redirect URL Supabase: ia
+    // jatuh ke Site URL. Teruskan beserta tokennya; tanpa ini orangnya melihat
+    // halaman masuk biasa dan mengira tautannya rusak.
+    if (/type=recovery/.test(window.location.hash)) {
+      window.location.replace('/atur-sandi' + window.location.hash)
+      return
+    }
+    // "Minta tautan baru" dari halaman /atur-sandi membuka formulir ini langsung.
+    if (new URLSearchParams(window.location.search).get('lupa') === '1') setMode('lupa')
+  }, [])
+
+  /**
+   * Meminta tautan atur ulang.
+   *
+   * Jawabannya SAMA untuk email yang terdaftar maupun tidak. Kalau berbeda,
+   * formulir ini jadi alat menebak email siapa saja yang punya akun di
+   * Sehatera, dan untuk aplikasi rekam medis itu sudah informasi.
+   */
+  const mintaTautan = async () => {
+    setLGalat('')
+    const e = lEmail.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
+      setLGalat(t('Tulis alamat email yang lengkap.', 'Enter a complete email address.'))
+      return
+    }
+    setLSibuk(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(e, {
+      redirectTo: `${window.location.origin}/atur-sandi`,
+    })
+    setLSibuk(false)
+    // Batas kirim adalah satu-satunya galat yang disebut: ia tidak membocorkan
+    // apa pun, dan orangnya perlu tahu untuk menunggu, bukan menekan ulang.
+    if (error && /rate|limit|seconds/i.test(error.message)) {
+      setLGalat(t('Terlalu sering meminta. Tunggu sekitar satu menit, lalu coba lagi.',
+                  'Too many requests. Wait about a minute, then try again.'))
+      return
+    }
+    setLTerkirim(true)
+  }
 
   // Login
   const [email, setEmail] = useState('')
@@ -59,7 +107,7 @@ export default function Auth() {
   const handleRegister = async () => {
     setSError(''); setSSukses('')
     if (!namaApotek || !sEmail || !sPassword) return setSError(t('Nama faskes, email, dan password wajib diisi', 'Facility name, email, and password are required'))
-    if (sPassword.length < 6) return setSError(t('Password minimal 6 karakter', 'Password must be at least 6 characters'))
+    if (sPassword.length < 8) return setSError(t('Password minimal 8 karakter', 'Password must be at least 8 characters'))
     if (sPassword !== konfirmasi) return setSError(t('Konfirmasi password tidak cocok', 'Password confirmation does not match'))
     setSLoading(true)
     // Nama apotek & nama lengkap disimpan di metadata akun, bukan cuma di state
@@ -214,12 +262,51 @@ export default function Auth() {
                     className="w-full bg-[var(--brand)] text-[var(--on-brand)] py-3.5 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
                     {loading ? t('Memproses…', 'Processing…') : t('Masuk', 'Sign in')}
                   </button>
+                  <button type="button" onClick={() => { setMode('lupa'); setLEmail(email); setLTerkirim(false); setLGalat('') }}
+                    className="block mx-auto text-sm text-[var(--ink-soft)] hover:text-[var(--brand)] underline-offset-4 hover:underline">
+                    {t('Lupa kata sandi?', 'Forgot password?')}
+                  </button>
                 </div>
 
                 <p className="mt-7 pt-6 border-t border-[var(--line-soft)] text-sm text-[var(--ink-soft)]">
                   {t('Belum punya faskes terdaftar?', 'No facility registered yet?')}{' '}
                   <button onClick={() => setMode('signup')} className="font-semibold text-[var(--brand)] hover:underline underline-offset-4">
                     {t('Daftarkan sekarang', 'Register now')}
+                  </button>
+                </p>
+              </div>
+            ) : mode === 'lupa' ? (
+              <div>
+                <h1 className="text-[28px] font-bold text-[var(--ink)] tracking-[-0.01em]">{t('Lupa kata sandi', 'Forgot password')}</h1>
+                <p className="text-sm text-[var(--ink-soft)] mt-1 mb-7">
+                  {t('Kami kirim tautan untuk membuat kata sandi baru ke email akun Anda.',
+                     'We will send a link to set a new password to your account email.')}
+                </p>
+
+                {lTerkirim ? (
+                  <div className="px-3.5 py-3 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm leading-relaxed">
+                    {t('Kalau email itu terdaftar di Sehatera, tautannya sudah dikirim. Periksa kotak masuk dan folder Spam; tautannya berlaku satu kali dan untuk waktu singkat.',
+                       'If that email is registered with Sehatera, the link has been sent. Check your inbox and Spam folder; the link works once and only briefly.')}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {lGalat && <div className="px-3.5 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm leading-relaxed">{lGalat}</div>}
+                    <div>
+                      <label htmlFor="lupa-email" className={label}>Email</label>
+                      <input id="lupa-email" type="email" placeholder="nama@faskes.com" value={lEmail}
+                        onChange={e => setLEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && mintaTautan()}
+                        className={inputCls} />
+                    </div>
+                    <button onClick={mintaTautan} disabled={lSibuk}
+                      className="w-full bg-[var(--brand)] text-[var(--on-brand)] py-3.5 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
+                      {lSibuk ? t('Mengirim…', 'Sending…') : t('Kirim tautan', 'Send link')}
+                    </button>
+                  </div>
+                )}
+
+                <p className="mt-7 pt-6 border-t border-[var(--line-soft)] text-sm text-[var(--ink-soft)]">
+                  <button onClick={() => setMode('login')} className="font-semibold text-[var(--brand)] hover:underline underline-offset-4">
+                    {t('Kembali ke halaman masuk', 'Back to sign in')}
                   </button>
                 </p>
               </div>
@@ -283,7 +370,7 @@ export default function Auth() {
                     <div>
                       <label className={label}>{t('Kata sandi', 'Password')}</label>
                       <input type="password" value={sPassword} onChange={e => setSPassword(e.target.value)}
-                        placeholder={t('Min. 6 karakter', 'Min. 6 characters')} className={inputCls} />
+                        placeholder={t('Min. 8 karakter', 'Min. 8 characters')} className={inputCls} />
                     </div>
                     <div>
                       <label className={label}>{t('Ulangi', 'Repeat')}</label>
