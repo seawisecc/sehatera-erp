@@ -127,6 +127,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0089_stok_opname` | `stock_opnames`, `stock_opname_items`, empat fungsi opname, `stok.opname(.final)` di `boleh()` |
 | `0090_peran_ikut_outlet` | `peran_saya()` dan `my_context()` membaca peran di outlet yang sedang dibuka |
 | `0091_sesi_kasir` | `transactions.dibuat_oleh`, `sesi_kasir`, buka/tutup kasir dengan kas seharusnya yang dibekukan |
+| `0092_transfer_stok` | `stock_transfers`, kirim/terima/batal antar outlet satu kelompok, produk dicocokkan di penerima |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -2482,6 +2483,28 @@ disimpan di komponen induk, dan fokus terlempar ke tombol silang: mengetik
 "200000" menghasilkan "2". Sekarang `onTutup` terbaru disimpan di ref dan
 efeknya hanya jalan saat dialog dibuka. **Efek apa pun di komponen bersama
 yang bergantung pada callback dari pemanggil punya bahaya yang sama.**
+
+## Transfer stok antar outlet
+
+Migrasi 0092 plus `/transfer`. Sebelumnya memindah obat antar cabang dicatat
+sebagai penjualan di A dan pembelian di B: omzet A naik palsu, B mencatat
+pembelian yang tidak dibayar, dan SIPNAP kedua outlet salah.
+
+- **Tiap outlet punya katalognya sendiri**, jadi penerima mencocokkan produk:
+  barcode, lalu kode KFA, lalu nama PERSIS. Yang tidak ketemu DIBUAT dari
+  cuplikan pengirim (kuota paket tetap ditegakkan trigger). Pencocokan nama
+  sengaja persis: pencocokan longgar adalah cara tercepat menambah stok ke
+  obat yang salah.
+- Stok pengirim turun saat DIKIRIM (barang dalam perjalanan), stok penerima
+  naik saat DITERIMA. Batal hanya selama belum diterima, dan stoknya kembali
+  ke batch ASALNYA.
+- Batch dengan nomor DAN kedaluwarsa sama digabung, aturan 0010.
+- Kedua outlet wajib satu `company_groups`. Hak `stok.transfer` (pemilik,
+  admin, apoteker).
+- SIPNAP: keluar di pengirim sejak dikirim, masuk di penerima sejak diterima.
+- Layar mengambil nama outlet lawan dari `outlet_saya`, bukan embed
+  `companies`: RLS companies hanya membuka faskes yang sedang dibuka, jadi
+  embed ke outlet lain kosong tanpa galat.
 
 ## Tidak ada `alert`, `confirm`, atau `prompt` di aplikasi ini
 

@@ -208,6 +208,7 @@ export default function HalamanLaporan() {
     const [
       { data: penerimaan }, { data: pengeluaran }, { data: batches },
       { data: musnah }, { data: retur }, { data: opname },
+      { data: trfKeluar }, { data: trfMasuk },
     ] = await Promise.all([
       semua(() => supabase.from('po_items')
         .select('product_id, qty_terima, purchase_orders(tanggal_terima, suppliers(nama_supplier))').in('product_id', ids)),
@@ -223,6 +224,14 @@ export default function HalamanLaporan() {
       semua(() => supabase.from('stock_opname_items')
         .select('product_id, selisih, stock_opnames!inner(nomor, status, difinalkan_pada)')
         .eq('stock_opnames.status', 'final').neq('selisih', 0).in('product_id', ids)),
+      // Transfer antar outlet (0092): keluar di pengirim sejak DIKIRIM (stoknya
+      // memang sudah turun saat itu), masuk di penerima sejak DITERIMA.
+      semua(() => supabase.from('stock_transfer_items')
+        .select('dari_product_id, qty, stock_transfers!inner(nomor, status, dibuat_pada)')
+        .neq('stock_transfers.status', 'batal').in('dari_product_id', ids)),
+      semua(() => supabase.from('stock_transfer_items')
+        .select('ke_product_id, qty, stock_transfers!inner(nomor, status, diterima_pada)')
+        .eq('stock_transfers.status', 'diterima').in('ke_product_id', ids)),
     ])
 
     const baris: BarisSipnap[] = prods.map((p: any) => {
@@ -242,6 +251,8 @@ export default function HalamanLaporan() {
         })),
         ...(opname || []).filter((r: any) => r.product_id === p.id && r.selisih > 0 && r.stock_opnames?.difinalkan_pada)
           .map((r: any) => ({ waktu: r.stock_opnames.difinalkan_pada, sumber: `Penyesuaian opname ${r.stock_opnames.nomor}`, jml: r.selisih })),
+        ...(trfMasuk || []).filter((r: any) => r.ke_product_id === p.id && r.stock_transfers?.diterima_pada)
+          .map((r: any) => ({ waktu: r.stock_transfers.diterima_pada, sumber: `Transfer masuk ${r.stock_transfers.nomor}`, jml: r.qty })),
       ]
       const keluar: Keluar[] = [
         ...keluarSemua.map((r: any) => ({
@@ -257,6 +268,8 @@ export default function HalamanLaporan() {
           .map((r: any) => ({ waktu: r.tanggal_retur, resep: '-', pasien: `Retur ke ${r.suppliers?.nama_supplier || 'supplier'} ${r.nomor_retur || ''}`.trim(), jml: r.qty_retur || 0 })),
         ...(opname || []).filter((r: any) => r.product_id === p.id && r.selisih < 0 && r.stock_opnames?.difinalkan_pada)
           .map((r: any) => ({ waktu: r.stock_opnames.difinalkan_pada, resep: '-', pasien: `Penyesuaian opname ${r.stock_opnames.nomor}`, jml: -r.selisih })),
+        ...(trfKeluar || []).filter((r: any) => r.dari_product_id === p.id && r.stock_transfers?.dibuat_pada)
+          .map((r: any) => ({ waktu: r.stock_transfers.dibuat_pada, resep: '-', pasien: `Transfer keluar ${r.stock_transfers.nomor}`, jml: r.qty })),
       ]
       const jumlah = (xs: { jml: number }[]) => xs.reduce((a, r) => a + r.jml, 0)
       const urut = <T extends { waktu: string }>(xs: T[]) => [...xs].sort((a, b) => new Date(a.waktu).getTime() - new Date(b.waktu).getTime())

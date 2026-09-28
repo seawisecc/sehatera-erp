@@ -33,6 +33,7 @@ export type Kapabilitas =
   | 'stok.opname.final'
   | 'kasir.sesi'
   | 'kasir.setoran'
+  | 'stok.transfer'
 
 const MATRIKS: Record<Kapabilitas, string[]> = {
   'rekam_medis.baca':  ['pemilik', 'admin', 'dokter', 'perawat'],
@@ -57,6 +58,7 @@ const MATRIKS: Record<Kapabilitas, string[]> = {
   // riwayat setoran semua kasir hanya untuk pemilik dan admin (0091).
   'kasir.sesi':        ['pemilik', 'admin', 'kasir', 'apoteker', 'asisten_apoteker', 'pendaftaran'],
   'kasir.setoran':     ['pemilik', 'admin'],
+  'stok.transfer':     ['pemilik', 'admin', 'apoteker'],
 }
 
 /**

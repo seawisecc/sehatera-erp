@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Pill, ShoppingCart, PackageOpen, BarChart2, Settings, Truck,
   ClipboardList, Receipt, HeartPulse, Building2, Stethoscope, UsersRound, FlaskConical,
-  CalendarClock, FlaskRound, ClipboardCheck,
+  CalendarClock, FlaskRound, ClipboardCheck, ArrowLeftRight,
 } from 'lucide-react'
 
 /**
@@ -57,6 +57,7 @@ export const menuItems: MenuItem[] = [
   // Tepat di bawah Produk & Stok: yang membukanya sedang memikirkan stok yang
   // sama, dan ikonnya berbeda supaya dua menu berurutan tidak tertukar.
   { id: 'opname',       href: '/opname',        label: 'Stok Opname',       en: 'Stock Take',       icon: ClipboardCheck },
+  { id: 'transfer',     href: '/transfer',      label: 'Transfer Stok',     en: 'Stock Transfer',   icon: ArrowLeftRight },
   { id: 'transaksi',    href: '/kasir',         label: 'Transaksi',         en: 'Sales',            icon: ShoppingCart },
   { id: 'layanan',      href: '/layanan',       label: 'Layanan Jasa',      en: 'Services',         icon: HeartPulse },
   { id: 'pembelian',    href: '/pembelian',     label: 'Pembelian',         en: 'Purchasing',       icon: PackageOpen },
@@ -74,9 +75,9 @@ export const menuSuper: MenuItem[] = [
 
 /** Halaman yang boleh dibuka tiap peran, kalau pemilik tidak mengatur sendiri. */
 export const ROLE_PAGES: Record<string, string[]> = {
-  pemilik:          ['dashboard','reservasi','kunjungan','pasien','farmasi','penunjang','produk','opname','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
-  admin:            ['dashboard','reservasi','kunjungan','pasien','farmasi','penunjang','produk','opname','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
-  apoteker:         ['dashboard','kunjungan','farmasi','produk','opname','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan'],
+  pemilik:          ['dashboard','reservasi','kunjungan','pasien','farmasi','penunjang','produk','opname','transfer','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
+  admin:            ['dashboard','reservasi','kunjungan','pasien','farmasi','penunjang','produk','opname','transfer','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan','pengaturan'],
+  apoteker:         ['dashboard','kunjungan','farmasi','produk','opname','transfer','transaksi','layanan','pembelian','faktur','supplier','tindaklanjut','laporan'],
   asisten_apoteker: ['dashboard','farmasi','produk','opname','transaksi','layanan','tindaklanjut','laporan'],
   // Kasir melihat antrean farmasi supaya tahu obat sudah siap sebelum
   // memanggil pasien ke loket. Ia tidak menyerahkan obatnya.
