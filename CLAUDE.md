@@ -2359,6 +2359,28 @@ Dua pola yang membuat uji tertinggal tanpa suara, dan sudah dibetulkan:
   memeriksa apa pun. Periksa per NAMA atas semua versinya, lalu pastikan
   fungsinya memang ditemukan.
 
+## Email: Resend lewat Custom SMTP, template di repo
+
+Sejak 28 September 2026 email Auth Supabase (atur ulang sandi, konfirmasi
+daftar, ganti email) dikirim lewat **Resend** sebagai Custom SMTP, pengirim
+`Sehatera <noreply@send.seawise.id>`. Domain `send.seawise.id` terverifikasi
+SPF/DKIM/DMARC di akun Resend yang sama dengan TokoKu, dengan **kunci API
+terpisah** (`sehatera-supabase-smtp`) supaya pencabutannya tidak ikut
+mematikan email TokoKu. Email bawaan Supabase dibatasi beberapa per jam dan
+tidak untuk produksi.
+
+**Templatenya ada di `supabase/templates/`**, dipasang tangan di Supabase >
+Authentication > Emails. Repo adalah sumbernya: yang disunting di dashboard
+tanpa disalin balik ke sini akan hilang saat dipasang ulang. Warnanya ditulis
+harfiah (Vital Tide), alasan yang sama dengan `opengraph-image.tsx`: klien
+email tidak membaca CSS aplikasi, dan tata letaknya tabel dengan gaya inline
+karena Gmail dan Outlook membuang `<style>`.
+
+**Lupa kata sandi** lahir di hari yang sama: `/?lupa=1` dan `/atur-sandi`.
+Jawaban formulirnya sama untuk email terdaftar maupun tidak, supaya ia tidak
+bisa dipakai menebak siapa yang punya akun. Minimal sandi 8, di pendaftaran
+juga.
+
 ## Tidak ada `alert`, `confirm`, atau `prompt` di aplikasi ini
 
 Semuanya lewat `components/Umpan.tsx`: `kabar()`, `konfirmasi()`, `tanya()`.
