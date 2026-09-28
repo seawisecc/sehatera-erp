@@ -17,9 +17,9 @@ import { readPlanFeatures } from '@/lib/plan'
  * satu sumber: kalau harga diubah di Super Admin, halaman ini ikut berubah
  * tanpa deploy.
  *
- * Paket dengan `is_public = false` sengaja tidak muncul. Itu yang menahan
- * paket Klinik, yang harganya masih usulan dan belum diketok: lebih baik tidak
- * terlihat daripada terlihat salah.
+ * Paket dengan `is_public = false` sengaja tidak muncul: lebih baik tidak
+ * terlihat daripada terlihat salah. Paket Klinik ditahan begitu sampai
+ * migrasi 0084, saat modulnya siap dijual.
  */
 
 type Paket = {
@@ -57,6 +57,7 @@ export default function DaftarPaket({ nada = 'terang' }: { nada?: 'terang' | 'ge
     : 'bg-[var(--surface)] text-[var(--ink)] shadow-xl border-2 border-[var(--brand)]'
   const redup = gelap ? 'text-[var(--on-brand-soft)]' : 'text-[var(--ink-soft)]'
 
+
   if (paket === null) {
     return <p className={`text-sm text-center py-10 ${redup}`}>{t('Memuat paket…', 'Loading plans…')}</p>
   }
@@ -89,9 +90,13 @@ export default function DaftarPaket({ nada = 'terang' }: { nada?: 'terang' | 'ge
         </div>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-3 text-left">
+      {/* Empat paket sejak Klinik dibuka (0084). Tiga kolom membuat paket
+          keempat jatuh sendirian di baris kedua, jadi di layar sedang dua
+          kolom dan baru empat di layar lebar. */}
+      <div className={`grid gap-5 text-left ${paket.length >= 4 ? 'sm:grid-cols-2 xl:grid-cols-4' : 'md:grid-cols-3'}`}>
         {paket.map((p, i) => {
           const f = readPlanFeatures(p.features)
+          const centang = gelap && i !== iUtama ? 'text-[var(--on-brand)]' : 'text-[var(--brand-soft)]'
           const harga = tahunan ? (p.price_yearly ?? p.price_monthly * 12) : p.price_monthly
           const per = tahunan ? t('/tahun', '/year') : t('/bulan', '/month')
           // Diskon tahunan dihitung dari angkanya sendiri, bukan ditulis
@@ -153,15 +158,17 @@ export default function DaftarPaket({ nada = 'terang' }: { nada?: 'terang' | 'ge
               )}
               {p.description && <p className="text-sm opacity-70 mt-2 leading-relaxed">{p.description}</p>}
 
+              {/* Di kartu gelap `--brand-soft` nyaris sewarna latarnya, jadi
+                  centangnya hilang dan kartu terbaca seperti tanpa fitur. */}
               <div className="mt-5 space-y-2 flex-1">
                 {isi.map(([label, nilai], j) => (
                   <div key={j} className="flex items-start gap-2 text-sm">
                     {typeof nilai === 'boolean' ? (
                       nilai
-                        ? <Check size={15} className="mt-0.5 shrink-0 text-[var(--brand-soft)]" />
+                        ? <Check size={15} className={`mt-0.5 shrink-0 ${centang}`} />
                         : <Minus size={15} className="mt-0.5 shrink-0 opacity-30" />
                     ) : (
-                      <Check size={15} className="mt-0.5 shrink-0 text-[var(--brand-soft)]" />
+                      <Check size={15} className={`mt-0.5 shrink-0 ${centang}`} />
                     )}
                     <span className={typeof nilai === 'boolean' && !nilai ? 'opacity-40' : ''}>
                       {label}

@@ -119,6 +119,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0081_gerbang_modul_klinik` | Kunjungan & reservasi BARU ditolak SH008 tanpa paket klinik |
 | `0082_hak_data_api_eksplisit` | Grant Data API seluruh tabel, view, dan sequence ditulis sendiri |
 | `0083_buang_ihs_organization_id` | Kolom lama `settings.ihs_organization_id` dibuang; tempatnya di kredensial |
+| `0084_paket_klinik_publik` | Paket Klinik tampil di halaman harga, deskripsinya tanpa janji SatuSehat & BPJS |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -2473,10 +2474,16 @@ orang mulai memercayainya. Ini dikatakan di layar resep, bukan didiamkan.
 Payment gateway belum tersambung: pergantian paket masih manual lewat Super
 Admin. SMTP undangan tim belum disetel, tautannya dikirim tangan.
 
-Paket **Klinik** ada di database tapi `is_public = false`: harganya
-(Rp 1.490.000/bln) sudah disetujui pemilik, tapi baru boleh ditampilkan setelah
-modulnya benar-benar siap dijual. Rumah sakit tidak ditawarkan di pendaftaran
-mandiri: harganya per implementasi.
+Paket **Klinik** PUBLIK sejak migrasi 0084 (28 September 2026, permintaan
+pemilik): Rp 1.490.000/bln, Rp 14.900.000/th. **Deskripsinya sengaja tidak
+menyebut SatuSehat maupun BPJS**: BPJS belum tersambung, dan SatuSehat baru di
+sandbox karena produksi menuntut Sehatera terverifikasi sebagai Penyedia
+Sistem RME di SSP. Begitu keduanya jalan di produksi, deskripsinya diubah lewat
+editor paket di Super Admin, bukan sebelumnya. Klinik yang mendaftar mandiri
+langsung mendapat masa coba paket Klinik (`register_faskes`), jadi gerbang
+0081 tidak menahan mereka. Rumah sakit tetap tidak ditawarkan di pendaftaran
+mandiri: harganya per implementasi, dan halaman `/kenapa` sekarang menyebut
+penawaran hanya untuk rumah sakit.
 
 ## Gambar bagikan: tidak pernah dibuka, jadi tidak pernah ketahuan basi
 

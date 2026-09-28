@@ -1099,7 +1099,7 @@ export default function Kenapa() {
           ditagihkan; siapa pun yang membacanya lalu mendaftar akan menemukan
           harga yang sama sekali lain begitu masuk. */}
       <section id="harga" className="kn-dark text-[var(--on-brand)] py-20 sm:py-28 scroll-mt-28">
-        <div className="max-w-5xl mx-auto px-5">
+        <div className="max-w-6xl mx-auto px-5">
           <div className="text-center mb-10">
             <p className="reveal text-[var(--on-brand-soft)] text-xs font-semibold uppercase tracking-[0.2em] mb-4">{t('Harga', 'Pricing')}</p>
             <h2 className="reveal kn-headline text-4xl sm:text-5xl font-bold mb-3" style={{ transitionDelay: '.05s' }}>
@@ -1116,7 +1116,7 @@ export default function Kenapa() {
             {[
               [t('Masa coba lebih dulu', 'Trial first'), t('Daftar sendiri, pakai dulu dengan data Anda sendiri, baru putuskan.', 'Register yourself, use it with your own data, then decide.')],
               [t('Kuota benar-benar ditegakkan', 'Quotas genuinely enforced'), t('Produk, pengguna, dan cabang dibatasi paket lewat trigger database, jadi angkanya bukan sekadar tulisan di halaman ini.', 'Products, users, and branches are capped by plan through database triggers, so these numbers are not just words on this page.')],
-              [t('Klinik dan rumah sakit', 'Clinics and hospitals'), t('Modul kliniknya sudah utuh, tapi harganya per penawaran karena kewajiban hukum dan pemasangannya berbeda tiap faskes. Hubungi tim Seawise.', 'The clinical modules are complete, but pricing is by quotation because legal duties and setup differ per facility. Talk to the Seawise team.')],
+              [t('Rumah sakit', 'Hospitals'), t('Klinik punya paketnya sendiri di atas. Rumah sakit harganya per penawaran, karena kewajiban hukum dan pemasangannya berbeda tiap fasilitas. Hubungi tim Seawise.', 'Clinics have their own plan above. Hospitals are priced by quotation, because legal duties and setup differ per facility. Talk to the Seawise team.')],
             ].map((c, i) => (
               <div key={i} className="bg-[var(--on-brand)]/[0.08] border border-[var(--on-brand)]/15 rounded-2xl p-5">
                 <p className="font-semibold mb-1">{c[0]}</p>
@@ -1128,10 +1128,10 @@ export default function Kenapa() {
             <a href="/" className="inline-flex items-center gap-2 bg-[var(--surface)] text-[var(--brand)] px-7 py-3.5 rounded-xl font-bold hover:bg-[var(--line-soft)] transition">
               {t('Daftarkan Faskes Sekarang', 'Register Your Facility Now')} <ArrowRight size={18} />
             </a>
-            <a href={wa(t('Halo Seawise, saya ingin penawaran Sehatera untuk klinik atau rumah sakit.', 'Hello Seawise, I would like a Sehatera quotation for a clinic or hospital.'))}
+            <a href={wa(t('Halo Seawise, saya ingin penawaran Sehatera untuk rumah sakit.', 'Hello Seawise, I would like a Sehatera quotation for a hospital.'))}
                target="_blank" rel="noopener noreferrer"
                className="inline-flex items-center gap-2 border border-[var(--on-brand)]/25 text-[var(--on-brand)] px-7 py-3.5 rounded-xl font-bold hover:bg-[var(--on-brand)]/10 transition">
-              <MessageCircle size={18} /> {t('Minta Penawaran Klinik', 'Request a Clinic Quote')}
+              <MessageCircle size={18} /> {t('Minta Penawaran Rumah Sakit', 'Request a Hospital Quote')}
             </a>
           </div>
         </div>
