@@ -68,7 +68,20 @@ export default function Dialog({
   const kotakRef = useRef<HTMLDivElement>(null)
   const asalFokus = useRef<HTMLElement | null>(null)
 
-  const tutup = useCallback(() => onTutup(), [onTutup])
+  /*
+   * `onTutup` disimpan di ref, dan `tutup` dibuat SEKALI.
+   *
+   * Hampir semua pemanggil menulis `onTutup={() => setBuka(false)}` langsung
+   * di JSX, jadi fungsinya baru di tiap render. Dulu `tutup` ikut berganti,
+   * efek di bawah (yang bergantung padanya) jalan ulang di TIAP KETIKAN pada
+   * dialog yang isiannya disimpan di komponen induk, dan autofokusnya
+   * melempar fokus ke tombol silang. Orang mengetik "200000" dan yang masuk
+   * "2". Ketahuan 28 September 2026 di dialog Buka Kasir; bug yang sama ada di
+   * setiap dialog berbentuk begitu sejak dialog diseragamkan 16 September.
+   */
+  const onTutupRef = useRef(onTutup)
+  useEffect(() => { onTutupRef.current = onTutup })
+  const tutup = useCallback(() => onTutupRef.current(), [])
 
   /**
    * Esc menutup dialog, dan halaman di belakangnya berhenti bergulir.

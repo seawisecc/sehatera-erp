@@ -15,6 +15,8 @@ import { TBL_WRAP, TBL_TEMPEL, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD } from '@/li
 import { rupiah, angka, tanggalJam, tanggal, tanggalLokal } from '@/lib/format'
 import { bukaCetak, laporanSipnap, type BarisSipnap } from '@/lib/cetak'
 import Klaim from '@/components/klinik/Klaim'
+import SetoranKasir from '@/components/SetoranKasir'
+import { boleh } from '@/lib/hak'
 
 /**
  * Laporan: penjualan, rekap metode bayar, dan SIPNAP.
@@ -41,7 +43,7 @@ export default function HalamanLaporan() {
   const { kabar, konfirmasi } = useUmpan()
   const app = useApp()
 
-  const [tab, setTab] = useState<'penjualan' | 'metode' | 'penjamin' | 'klaim' | 'sipnap'>('penjualan')
+  const [tab, setTab] = useState<'penjualan' | 'metode' | 'penjamin' | 'klaim' | 'setoran' | 'sipnap'>('penjualan')
   const [penjamin, setPenjamin] = useState<any[]>([])
   const [muatPenjamin, setMuatPenjamin] = useState(false)
   const [riwayat, setRiwayat] = useState<any[]>([])
@@ -327,6 +329,9 @@ export default function HalamanLaporan() {
             { id: 'penjamin' as const, label: t('Penjamin', 'Payers') },
             { id: 'klaim' as const, label: t('Klaim', 'Claims') },
           ] : []),
+          ...(boleh(app.currentRole, 'kasir.setoran', app.isSuper) ? [
+            { id: 'setoran' as const, label: t('Setoran Kasir', 'Register Sessions') },
+          ] : []),
           { id: 'sipnap', label: 'SIPNAP' },
         ] as const).map(x => (
           <button key={x.id} onClick={() => setTab(x.id)}
@@ -467,6 +472,7 @@ export default function HalamanLaporan() {
       )}
 
       {tab === 'klaim' && <Klaim />}
+      {tab === 'setoran' && <SetoranKasir />}
 
       {tab === 'metode' && (
         <div>

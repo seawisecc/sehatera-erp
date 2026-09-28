@@ -12,6 +12,7 @@ import { pesanError } from '@/lib/session'
 import { TBL_WRAP, TBL, TBL_KARTU, TBL_KARTU_WADAH, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
 import { rupiah, angka, tanggalJam } from '@/lib/format'
 import { bukaCetak, strukPenjualan } from '@/lib/cetak'
+import SesiKasir from '@/components/SesiKasir'
 
 /**
  * Kasir.
@@ -86,6 +87,8 @@ export default function HalamanKasir() {
   const [ditagihkan, setDitagihkan] = useState(0)
   const [daftarAsuransi, setDaftarAsuransi] = useState<{ id: string; nama: string }[]>([])
   const [sibuk, setSibuk] = useState(false)
+  // Dinaikkan tiap transaksi berhasil, supaya angka laci di strip sesi ikut.
+  const [segarkanSesi, setSegarkanSesi] = useState(0)
 
   const [struk, setStruk] = useState<any>(null)
   const [strukItems, setStrukItems] = useState<any[]>([])
@@ -286,6 +289,7 @@ export default function HalamanKasir() {
     }
 
     setStruk(data)
+    setSegarkanSesi(n => n + 1)
     setStrukItems(keranjang.map(k => ({ ...k, subtotal: k.harga_jual * k.jumlah })))
     kosongkan()
     // Stok di layar sudah tidak sama dengan stok di database.
@@ -484,6 +488,8 @@ export default function HalamanKasir() {
           </span>
         </p>
       </div>
+
+      <SesiKasir segarkan={segarkanSesi} />
 
       {terkunciSuper && (
         <div className="mb-5 flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-800">

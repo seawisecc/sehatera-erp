@@ -31,6 +31,8 @@ export type Kapabilitas =
   | 'kunjungan.siap_tagih'
   | 'stok.opname'
   | 'stok.opname.final'
+  | 'kasir.sesi'
+  | 'kasir.setoran'
 
 const MATRIKS: Record<Kapabilitas, string[]> = {
   'rekam_medis.baca':  ['pemilik', 'admin', 'dokter', 'perawat'],
@@ -51,6 +53,10 @@ const MATRIKS: Record<Kapabilitas, string[]> = {
   // (migrasi 0089). Final mengubah stok dan jejaknya masuk SIPNAP.
   'stok.opname':       ['pemilik', 'admin', 'apoteker', 'asisten_apoteker'],
   'stok.opname.final': ['pemilik', 'admin', 'apoteker'],
+  // Siapa pun yang melayani di kasir membuka dan menutup lacinya sendiri;
+  // riwayat setoran semua kasir hanya untuk pemilik dan admin (0091).
+  'kasir.sesi':        ['pemilik', 'admin', 'kasir', 'apoteker', 'asisten_apoteker', 'pendaftaran'],
+  'kasir.setoran':     ['pemilik', 'admin'],
 }
 
 /**

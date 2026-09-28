@@ -126,6 +126,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0088_email_wajib_dikonfirmasi` | Trigger `auto_confirm_email` di `auth.users` dicabut: email wajib dikonfirmasi |
 | `0089_stok_opname` | `stock_opnames`, `stock_opname_items`, empat fungsi opname, `stok.opname(.final)` di `boleh()` |
 | `0090_peran_ikut_outlet` | `peran_saya()` dan `my_context()` membaca peran di outlet yang sedang dibuka |
+| `0091_sesi_kasir` | `transactions.dibuat_oleh`, `sesi_kasir`, buka/tutup kasir dengan kas seharusnya yang dibekukan |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -2454,6 +2455,33 @@ urutan yang sama dengan `my_context()`: pemilik faskes itu dulu, lalu baris
 app_users di faskes itu. `supabase/uji/0090` menguji satu orang berpindah
 outlet lewat `request.jwt.claims`, cara yang bisa dipakai uji lain yang butuh
 identitas pengguna.
+
+## Sesi kasir: laci yang akhirnya bisa dicocokkan
+
+Migrasi 0091, strip di atas layar Kasir (`components/SesiKasir.tsx`), dan
+Laporan > Setoran Kasir (pemilik dan admin, `kasir.setoran`).
+
+- **`transactions.dibuat_oleh` terisi sendiri** lewat nilai bawaan kolom dari
+  email di token. `apply_transaction` tidak disentuh: fungsi security definer
+  tetap membaca `request.jwt.claims` milik pemanggilnya. Transaksi lama null.
+- **Kas seharusnya = kas awal + diterima_tunai metode Tunai milik kasir itu
+  selama sesinya**, tanpa yang dibatalkan. Dihitung SATU fungsi
+  (`hitung_sesi_kasir`) untuk layar maupun penutupan, lalu DIBEKUKAN di baris
+  sesi: pembatalan transaksi sesudahnya tidak mengubah setoran yang sudah
+  diserahkan.
+- Selisih wajib bercatatan. Yang menutup hanya kasirnya sendiri, atau
+  pemilik/admin untuk kasir yang lupa menutup.
+- **Tidak memblokir penjualan.** Kasir yang lupa membuka sesi tetap melayani.
+
+## Dialog: `onTutup` di ref, jangan di dependensi
+
+Sampai 28 September 2026 efek autofokus `components/Dialog.tsx` bergantung
+pada `onTutup`. Hampir semua pemanggil menulisnya sebagai fungsi panah di
+JSX, jadi efeknya jalan ulang di TIAP KETIKAN pada dialog yang isiannya
+disimpan di komponen induk, dan fokus terlempar ke tombol silang: mengetik
+"200000" menghasilkan "2". Sekarang `onTutup` terbaru disimpan di ref dan
+efeknya hanya jalan saat dialog dibuka. **Efek apa pun di komponen bersama
+yang bergantung pada callback dari pemanggil punya bahaya yang sama.**
 
 ## Tidak ada `alert`, `confirm`, atau `prompt` di aplikasi ini
 
