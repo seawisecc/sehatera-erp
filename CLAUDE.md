@@ -124,6 +124,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0086_penunjang_luar_katalog` | `minta_penunjang` berhenti gagal 55000 untuk pemeriksaan di luar katalog |
 | `0087_waktu_apotek_berzona` | Sembilan `created_at` apotek jadi timestamptz: jam tidak lagi mundur 8 jam |
 | `0088_email_wajib_dikonfirmasi` | Trigger `auto_confirm_email` di `auth.users` dicabut: email wajib dikonfirmasi |
+| `0089_stok_opname` | `stock_opnames`, `stock_opname_items`, empat fungsi opname, `stok.opname(.final)` di `boleh()` |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -2401,6 +2402,47 @@ itu perilaku Supabase dan memang benar.
 Jawaban formulirnya sama untuk email terdaftar maupun tidak, supaya ia tidak
 bisa dipakai menebak siapa yang punya akun. Minimal sandi 8, di pendaftaran
 juga.
+
+## Stok opname, dan SIPNAP yang akhirnya menghitung semua gerakan
+
+Migrasi 0089 plus `/opname`. Sebelumnya satu-satunya cara membetulkan stok
+adalah menyunting angka stok produk langsung: tanpa alasan, tanpa jejak,
+tanpa menyentuh batch, dan tanpa muncul di SIPNAP.
+
+- **Satu baris per BATCH**, ditambah satu baris "tanpa batch" untuk stok
+  produk yang tidak tercatat di batch mana pun (`stok_total` minus jumlah
+  batch). Tanpa baris itu, selisih lama antara keduanya tidak pernah bisa
+  dibetulkan.
+- **Penyesuaiannya RELATIF** (stok sekarang + selisih), bukan menimpa
+  dengan angka fisik: penjualan di antara mulai dan final tidak boleh
+  hilang, kesalahan yang sama dengan penerimaan sebelum 0010. Hasil minus
+  DITOLAK (SH005) dengan nama batchnya.
+- Ditegakkan database: satu draf per faskes (indeks unik parsial), semua
+  baris wajib dihitung, selisih wajib beralasan, final hanya
+  `stok.opname.final` (pemilik, admin, apoteker). Asisten apoteker boleh
+  menghitung, tidak menandatangani.
+- Tabelnya hanya ber-policy SELECT. Semua tulisan lewat fungsi, karena policy
+  tulis apa pun mengizinkan `status = 'final'` tanpa stoknya disesuaikan.
+- **Sengaja tidak ada tombol "isi semua sesuai sistem"**: baris yang tidak
+  dihitung bukan berarti tidak berubah.
+
+**SIPNAP sebelumnya hanya menghitung penerimaan PO dan penjualan.** Pemusnahan
+dan retur memotong stok tanpa pernah muncul di laporan, jadi saldo akhir apotek
+yang pernah memusnahkan narkotika tidak sama dengan stok fisiknya. Sejak
+28 September 2026 pemusnahan, retur `selesai`, dan selisih opname final ikut
+masuk, baik ke saldo awal maupun rincian bulan berjalan.
+
+**Yang MASIH tidak masuk SIPNAP: stok awal hasil impor CSV** (`importStok` di
+Pengaturan > Migrasi). Ia menulis batch tanpa `po_id` dan tanpa catatan
+gerakan apa pun, jadi apotek yang memulai Sehatera dengan stok narkotika yang
+sudah ada punya saldo awal SIPNAP nol. Perbaikan yang benar adalah mencatat
+impor stok awal sebagai gerakan bertanggal; sampai itu ada, opname pertama
+sesudah impor tidak menolong karena selisihnya nol.
+
+**Temuan terkait yang belum dibetulkan: `peran_saya()` tidak mengenal
+outlet.** Ia mengambil `app_users.role` dengan `limit 1` tanpa memandang
+`auth_company_id()`, padahal sejak 0065 satu orang boleh berbeda peran di tiap
+outlet. Peran yang dipakai `boleh()` bisa peran dari outlet lain.
 
 ## Tidak ada `alert`, `confirm`, atau `prompt` di aplikasi ini
 

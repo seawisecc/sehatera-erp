@@ -60,7 +60,7 @@ export function istilah(sektor: Sektor, kunci: keyof Istilah, en: boolean): stri
 }
 
 const FARMASI = [
-  'produk', 'transaksi', 'layanan', 'pembelian',
+  'produk', 'opname', 'transaksi', 'layanan', 'pembelian',
   'faktur', 'supplier', 'tindaklanjut',
 ] as const
 

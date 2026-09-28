@@ -11,7 +11,7 @@ import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
-import { TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD, KATEGORI_BADGE } from '@/lib/ui'
+import { TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TH_R, TH_C, TR, TD, KATEGORI_BADGE, KATEGORI_LABEL } from '@/lib/ui'
 import { rupiah, angka, tanggalLokal } from '@/lib/format'
 import PilihKfa from '@/components/klinik/PilihKfa'
 import DetailProduk from '@/components/produk/DetailProduk'
@@ -36,11 +36,7 @@ import TombolIkon from '@/components/TombolIkon'
  *    katalog dan muncul sebagai baris kosong di kasir.
  */
 
-const KATEGORI: Record<string, string> = {
-  bebas: 'Bebas', bebas_terbatas: 'Bebas Terbatas', keras: 'Keras',
-  suplemen: 'Suplemen', psikotropika: 'Psikotropika', narkotika: 'Narkotika',
-  prekursor: 'Prekursor', alkes: 'Alkes', lainnya: 'Lainnya',
-}
+const KATEGORI = KATEGORI_LABEL
 const SATUAN = ['Tablet', 'Kapsul', 'Botol', 'Sachet', 'Tube', 'Ampul', 'Vial']
 
 const FORM_KOSONG = {

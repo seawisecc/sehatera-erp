@@ -29,6 +29,8 @@ export type Kapabilitas =
   | 'penunjang.hasil'
   | 'penunjang.baca'
   | 'kunjungan.siap_tagih'
+  | 'stok.opname'
+  | 'stok.opname.final'
 
 const MATRIKS: Record<Kapabilitas, string[]> = {
   'rekam_medis.baca':  ['pemilik', 'admin', 'dokter', 'perawat'],
@@ -45,6 +47,10 @@ const MATRIKS: Record<Kapabilitas, string[]> = {
   // Kasir sengaja TIDAK di sini. Kasir yang bisa menyatakan sendiri bahwa
   // tagihannya lengkap sedang menandatangani pekerjaan orang lain.
   'kunjungan.siap_tagih': ['pemilik', 'admin', 'dokter', 'perawat'],
+  // Asisten apoteker boleh MENGHITUNG, tidak boleh menandatangani hasilnya
+  // (migrasi 0089). Final mengubah stok dan jejaknya masuk SIPNAP.
+  'stok.opname':       ['pemilik', 'admin', 'apoteker', 'asisten_apoteker'],
+  'stok.opname.final': ['pemilik', 'admin', 'apoteker'],
 }
 
 /**

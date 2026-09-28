@@ -43,6 +43,13 @@ export const TD       = 'px-4 py-2.5 align-middle'
  * tema mana pun: apoteker mengenalinya dari warna sebelum sempat membaca
  * tulisannya, dan itu justru yang diandalkan saat sedang buru-buru.
  */
+/** Nama kategori obat yang dibaca manusia. Satu daftar untuk Produk dan Opname. */
+export const KATEGORI_LABEL: Record<string, string> = {
+  bebas: 'Bebas', bebas_terbatas: 'Bebas Terbatas', keras: 'Keras',
+  suplemen: 'Suplemen', psikotropika: 'Psikotropika', narkotika: 'Narkotika',
+  prekursor: 'Prekursor', alkes: 'Alkes', lainnya: 'Lainnya',
+}
+
 export const KATEGORI_BADGE: Record<string, string> = {
   bebas:           'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20',
   bebas_terbatas:  'bg-blue-50 text-blue-700 ring-1 ring-blue-600/20',

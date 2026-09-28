@@ -194,16 +194,33 @@ export default function HalamanLaporan() {
     }
     const ids = prods.map((p: any) => p.id)
 
-    // Saldo awal dihitung dari SELURUH riwayat sebelum bulan itu, jadi ketiga
-    // kueri ini tumbuh terus sepanjang umur apotek. Tanpa `semua()` laporan
-    // wajib narkotika mulai salah diam-diam begitu riwayatnya lewat 1.000 baris.
-    const [{ data: penerimaan }, { data: pengeluaran }, { data: batches }] = await Promise.all([
+    // Saldo awal dihitung dari SELURUH riwayat sebelum bulan itu, jadi kueri
+    // ini tumbuh terus sepanjang umur apotek. Tanpa `semua()` laporan wajib
+    // narkotika mulai salah diam-diam begitu riwayatnya lewat 1.000 baris.
+    //
+    // Sampai 28 September 2026 hanya penerimaan PO dan penjualan yang
+    // dihitung. Pemusnahan dan retur memotong stok tanpa pernah muncul di
+    // sini, jadi saldo akhir SIPNAP apotek yang pernah memusnahkan narkotika
+    // tidak sama dengan stok fisiknya. Keduanya ikut sekarang, bersama
+    // penyesuaian stok opname (migrasi 0089).
+    const [
+      { data: penerimaan }, { data: pengeluaran }, { data: batches },
+      { data: musnah }, { data: retur }, { data: opname },
+    ] = await Promise.all([
       semua(() => supabase.from('po_items')
         .select('product_id, qty_terima, purchase_orders(tanggal_terima, suppliers(nama_supplier))').in('product_id', ids)),
       semua(() => supabase.from('transaction_items')
         .select('product_id, jumlah, transactions(created_at, nama_pasien, alamat_pasien, kontak_pasien, nomor_resep, status)').in('product_id', ids)),
       semua(() => supabase.from('product_batches')
         .select('product_id, batch_number, expired_date').in('product_id', ids)),
+      semua(() => supabase.from('pemusnahan')
+        .select('product_id, qty_musnahkan, tanggal_musnahkan, nomor_ba').in('product_id', ids)),
+      semua(() => supabase.from('retur_supplier')
+        .select('product_id, qty_retur, tanggal_retur, nomor_retur, status, suppliers(nama_supplier)')
+        .eq('status', 'selesai').in('product_id', ids)),
+      semua(() => supabase.from('stock_opname_items')
+        .select('product_id, selisih, stock_opnames!inner(nomor, status, difinalkan_pada)')
+        .eq('stock_opnames.status', 'final').neq('selisih', 0).in('product_id', ids)),
     ])
 
     const baris: BarisSipnap[] = prods.map((p: any) => {
@@ -211,26 +228,45 @@ export default function HalamanLaporan() {
       const keluarSemua = (pengeluaran || []).filter((r: any) =>
         r.product_id === p.id && r.transactions?.status !== 'dibatalkan' && r.transactions?.created_at)
 
-      const awal =
-        masukSemua.filter((r: any) => sebelum(r.purchase_orders.tanggal_terima)).reduce((a: number, r: any) => a + (r.qty_terima || 0), 0) -
-        keluarSemua.filter((r: any) => sebelum(r.transactions.created_at)).reduce((a: number, r: any) => a + (r.jumlah || 0), 0)
-
-      return {
-        nama: p.nama_obat,
-        satuan: p.satuan,
-        awal,
-        masuk: masukSemua.filter((r: any) => diBulanIni(r.purchase_orders.tanggal_terima)).map((r: any) => ({
-          tgl: fmt(r.purchase_orders.tanggal_terima),
+      // Satu daftar gerakan per arah, masing-masing membawa tanggal aslinya
+      // supaya bisa dipisah sebelum/selama bulan itu dan diurutkan.
+      type Masuk = { waktu: string; sumber: string; jml: number }
+      type Keluar = { waktu: string; resep: string; pasien: string; jml: number }
+      const masuk: Masuk[] = [
+        ...masukSemua.map((r: any) => ({
+          waktu: r.purchase_orders.tanggal_terima,
           sumber: r.purchase_orders?.suppliers?.nama_supplier || '-',
           jml: r.qty_terima || 0,
         })),
-        keluar: keluarSemua.filter((r: any) => diBulanIni(r.transactions.created_at)).map((r: any) => ({
-          tgl: fmt(r.transactions.created_at),
+        ...(opname || []).filter((r: any) => r.product_id === p.id && r.selisih > 0 && r.stock_opnames?.difinalkan_pada)
+          .map((r: any) => ({ waktu: r.stock_opnames.difinalkan_pada, sumber: `Penyesuaian opname ${r.stock_opnames.nomor}`, jml: r.selisih })),
+      ]
+      const keluar: Keluar[] = [
+        ...keluarSemua.map((r: any) => ({
+          waktu: r.transactions.created_at,
           resep: r.transactions?.nomor_resep || '-',
           pasien: [r.transactions?.nama_pasien, r.transactions?.alamat_pasien, r.transactions?.kontak_pasien]
             .filter(Boolean).join(' / ') || '-',
           jml: r.jumlah || 0,
         })),
+        ...(musnah || []).filter((r: any) => r.product_id === p.id && r.tanggal_musnahkan)
+          .map((r: any) => ({ waktu: r.tanggal_musnahkan, resep: '-', pasien: `Pemusnahan ${r.nomor_ba || ''}`.trim(), jml: r.qty_musnahkan || 0 })),
+        ...(retur || []).filter((r: any) => r.product_id === p.id && r.tanggal_retur)
+          .map((r: any) => ({ waktu: r.tanggal_retur, resep: '-', pasien: `Retur ke ${r.suppliers?.nama_supplier || 'supplier'} ${r.nomor_retur || ''}`.trim(), jml: r.qty_retur || 0 })),
+        ...(opname || []).filter((r: any) => r.product_id === p.id && r.selisih < 0 && r.stock_opnames?.difinalkan_pada)
+          .map((r: any) => ({ waktu: r.stock_opnames.difinalkan_pada, resep: '-', pasien: `Penyesuaian opname ${r.stock_opnames.nomor}`, jml: -r.selisih })),
+      ]
+      const jumlah = (xs: { jml: number }[]) => xs.reduce((a, r) => a + r.jml, 0)
+      const urut = <T extends { waktu: string }>(xs: T[]) => [...xs].sort((a, b) => new Date(a.waktu).getTime() - new Date(b.waktu).getTime())
+
+      const awal = jumlah(masuk.filter(r => sebelum(r.waktu))) - jumlah(keluar.filter(r => sebelum(r.waktu)))
+
+      return {
+        nama: p.nama_obat,
+        satuan: p.satuan,
+        awal,
+        masuk: urut(masuk.filter(r => diBulanIni(r.waktu))).map(r => ({ tgl: fmt(r.waktu), sumber: r.sumber, jml: r.jml })),
+        keluar: urut(keluar.filter(r => diBulanIni(r.waktu))).map(r => ({ tgl: fmt(r.waktu), resep: r.resep, pasien: r.pasien, jml: r.jml })),
         batch: (batches || []).filter((b: any) => b.product_id === p.id)
           .map((b: any) => `${b.batch_number || '-'} (ED ${fmtED(b.expired_date)})`),
       }
