@@ -262,7 +262,7 @@ export default function HalamanLaporan() {
            'Sales reports and SIPNAP reports (Narcotics, Psychotropics, Precursors)')}
       </p>
 
-      <div className="sw-geser-x flex gap-1 mb-5 pb-1">
+      <div className="sw-geser-x sw-geser-tab flex gap-1 mb-5 pb-1">
         {([
           { id: 'penjualan', label: t('Penjualan', 'Sales') },
           { id: 'metode', label: t('Metode Bayar', 'Payment Methods') },

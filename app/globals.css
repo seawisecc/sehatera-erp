@@ -683,6 +683,39 @@ select {
     radial-gradient(farthest-side at 100% 50%, color-mix(in oklab, var(--ink) 16%, transparent), transparent) right center / 12px 100% no-repeat scroll;
 }
 
+/* ── Baris tab yang duduk di LATAR HALAMAN, bukan di dalam kartu ──
+   Penutup `.sw-geser-x` di atas berwarna `--surface` (putih), dan itu hanya
+   benar kalau barisnya berada di atas kartu putih. Baris tab Laporan, Lab &
+   Radiologi, dan Klien duduk langsung di latar bergradien, jadi penutupnya
+   terlihat sebagai kotak putih di ujung kanan (ujung kiri kebetulan tertutup
+   tab pertama yang pekat). Ketahuan saat audit 28 September 2026.
+
+   Di sini penandanya MASK yang memudarkan tepi, digerakkan oleh posisi gulir
+   baris itu sendiri. Baris yang tidak meluap tidak punya timeline gulir yang
+   aktif, jadi kedua tepinya tetap 0 dan tidak ada yang memudar. Peramban
+   tanpa `animation-timeline` jatuh ke keadaan yang sama: bisa digeser, tanpa
+   penanda. */
+@property --geser-kiri  { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --geser-kanan { syntax: '<length>'; inherits: false; initial-value: 0px; }
+
+.sw-geser-x.sw-geser-tab {
+  background: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--geser-kiri), #000 calc(100% - var(--geser-kanan)), transparent);
+          mask-image: linear-gradient(to right, transparent, #000 var(--geser-kiri), #000 calc(100% - var(--geser-kanan)), transparent);
+}
+@supports (animation-timeline: scroll()) {
+  .sw-geser-x.sw-geser-tab {
+    animation: swGeserTepi linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+@keyframes swGeserTepi {
+  0%   { --geser-kiri: 0px;  --geser-kanan: 28px; }
+  8%   { --geser-kiri: 28px; --geser-kanan: 28px; }
+  92%  { --geser-kiri: 28px; --geser-kanan: 28px; }
+  100% { --geser-kiri: 28px; --geser-kanan: 0px; }
+}
+
 /* ── Tinggi layar yang benar di telepon ──
    `100vh` di Safari iOS berarti tinggi layar TANPA bilah alamat, jadi elemen
    setinggi 90vh sebenarnya menjulur ke bawah layar selama bilah alamatnya

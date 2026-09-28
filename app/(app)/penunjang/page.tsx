@@ -11,7 +11,7 @@ import { useUmpan } from '@/components/Umpan'
 import { pesanError } from '@/lib/session'
 import { boleh } from '@/lib/hak'
 import TarifPenunjang from '@/components/klinik/TarifPenunjang'
-import { jam } from '@/lib/format'
+import { waktuSingkat } from '@/lib/format'
 
 /**
  * Antrean kerja laboratorium dan radiologi.
@@ -202,7 +202,7 @@ export default function HalamanPenunjang() {
         </div>
       </div>
 
-      <div className="sw-geser-x flex gap-1 mb-5 pb-1">
+      <div className="sw-geser-x sw-geser-tab flex gap-1 mb-5 pb-1">
         {([
           { id: 'antrean' as const, label: t('Antrean kerja', 'Worklist') },
           { id: 'tarif' as const,   label: t('Tarif & paket pemeriksaan', 'Tariffs & panels') },
@@ -248,7 +248,7 @@ export default function HalamanPenunjang() {
                       <Zap size={10} /> CITO
                     </span>
                   )}
-                  <span className="ml-auto text-[11px] text-[var(--ink-faint)] num">{jam(a.diminta_pada)}</span>
+                  <span className="ml-auto text-[11px] text-[var(--ink-faint)] num">{waktuSingkat(a.diminta_pada)}</span>
                 </div>
                 <p className="text-sm text-[var(--ink)] mt-1">
                   <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--surface-2)] text-[var(--ink-soft)] mr-1.5">

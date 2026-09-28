@@ -153,7 +153,7 @@ export default function HalamanKlien() {
         </p>
       </div>
 
-      <div className="sw-geser-x flex gap-1 mb-5 pb-1">
+      <div className="sw-geser-x sw-geser-tab flex gap-1 mb-5 pb-1">
         {([
           { id: 'daftar',  label: t('Daftar Klien', 'Client List') },
           { id: 'tagihan', label: t('Tagihan', 'Invoices') },

@@ -53,6 +53,22 @@ export function jam(nilai: string | Date | null | undefined): string {
 }
 
 /**
+ * ISO -> "14:30" kalau hari ini, "26 Sep, 14:30" kalau bukan.
+ *
+ * Untuk antrean kerja. Jam saja membuat permintaan yang tertinggal dari tiga
+ * hari lalu terbaca seperti permintaan tadi sore, jadi yang paling lama
+ * menunggu justru yang paling tidak kelihatan tertinggal.
+ */
+export function waktuSingkat(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const hariIni = tanggalLokal(d) === tanggalLokal()
+  const j = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+  return hariIni ? j : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) + ', ' + j
+}
+
+/**
  * Date -> "2026-08-17" menurut jam DINDING, bukan menurut UTC.
  *
  * `toISOString()` menggeser ke UTC lebih dulu, dan Indonesia ada di depan UTC:

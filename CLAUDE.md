@@ -120,6 +120,9 @@ memasang lubang keamanan yang sudah ditutup.
 | `0082_hak_data_api_eksplisit` | Grant Data API seluruh tabel, view, dan sequence ditulis sendiri |
 | `0083_buang_ihs_organization_id` | Kolom lama `settings.ihs_organization_id` dibuang; tempatnya di kredensial |
 | `0084_paket_klinik_publik` | Paket Klinik tampil di halaman harga, deskripsinya tanpa janji SatuSehat & BPJS |
+| `0085_penomoran_per_faskes_sungguhan` | Trigger nomor lama dicabut, penomoran per faskes 0002 akhirnya berlaku; `next_doc_number` dikunci; indeks jalur harian |
+| `0086_penunjang_luar_katalog` | `minta_penunjang` berhenti gagal 55000 untuk pemeriksaan di luar katalog |
+| `0087_waktu_apotek_berzona` | Sembilan `created_at` apotek jadi timestamptz: jam tidak lagi mundur 8 jam |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -2299,6 +2302,49 @@ dihemat satu putaran jaringan di tiap halaman yang dibuka.
 tombol "Tampilkan lagi". Yang dibatasi hanya yang DIGAMBAR, bukan yang
 dicari, jadi saringan tetap berjalan atas seluruh daftar. Dipakai di Produk
 dan Pasien; layar daftar baru yang bisa berisi ribuan baris ikut memakainya.
+
+## Trigger berjalan menurut ABJAD, dan itu sudah dua kali menentukan hasil
+
+PostgreSQL menjalankan trigger BEFORE yang setara menurut NAMA. Migrasi 0002
+memasang penomoran per faskes (`trg_nomor_*`), tapi trigger lama dari folder
+`sql/` (`set_nomor_*`) masih terpasang dan menang karena "s" sebelum "t".
+Fungsi baru cuma mengisi nomor yang masih kosong, jadi selama sebulan lebih
+semua faskes berbagi SATU deret nomor tanpa ada yang tahu. Ditemukan audit
+28 September 2026 dari data: nomor Apotek Sejahtera melompat 0038 ke 0166.
+
+Sekarang namanya `trg_z_nomor_*`, supaya jalan SESUDAH `trg_set_company_id`.
+**Awalan `z` itu logika, bukan selera.** Menambah trigger BEFORE baru berarti
+memeriksa urutannya terhadap yang sudah ada:
+
+```sql
+select tgname from pg_trigger where tgrelid = 'public.x'::regclass
+  and not tgisinternal order by tgname;
+```
+
+`supabase/uji/0085_penomoran_per_faskes.sql` memegang urutan itu.
+
+**Folder `sql/` meninggalkan benda hidup di database.** Trigger nomor lama dan
+`auto_confirm_email` (email dianggap terverifikasi saat mendaftar) sama-sama
+dari sana, tidak ada di migrasi mana pun, dan tidak ketahuan dari membaca
+folder migrasi. Yang berlaku adalah katalog database, bukan berkasnya.
+
+## Kolom waktu wajib `timestamptz`
+
+`timestamp without time zone` dikirim PostgREST tanpa penanda zona, dan
+peramban membaca string tanpa zona sebagai JAM LOKAL. Di WITA itu berarti
+mundur 8 jam: laporan harian memasukkan penjualan pagi ke hari kemarin, dan
+SIPNAP memasukkan tanggal 1 pagi ke bulan sebelumnya. Migrasi 0087 mengubah
+sembilan kolom apotek lama. **Kolom waktu baru selalu `timestamptz`.**
+
+## Enam berkas uji yang tertinggal
+
+Saat audit, 25 dari 31 berkas di `supabase/uji/` lulus. Enam sisanya gagal
+karena menguji perilaku yang sengaja diubah belakangan, bukan karena
+fungsinya rusak: 0035 dan 0040 (keadaan `resep` dibuang di 0049), 0038
+(kunjungan tanpa diagnosis kini ditolak), 0054 (reservasi kembar ditolak
+sejak 0058), 0056 (perilaku ulang diubah 0075), 0041 (butuh sesi login).
+Perlu disegarkan: uji yang dibiarkan merah berhenti dibaca, dan 0061 yang
+merah justru menemukan bug sungguhan (0086).
 
 ## Tidak ada `alert`, `confirm`, atau `prompt` di aplikasi ini
 
