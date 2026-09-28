@@ -275,7 +275,7 @@ export default function HalamanReservasi() {
               title={app.fitur.klinik ? undefined
                 : t('Paket fasilitas ini belum membuka modul klinik.',
                     'This facility plan does not include the clinic module.')}
-              className="inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-40 disabled:cursor-not-allowed">
+              className="inline-flex items-center gap-2 whitespace-nowrap shrink-0 bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-40 disabled:cursor-not-allowed">
               <CalendarClock size={16} /> {t('Buat Reservasi', 'New Appointment')}
             </button>
           )}

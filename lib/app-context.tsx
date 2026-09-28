@@ -143,7 +143,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // dikeluarkan. Yang dihemat satu putaran jaringan (~150-200 ms ke
       // Singapura) di SETIAP halaman yang dibuka, sebelum apa pun tampil.
       const { data: { session: sesi } } = await supabase.auth.getSession()
-      const user = sesi?.user
+      // Sesi lokal yang kosong belum tentu berarti keluar: tab yang baru dibuka
+      // bisa membacanya tepat saat token sedang diperbarui. Sebelum melempar
+      // orang ke halaman masuk, tanyakan server sekali (perilaku lama).
+      const user = sesi?.user ?? (await supabase.auth.getUser()).data.user
       if (!user) { window.location.href = '/'; return }
       setAuthName((user.user_metadata as any)?.nama_lengkap || user.email || '')
 

@@ -125,19 +125,19 @@ export default function HalamanTindakLanjut() {
       wrap: 'bg-red-50 border-red-300', title: t('Sudah Kadaluarsa', 'Already Expired'),
       sub: t('tarik dari rak', 'pull from shelf'),
       titleCls: 'text-red-800', badgeCls: 'bg-red-600 text-white', card: 'border-red-200',
-      dayCls: 'text-red-700', btn: 'bg-red-600 hover:bg-red-700',
+      dayCls: 'text-red-700', btn: 'border-red-300 text-red-700 hover:bg-red-50',
     },
     {
       items: merah, Icon: AlertTriangle,
       wrap: 'bg-amber-50 border-amber-300', title: t('Segera Kadaluarsa', 'Expiring Soon'), sub: `≤30 ${t('hari', 'days')}`,
       titleCls: 'text-amber-900', badgeCls: 'bg-amber-200 text-amber-900', card: 'border-amber-200',
-      dayCls: 'text-amber-800', btn: 'bg-amber-600 hover:bg-amber-700',
+      dayCls: 'text-amber-800', btn: 'border-amber-300 text-amber-800 hover:bg-amber-50',
     },
     {
       items: kuning, Icon: CalendarClock,
       wrap: 'bg-[var(--surface-2)] border-[var(--line)]', title: t('Perlu Perhatian', 'Needs Attention'), sub: `31-60 ${t('hari', 'days')}`,
       titleCls: 'text-[var(--ink)]', badgeCls: 'bg-[var(--surface)] text-[var(--ink-soft)]', card: 'border-[var(--line)]',
-      dayCls: 'text-[var(--ink-soft)]', btn: 'bg-[var(--brand)] hover:bg-[var(--brand-hover)]',
+      dayCls: 'text-[var(--ink-soft)]', btn: 'border-[var(--line)] text-[var(--brand)] hover:bg-[var(--surface-2)]',
     },
   ]
 
@@ -200,8 +200,11 @@ export default function HalamanTindakLanjut() {
                             <span className="num">{b.batch_number || '-'}</span> · {t('kadaluarsa', 'expiry')} {exp} · {t('stok', 'stock')} {angka(b.stok_batch)}
                           </p>
                         </div>
+                        {/* Bergaris, bukan pekat: warna tingkatnya sudah dibawa
+                            wadah grupnya, dan enam kotak merah berjajar membuat
+                            mata jatuh ke tombol alih-alih ke nama obatnya. */}
                         <button onClick={() => setPilih(b)}
-                          className={`shrink-0 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition ${g.btn}`}>
+                          className={`shrink-0 px-3 py-1.5 rounded-lg border bg-[var(--surface)] text-xs font-semibold transition ${g.btn}`}>
                           {t('Tindak Lanjut', 'Follow up')}
                         </button>
                       </div>
