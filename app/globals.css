@@ -700,9 +700,13 @@ select {
 
 .sw-geser-x.sw-geser-tab {
   background: none;
+  /* Tepi yang memudar sudah jadi penandanya; batang gulir di bawah deretan
+     tab cuma garis abu-abu kedua yang mengatakan hal yang sama. */
+  scrollbar-width: none;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--geser-kiri), #000 calc(100% - var(--geser-kanan)), transparent);
           mask-image: linear-gradient(to right, transparent, #000 var(--geser-kiri), #000 calc(100% - var(--geser-kanan)), transparent);
 }
+.sw-geser-x.sw-geser-tab::-webkit-scrollbar { display: none; }
 @supports (animation-timeline: scroll()) {
   .sw-geser-x.sw-geser-tab {
     animation: swGeserTepi linear both;

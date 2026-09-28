@@ -134,7 +134,10 @@ export default function HalamanLaporan() {
   }), { tunai: 0, tagih: 0, total: 0, jumlah: 0 }), [penjamin])
 
   const tersaring = useMemo(() => riwayat.filter(x => {
-    const d = (x.created_at || '').split('T')[0]
+    // Tanggal menurut jam DINDING faskes, bukan potongan string UTC. Sejak
+    // 0087 created_at membawa zonanya, dan potongan string memasukkan
+    // penjualan sebelum pukul 08.00 WITA ke tanggal kemarin.
+    const d = x.created_at ? tanggalLokal(new Date(x.created_at)) : ''
     if (dari && d < dari) return false
     if (sampai && d > sampai) return false
     if (metode && (x.metode_bayar || 'Tunai') !== metode) return false
@@ -532,7 +535,7 @@ export default function HalamanLaporan() {
                 ) : tersaring.map(trx => (
                   <tr key={trx.id} className={TR}>
                     <td className="px-4 py-3 num text-xs text-[var(--brand)] font-medium">{trx.nomor_transaksi}</td>
-                    <td className="px-4 py-3 text-[var(--ink-soft)] num">{tanggalJam(trx.created_at)}</td>
+                    <td className="px-4 py-3 text-[var(--ink-soft)] num whitespace-nowrap">{tanggalJam(trx.created_at)}</td>
                     <td className="px-4 py-3 text-center">
                       <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--paper)] text-[var(--brand-soft)]">
                         {trx.metode_bayar || 'Tunai'}
