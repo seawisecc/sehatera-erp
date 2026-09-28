@@ -95,7 +95,13 @@ begin
   begin
     perform public.buat_reservasi('Orang Kedua Lagi', v_tgl, v_jad2, null, v_pas, p_company => v_co);
     raise exception 'Satu pasien bisa memesan dua kali di poli dan hari yang sama.';
-  exception when unique_violation then null;
+  -- SH004, bukan unique_violation mentah: sejak 0058 buat_reservasi
+  -- menerjemahkannya sendiri, karena 23505 sampai ke layar sebagai "coba lagi
+  -- sebentar lagi" padahal mencoba lagi tidak akan pernah berhasil.
+  exception when sqlstate 'SH004' then
+    if sqlerrm not like '%sudah punya reservasi%' then
+      raise exception 'Reservasi kembar ditolak dengan alasan yang salah: %', sqlerrm;
+    end if;
   end;
 
   -- 8. Penerbit asuransi tanpa penjamin asuransi ditolak ---------------------

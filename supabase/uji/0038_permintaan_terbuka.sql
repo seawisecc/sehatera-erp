@@ -24,6 +24,10 @@ begin
   values (v_co, 'UJI PERMINTAAN', 'P') returning id into v_pas;
   insert into public.visits (company_id, patient_id, status, dokter_email)
   values (v_co, v_pas, 'diperiksa', 'dokter.uji@contoh.id') returning id into v_vis;
+  -- Sejak 0049 penyerahan obat ikut MENUTUP kunjungan, dan kunjungan tidak
+  -- bisa ditutup tanpa diagnosis (0018). Uji ini lahir sebelum itu.
+  insert into public.visit_diagnoses (company_id, visit_id, kode_icd10, nama, tipe)
+  values (v_co, v_vis, 'L50.9', 'Urtikaria', 'primer');
 
   -- 1. Yang hampir saya jatuhkan saat menulis ulang simpan_resep -------
   perform public.simpan_resep(v_vis, jsonb_build_array(

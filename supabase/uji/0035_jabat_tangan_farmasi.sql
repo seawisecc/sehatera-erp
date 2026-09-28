@@ -22,8 +22,14 @@ begin
 
   insert into public.patients (company_id, nama, jenis_kelamin)
   values (v_co, 'UJI FARMASI', 'L') returning id into v_pas;
+  -- `diperiksa`, bukan `resep`: keadaan `resep` dibuang di migrasi 0049.
+  -- Begitu resepnya difinalkan, trigger menggeser kunjungan ke `obat`.
   insert into public.visits (company_id, patient_id, status)
-  values (v_co, v_pas, 'resep') returning id into v_vis;
+  values (v_co, v_pas, 'diperiksa') returning id into v_vis;
+  -- Sejak 0049 penyerahan obat ikut MENUTUP kunjungan, dan kunjungan tidak
+  -- bisa ditutup tanpa diagnosis (0018). Uji ini lahir sebelum itu.
+  insert into public.visit_diagnoses (company_id, visit_id, kode_icd10, nama, tipe)
+  values (v_co, v_vis, 'J06.9', 'Infeksi saluran napas atas akut', 'primer');
   insert into public.prescriptions (company_id, visit_id, status, dokter_email)
   values (v_co, v_vis, 'draf', 'dokter.uji@contoh.id') returning id into v_resep;
 
@@ -74,8 +80,9 @@ begin
   -- migrasi 0021 menolak penjualan yang tidak terikat kunjungan lewat trigger.
   -- Percobaan pertama uji ini lupa itu dan ditolak database, yang justru
   -- membuktikan batas instalasi farmasi masih berdiri.
-  insert into public.transactions (company_id, visit_id, total, bayar)
-  values (v_co, v_vis, 50000, 50000) returning id into v_trx;
+  -- Sejak 0051 total wajib terbelah jadi diterima_tunai + ditagihkan_penjamin.
+  insert into public.transactions (company_id, visit_id, total, bayar, diterima_tunai)
+  values (v_co, v_vis, 50000, 50000, 50000) returning id into v_trx;
 
   perform public.tandai_resep_dibayar(v_resep, v_trx);
   select * into v_row from public.prescriptions where id = v_resep;

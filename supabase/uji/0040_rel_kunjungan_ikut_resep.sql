@@ -3,6 +3,10 @@
 -- ============================================================
 --
 -- BUKAN migrasi. Diakhiri `raise exception`, jadi tidak mengubah apa pun.
+--
+-- Disegarkan 28 September 2026 ke rel EMPAT keadaan (migrasi 0049):
+-- terdaftar -> diperiksa -> obat -> selesai. Keadaan `resep` sudah dibuang,
+-- dan resep yang difinalkan kini menggeser kunjungan langsung ke `obat`.
 
 do $$
 declare
@@ -71,10 +75,16 @@ begin
     values (v_co, 'UJI REL LOMPAT PERIKSA', 'L') returning id into v_pas3;
     insert into public.visits (company_id, patient_id, status)
     values (v_co, v_pas3, 'terdaftar') returning id into v_vis2;
+    -- Ditolak karena MELOMPAT, bukan karena nama keadaannya tidak dikenal:
+    -- versi lama uji ini memakai 'resep', yang sejak 0049 memang tidak ada,
+    -- jadi ia lulus karena alasan yang salah.
     begin
-      perform public.ubah_status_kunjungan(v_vis2, 'resep');
+      perform public.ubah_status_kunjungan(v_vis2, 'obat');
       raise exception 'Kunjungan bisa melompati tahap diperiksa.';
-    exception when sqlstate 'SH004' then null;
+    exception when sqlstate 'SH004' then
+      if sqlerrm not like '%melompat%' then
+        raise exception 'Lompatan ditolak dengan alasan yang salah: %', sqlerrm;
+      end if;
     end;
   end;
 
@@ -84,18 +94,18 @@ begin
   select status into v_stat from public.visits where id = v_vis;
   if v_stat <> 'diperiksa' then raise exception 'Awalnya seharusnya diperiksa, dapat %.', v_stat; end if;
 
-  -- Dokter memfinalkan -> kunjungan pindah ke `resep` tanpa ada yang mengklik.
+  -- Dokter memfinalkan -> kunjungan pindah ke `obat` tanpa ada yang mengklik.
   update public.prescriptions set status = 'final', difinalkan_pada = now() where id = v_resep;
   select status into v_stat from public.visits where id = v_vis;
-  if v_stat <> 'resep' then
-    raise exception 'Resep difinalkan tapi kunjungan masih %, seharusnya resep.', v_stat;
+  if v_stat <> 'obat' then
+    raise exception 'Resep difinalkan tapi kunjungan masih %, seharusnya obat.', v_stat;
   end if;
 
-  -- Farmasi mulai menyiapkan -> kunjungan pindah ke `obat`.
+  -- Farmasi mulai menyiapkan -> kunjungan tetap `obat`, tidak bergeser lagi.
   update public.prescriptions set status = 'disiapkan', disiapkan_pada = now() where id = v_resep;
   select status into v_stat from public.visits where id = v_vis;
   if v_stat <> 'obat' then
-    raise exception 'Farmasi mulai menyiapkan tapi kunjungan masih %, seharusnya obat.', v_stat;
+    raise exception 'Farmasi mulai menyiapkan tapi kunjungan pindah ke %, seharusnya tetap obat.', v_stat;
   end if;
 
   -- `siap` tidak menyeret lebih jauh: yang menutup kunjungan tetap orang.

@@ -29,17 +29,26 @@ begin
   -- auth_company_id(), dan di SQL Editor tidak ada sesi. Itu memang benar
   -- untuk aplikasinya, jadi yang diuji di sini sifat fungsinya, bukan
   -- panggilannya.
+  --
+  -- Disegarkan 28 September 2026: versi awal uji ini MENUNTUT
+  -- gen_random_bytes, padahal migrasi 0043 sengaja membuangnya. pgcrypto
+  -- tinggal di skema `extensions`, dan fungsi security definer yang
+  -- search_path-nya dikunci tidak melihatnya: di aplikasi jadinya 42883,
+  -- sementara uji di SQL Editor lulus karena search_path-nya lebih luas.
+  -- Sekarang yang dituntut kebalikannya.
   if not exists (
     select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public' and p.proname = 'token_antrean_saya'
-       and pg_get_functiondef(p.oid) like '%gen_random_bytes%'
+       and pg_get_functiondef(p.oid) like '%gen_random_uuid%'
+       and pg_get_functiondef(p.oid) not like '%gen_random_bytes%'
        and pg_get_functiondef(p.oid) like '%auth_company_id%') then
-    raise exception 'token_antrean_saya tidak membangkitkan token acak dari fasilitas si pemanggil.';
+    raise exception 'token_antrean_saya tidak membangkitkan token acak (gen_random_uuid, tanpa pgcrypto) dari fasilitas si pemanggil.';
   end if;
 
   -- Tokennya dipasang langsung di sini, karena seluruh blok ini dibatalkan
-  -- di akhir dan token asli klinik tidak ikut berubah.
-  v_token := encode(gen_random_bytes(24), 'hex');
+  -- di akhir dan token asli klinik tidak ikut berubah. Bentuknya sama dengan
+  -- yang dibuat fungsinya: dua uuid tanpa tanda hubung, 64 karakter hex.
+  v_token := replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
   update public.settings set token_antrean = v_token where company_id = v_co;
 
   if length(v_token) < 32 then

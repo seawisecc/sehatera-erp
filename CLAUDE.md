@@ -2336,15 +2336,28 @@ mundur 8 jam: laporan harian memasukkan penjualan pagi ke hari kemarin, dan
 SIPNAP memasukkan tanggal 1 pagi ke bulan sebelumnya. Migrasi 0087 mengubah
 sembilan kolom apotek lama. **Kolom waktu baru selalu `timestamptz`.**
 
-## Enam berkas uji yang tertinggal
+## Seluruh uji hijau, dan dijalankan SEKALIGUS
 
-Saat audit, 25 dari 31 berkas di `supabase/uji/` lulus. Enam sisanya gagal
-karena menguji perilaku yang sengaja diubah belakangan, bukan karena
-fungsinya rusak: 0035 dan 0040 (keadaan `resep` dibuang di 0049), 0038
-(kunjungan tanpa diagnosis kini ditolak), 0054 (reservasi kembar ditolak
-sejak 0058), 0056 (perilaku ulang diubah 0075), 0041 (butuh sesi login).
-Perlu disegarkan: uji yang dibiarkan merah berhenti dibaca, dan 0061 yang
-merah justru menemukan bug sungguhan (0086).
+`bash scripts/uji-semua.sh` menjalankan seluruh `supabase/uji/` ke database
+tertaut. **Jalankan sesudah tiap migrasi, bukan cuma uji milik migrasi itu.**
+
+Sampai 28 September 2026 enam uji dibiarkan merah karena menguji perilaku
+yang sengaja diubah belakangan (keadaan `resep` di 0049, diagnosis wajib saat
+farmasi menutup kunjungan, SH004 untuk reservasi kembar di 0058, pengantrean
+ulang di 0075, token tanpa pgcrypto di 0043). Uji yang dibiarkan merah
+berhenti dibaca, dan di antara yang merah itu 0061 justru menunjuk bug
+sungguhan: penunjang di luar katalog gagal total (diperbaiki di 0086).
+
+Dua pola yang membuat uji tertinggal tanpa suara, dan sudah dibetulkan:
+
+- **Uji yang lulus karena alasan yang salah.** 0040 menguji "tidak bisa
+  melompati diperiksa" dengan keadaan `resep` yang sudah tidak ada, jadi ia
+  lulus karena nama keadaannya tidak dikenal. Penolakan yang diharapkan
+  sekarang diperiksa ALASANNYA juga (`sqlerrm like ...`).
+- **Pemeriksaan hak yang menyebut tanda tangan fungsi harfiah.** Begitu
+  argumen ditambahkan, tanda tangan lama hilang dan pemeriksaannya berhenti
+  memeriksa apa pun. Periksa per NAMA atas semua versinya, lalu pastikan
+  fungsinya memang ditemukan.
 
 ## Tidak ada `alert`, `confirm`, atau `prompt` di aplikasi ini
 

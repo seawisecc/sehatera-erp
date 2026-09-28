@@ -100,15 +100,23 @@ begin
       v_row.status;
   end if;
 
-  -- 7. Yang ditinggalkan tidak dibangunkan pengantrean berikutnya --------------
+  -- 7. Pengantrean ulang MEMBANGKITKAN yang ditinggalkan (migrasi 0075) --------
+  -- Versi awal uji ini menuntut kebalikannya. Sejak 0075 itu sengaja diubah:
+  -- payload adalah cuplikan, jadi kiriman yang ditinggalkan karena bentuknya
+  -- salah tidak akan pernah sampai kalau tidak dibangkitkan dengan payload
+  -- yang sudah dibetulkan. Rinciannya dipegang supabase/uji/0075.
   v_b := public.antre_kirim('satusehat', 'Encounter', 'UJI0056:enc:1', '{}'::jsonb, null, null, v_co);
   select * into v_row from public.outbound_messages where id = v_id;
-  if v_row.status <> 'ditinggalkan' then
-    raise exception 'Pengantrean ulang menghidupkan kembali yang sudah diputuskan orang.';
+  if v_row.status <> 'antre' or v_row.percobaan <> 0 or not (v_b ->> 'diulang')::boolean then
+    raise exception 'Yang ditinggalkan tidak dibangkitkan: status=% percobaan=% diulang=%.',
+      v_row.status, v_row.percobaan, v_b ->> 'diulang';
   end if;
 
   -- 8. Yang ditinggalkan tidak ikut terambil -----------------------------------
-  update public.outbound_messages set kirim_setelah = now() - interval '1 minute' where id = v_id;
+  -- Ditinggalkan lagi dulu, karena langkah 7 baru saja membangkitkannya.
+  update public.outbound_messages
+     set status = 'ditinggalkan', kirim_setelah = now() - interval '1 minute'
+   where id = v_id;
   v_amb := public.ambil_antrean_kirim('satusehat', 50);
   if exists (select 1 from jsonb_array_elements(v_amb) x where (x ->> 'id')::uuid = v_id) then
     raise exception 'Baris yang ditinggalkan masih ikut terambil.';
@@ -142,14 +150,21 @@ begin
   -- 11. Jalur server saja untuk yang membawa payload ---------------------------
   -- Payloadnya berisi data pasien, dan pengambilnya juga yang memegang
   -- kredensial. Kunci anon ada di dalam peramban setiap pengguna.
-  if has_function_privilege('authenticated', 'public.ambil_antrean_kirim(text, integer)', 'execute') then
-    raise exception 'ambil_antrean_kirim terbuka untuk authenticated.';
+  -- Diperiksa per NAMA atas semua versinya, bukan satu tanda tangan harfiah.
+  -- 0072 menambah p_company ke ambil_antrean_kirim dan membuang versi dua
+  -- argumen; pemeriksaan yang menyebut tanda tangan lama berhenti memeriksa
+  -- apa pun, dan versi baru yang terbuka tidak akan pernah ketahuan.
+  if exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+              where n.nspname = 'public'
+                and p.proname in ('ambil_antrean_kirim', 'tandai_terkirim', 'tandai_gagal')
+                and (has_function_privilege('authenticated', p.oid, 'execute')
+                     or has_function_privilege('anon', p.oid, 'execute'))) then
+    raise exception 'Fungsi pengirim terbuka dari peramban: kiriman bisa diambil atau dinyatakan berhasil tanpa server.';
   end if;
-  if has_function_privilege('authenticated', 'public.tandai_terkirim(uuid, text, jsonb)', 'execute') then
-    raise exception 'tandai_terkirim terbuka untuk authenticated: kiriman bisa dinyatakan berhasil dari peramban.';
-  end if;
-  if has_function_privilege('authenticated', 'public.tandai_gagal(uuid, text, integer)', 'execute') then
-    raise exception 'tandai_gagal terbuka untuk authenticated.';
+  if (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public'
+         and p.proname in ('ambil_antrean_kirim', 'tandai_terkirim', 'tandai_gagal')) < 3 then
+    raise exception 'Fungsi pengirim yang diperiksa tidak ditemukan; pemeriksaan di atas tidak memeriksa apa pun.';
   end if;
 
   -- 12. Menulis langsung ke tabelnya tidak dibuka ------------------------------
