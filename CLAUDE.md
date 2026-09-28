@@ -118,6 +118,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0080_daftar_faskes_terjadwal` | `faskes_kirim_terjadwal()` untuk penjadwal |
 | `0081_gerbang_modul_klinik` | Kunjungan & reservasi BARU ditolak SH008 tanpa paket klinik |
 | `0082_hak_data_api_eksplisit` | Grant Data API seluruh tabel, view, dan sequence ditulis sendiri |
+| `0083_buang_ihs_organization_id` | Kolom lama `settings.ihs_organization_id` dibuang; tempatnya di kredensial |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -2427,19 +2428,19 @@ sudah menangkapnya sejak 0022; `buat_reservasi` ditulis tanpa menirunya.
 **Tiap fungsi yang bisa menabrak indeks unik karena tindakan wajar pengguna
 harus menerjemahkannya sendiri jadi SH004.**
 
-## Dua hal yang BELUM diperbaiki, dan alasannya
+## Dua hal yang dulu BELUM diperbaiki
 
 **`PlanFeatures.klinik` sekarang MENGGERBANGI, sejak migrasi 0081.** Lihat
 bagian "Gerbang modul klinik" di bawah. Yang dikunci cuma membuat kunjungan
 dan reservasi BARU; membaca, mencetak, dan menambahi adendum rekam medis lama
 tetap terbuka selamanya.
 
-**`settings.ihs_organization_id` dan `faskes_credentials.publik->>'organization_id'`
-adalah dua tempat untuk satu fakta.** Yang benar tempatnya di kredensial:
-sandbox dan produksi punya organization id yang BERBEDA, dan kolom tunggal di
-`settings` tidak bisa menampung keduanya. Kolom lama dibiarkan sampai
-pengirimannya benar-benar disambungkan, supaya tidak ada yang membacanya lalu
-mengirim ke lingkungan yang salah. **Jangan menulis kode baru yang membacanya.**
+**`settings.ihs_organization_id` sudah DIBUANG di migrasi 0083.** Organization
+ID sandbox dan produksi berbeda, jadi tempatnya satu-satunya adalah
+`faskes_credentials.publik->>'organization_id'`. Kolom itu dibiarkan sampai
+pengirimannya tersambung supaya tidak ada yang mengirim ke lingkungan yang
+salah; sesudah tersambung, kolom yang tidak dibaca siapa pun cuma jadi tempat
+yang salah untuk ditemukan orang berikutnya.
 
 ## Yang belum ada
 

@@ -1,0 +1,21 @@
+-- ============================================================
+-- 0083  settings.ihs_organization_id dibuang
+-- ============================================================
+--
+-- Dua tempat untuk satu fakta, dan yang ini tempat yang salah. Organization
+-- ID SatuSehat BERBEDA antara sandbox dan produksi, jadi satu kolom di
+-- `settings` tidak bisa menampung keduanya. Tempatnya yang benar adalah
+-- kredensial (`faskes_credentials.publik->>'organization_id'`, migrasi 0055),
+-- dan seluruh pengiriman sejak 0072 sudah membacanya dari sana.
+--
+-- Kolom ini sengaja dibiarkan sampai pengirimannya benar-benar tersambung,
+-- supaya tidak ada yang membacanya lalu mengirim ke lingkungan yang salah.
+-- Sekarang sudah tersambung (lima resource diterima sandbox), dan pada
+-- 28 September 2026 diperiksa: tidak ada fungsi, view, maupun kode aplikasi
+-- yang membacanya, dan isinya kosong di semua faskes.
+--
+-- Kolom yang tidak dibaca siapa pun tapi masih ada akan dibaca orang
+-- berikutnya yang mencari "organization id" di skema, dan yang ia temukan
+-- adalah tempat yang salah.
+
+alter table public.settings drop column if exists ihs_organization_id;
