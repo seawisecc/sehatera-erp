@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle, Check, Pencil, Receipt, Truck, Wand2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
@@ -101,7 +102,7 @@ export default function HalamanPembelian() {
   // ── Order manual ──
 
   const muatProdukSupplier = async (supplierId: string) => {
-    const { data } = await supabase.from('product_suppliers').select('*, products(*)').eq('supplier_id', supplierId)
+    const { data } = await semua(() => supabase.from('product_suppliers').select('*, products(*)').eq('supplier_id', supplierId))
     setProdukSupplier(data?.map((d: any) => d.products).filter(Boolean) || [])
   }
 
@@ -161,9 +162,9 @@ export default function HalamanPembelian() {
   const mulaiTerpandu = async () => {
     if (terkunci) { kabar(t('Pilih satu apotek dulu di pemilih faskes sebelum membuat order.', 'Select a specific pharmacy first before creating an order.')); return }
     setTerpanduSibuk(true)
-    const { data: prods } = await scope(
+    const { data: prods } = await semua(() => scope(
       supabase.from('products').select('id,nama_obat,satuan,stok_total,stok_minimum,harga_beli').order('nama_obat')
-    )
+    ))
     const minim = (prods || []).filter((p: any) => (p.stok_total ?? 0) <= (p.stok_minimum ?? 0))
     if (minim.length === 0) {
       setTerpanduSibuk(false)
@@ -171,9 +172,9 @@ export default function HalamanPembelian() {
       return
     }
     const ids = minim.map((p: any) => p.id)
-    const { data: ps } = await scope(
+    const { data: ps } = await semua(() => scope(
       supabase.from('product_suppliers').select('product_id, suppliers(id, nama_supplier, jenis)').in('product_id', ids)
-    )
+    ))
     const perProduk: Record<string, any[]> = {}
     ;(ps || []).forEach((r: any) => {
       if (r.suppliers) (perProduk[r.product_id] = perProduk[r.product_id] || []).push(r.suppliers)

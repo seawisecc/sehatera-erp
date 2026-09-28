@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle, CalendarClock, Printer, Ban } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
@@ -46,18 +47,18 @@ export default function HalamanTindakLanjut() {
     mulai()
     const in60 = new Date(); in60.setDate(in60.getDate() + 60)
     const [{ data: b }, { data: m }, { data: r }] = await Promise.all([
-      scope(supabase.from('product_batches')
+      semua(() => scope(supabase.from('product_batches')
         .select('*, products(nama_obat, kode, satuan)')
         .lte('expired_date', in60.toISOString().split('T')[0])
         .gt('stok_batch', 0)
         .is('ditindaklanjuti_pada', null)
-        .order('expired_date')),
-      scope(supabase.from('pemusnahan')
+        .order('expired_date'))),
+      semua(() => scope(supabase.from('pemusnahan')
         .select('*, products(nama_obat, satuan, kode), product_batches(batch_number, expired_date)')
-        .order('created_at', { ascending: false })),
-      scope(supabase.from('retur_supplier')
+        .order('created_at', { ascending: false }))),
+      semua(() => scope(supabase.from('retur_supplier')
         .select('*, products(nama_obat, satuan, kode), suppliers(nama_supplier), product_batches(batch_number, expired_date)')
-        .order('created_at', { ascending: false })),
+        .order('created_at', { ascending: false }))),
     ])
     setBatches(b || []); setMusnah(m || []); setRetur(r || [])
     selesai()

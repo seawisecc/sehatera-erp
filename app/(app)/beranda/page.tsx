@@ -7,6 +7,7 @@ import {
   Minus, Package, Receipt, ShoppingCart, Stethoscope, UserPlus, UsersRound, Wallet,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
 import { rupiah, angka, desimal } from '@/lib/format'
@@ -77,15 +78,21 @@ export default function HalamanBeranda() {
 
     // Satu pengambilan untuk DUA periode sekaligus. Dua panggilan terpisah
     // untuk rentang yang bersebelahan hanya menggandakan waktu tunggu.
-    const { data: trx } = await scope(
-      supabase.from('transactions')
-        .select('total,created_at,status')
-        .gte('created_at', mulaiLalu.toISOString())
-    )
-    const { data: item } = await scope(
-      supabase.from('transaction_items')
-        .select('jumlah,transactions(created_at,status)')
-    )
+    // Item disaring lewat transaksinya (`!inner`), bukan diambil seluruh
+    // riwayatnya lalu dibuang di peramban: tanpa saringan ini beranda menarik
+    // tiap baris yang pernah terjual sejak apoteknya berdiri.
+    const [{ data: trx }, { data: item }] = await Promise.all([
+      semua(() => scope(
+        supabase.from('transactions')
+          .select('total,created_at,status')
+          .gte('created_at', mulaiLalu.toISOString())
+      )),
+      semua(() => scope(
+        supabase.from('transaction_items')
+          .select('jumlah,transactions!inner(created_at,status)')
+          .gte('transactions.created_at', mulaiLalu.toISOString())
+      )),
+    ])
 
     const ember: Record<string, { nilai: number; jumlah: number; kunjungan?: number }> = {}
     let oKini = 0, tKini = 0, oLalu = 0, tLalu = 0
@@ -134,10 +141,10 @@ export default function HalamanBeranda() {
     // dan ditutup sesudahnya tetap milik hari kliniknya, bukan hari berikutnya.
     if (klinik) {
       const [{ data: vis }, { data: pas }] = await Promise.all([
-        scope(supabase.from('visits').select('tanggal,status')
-          .gte('tanggal', kunci(mulaiLalu))),
-        scope(supabase.from('patients').select('created_at')
-          .gte('created_at', mulaiLalu.toISOString())),
+        semua(() => scope(supabase.from('visits').select('tanggal,status')
+          .gte('tanggal', kunci(mulaiLalu)))),
+        semua(() => scope(supabase.from('patients').select('created_at')
+          .gte('created_at', mulaiLalu.toISOString()))),
       ])
       let kKini = 0, kLalu = 0
       ;(vis || []).forEach((x: any) => {
@@ -176,15 +183,17 @@ export default function HalamanBeranda() {
     const in60 = new Date(); in60.setDate(in60.getDate() + 60)
 
     const [{ data: items }, { data: prods }, { data: batches }, { data: fakturs }] = await Promise.all([
-      scope(supabase.from('transaction_items').select('nama_obat,jumlah,transactions(status,created_at)')),
-      scope(supabase.from('products').select('nama_obat,kode,stok_total,stok_minimum').order('stok_total')),
+      semua(() => scope(supabase.from('transaction_items')
+        .select('nama_obat,jumlah,transactions!inner(status,created_at)')
+        .gte('transactions.created_at', d30.toISOString()))),
+      semua(() => scope(supabase.from('products').select('nama_obat,kode,stok_total,stok_minimum').order('stok_total'))),
       scope(supabase.from('product_batches')
         .select('batch_number,expired_date,stok_batch,products(nama_obat)')
         .lte('expired_date', in60.toISOString().split('T')[0])
         .gt('stok_batch', 0).is('ditindaklanjuti_pada', null).order('expired_date')),
-      scope(supabase.from('faktur')
+      semua(() => scope(supabase.from('faktur')
         .select('nomor_faktur,tanggal_jatuh_tempo,total,status,suppliers(nama_supplier)')
-        .neq('status', 'lunas')),
+        .neq('status', 'lunas'))),
     ])
 
     const peta: Record<string, number> = {}

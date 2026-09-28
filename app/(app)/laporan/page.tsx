@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Info, Printer } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
 import Dialog, { TOMBOL_KEDUA } from '@/components/Dialog'
@@ -84,9 +85,11 @@ export default function HalamanLaporan() {
     // peramban. Menyaring di peramban berarti seluruh riwayat tetap diambil
     // dan tetap ada di dalam perangkat orangnya; yang dibatasi cuma yang
     // digambar, dan itu bukan pembatasan.
-    let q = scope(supabase.from('transactions').select('*'))
-    if (batasTanggal) q = q.gte('created_at', batasTanggal)
-    const { data } = await q.order('created_at', { ascending: false })
+    const { data } = await semua(() => {
+      let q = scope(supabase.from('transactions').select('*'))
+      if (batasTanggal) q = q.gte('created_at', batasTanggal)
+      return q.order('created_at', { ascending: false })
+    })
     setRiwayat(data || [])
     setMemuat(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -179,21 +182,26 @@ export default function HalamanLaporan() {
     const fmt = (d: any) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''
     const fmtED = (d: any) => d ? new Date(d).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }) : '-'
 
-    const { data: prods } = await scope(
+    const { data: prods } = await semua(() => scope(
       supabase.from('products').select('*').eq('kategori', golongan).order('nama_obat')
-    )
+    ))
     if (!prods || prods.length === 0) {
       kabar(t('Belum ada produk berkategori ', 'No products in category ') + golongan + '.')
       return
     }
     const ids = prods.map((p: any) => p.id)
 
-    const { data: penerimaan } = await supabase.from('po_items')
-      .select('product_id, qty_terima, purchase_orders(tanggal_terima, suppliers(nama_supplier))').in('product_id', ids)
-    const { data: pengeluaran } = await supabase.from('transaction_items')
-      .select('product_id, jumlah, transactions(created_at, nama_pasien, alamat_pasien, kontak_pasien, nomor_resep, status)').in('product_id', ids)
-    const { data: batches } = await supabase.from('product_batches')
-      .select('product_id, batch_number, expired_date').in('product_id', ids)
+    // Saldo awal dihitung dari SELURUH riwayat sebelum bulan itu, jadi ketiga
+    // kueri ini tumbuh terus sepanjang umur apotek. Tanpa `semua()` laporan
+    // wajib narkotika mulai salah diam-diam begitu riwayatnya lewat 1.000 baris.
+    const [{ data: penerimaan }, { data: pengeluaran }, { data: batches }] = await Promise.all([
+      semua(() => supabase.from('po_items')
+        .select('product_id, qty_terima, purchase_orders(tanggal_terima, suppliers(nama_supplier))').in('product_id', ids)),
+      semua(() => supabase.from('transaction_items')
+        .select('product_id, jumlah, transactions(created_at, nama_pasien, alamat_pasien, kontak_pasien, nomor_resep, status)').in('product_id', ids)),
+      semua(() => supabase.from('product_batches')
+        .select('product_id, batch_number, expired_date').in('product_id', ids)),
+    ])
 
     const baris: BarisSipnap[] = prods.map((p: any) => {
       const masukSemua = (penerimaan || []).filter((r: any) => r.product_id === p.id && r.purchase_orders?.tanggal_terima)

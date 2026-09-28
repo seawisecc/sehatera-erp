@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, ClipboardList, Download, PackageOpen, Pill, Receipt, Truck, Upload } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
 import { useUmpan } from '@/components/Umpan'
@@ -204,7 +205,7 @@ export default function HalamanMigrasi() {
   // ── Export / Backup ke CSV ──
   const lingkup = (q: any) => (app.isSuper && migrasiCompany) ? q.eq('company_id', migrasiCompany) : q
   const exportProduk = async () => {
-    const { data } = await lingkup(supabase.from('products').select('*').order('kode'))
+    const { data } = await semua(() => lingkup(supabase.from('products').select('*').order('kode')))
     const headers = ['kode', 'nama_obat', 'nama_generik', 'kandungan', 'kategori', 'satuan', 'isi_kemasan', 'harga_beli', 'harga_jual', 'stok_total', 'stok_minimum']
     unduhCSV('export_produk.csv', headers, (data || []).map((p: any) => headers.map(h => String(p[h] ?? ''))))
   }
@@ -214,12 +215,12 @@ export default function HalamanMigrasi() {
     unduhCSV('export_supplier.csv', headers, (data || []).map((s: any) => headers.map(h => String(s[h] ?? ''))))
   }
   const exportStok = async () => {
-    const { data } = await lingkup(supabase.from('product_batches').select('*, products(kode)').order('expired_date'))
+    const { data } = await semua(() => lingkup(supabase.from('product_batches').select('*, products(kode)').order('expired_date')))
     const headers = ['kode_produk', 'batch_number', 'expired_date', 'stok_batch']
     unduhCSV('export_stok_batch.csv', headers, (data || []).map((b: any) => [b.products?.kode || '', b.batch_number || '', b.expired_date || '', String(b.stok_batch ?? '')]))
   }
   const exportTransaksi = async () => {
-    const { data } = await lingkup(supabase.from('transactions').select('*').order('created_at', { ascending: false }))
+    const { data } = await semua(() => lingkup(supabase.from('transactions').select('*').order('created_at', { ascending: false })))
     const headers = ['nomor_transaksi', 'tanggal', 'total', 'bayar', 'kembalian', 'status', 'nama_pasien', 'kontak_pasien', 'alamat_pasien', 'nomor_resep']
     unduhCSV('export_transaksi.csv', headers, (data || []).map((t: any) => [
       t.nomor_transaksi || '', t.created_at || '', String(t.total ?? ''), String(t.bayar ?? ''), String(t.kembalian ?? ''),
@@ -227,7 +228,7 @@ export default function HalamanMigrasi() {
     ]))
   }
   const exportFaktur = async () => {
-    const { data } = await lingkup(supabase.from('faktur').select('*, suppliers(nama_supplier), purchase_orders(nomor_po)').order('tanggal_faktur', { ascending: false }))
+    const { data } = await semua(() => lingkup(supabase.from('faktur').select('*, suppliers(nama_supplier), purchase_orders(nomor_po)').order('tanggal_faktur', { ascending: false })))
     const headers = ['nomor_faktur', 'supplier', 'nomor_po', 'tanggal_faktur', 'term_of_payment', 'tanggal_jatuh_tempo', 'total', 'status', 'tanggal_bayar', 'metode_bayar', 'catatan_bayar']
     unduhCSV('export_faktur.csv', headers, (data || []).map((f: any) => [
       f.nomor_faktur || '', f.suppliers?.nama_supplier || '', f.purchase_orders?.nomor_po || '', f.tanggal_faktur || '',

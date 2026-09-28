@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, HeartPulse, Search, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
 import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
@@ -98,7 +99,7 @@ export default function HalamanKasir() {
 
   const muat = useCallback(async () => {
     const [{ data: p }, { data: s }, { data: ins }] = await Promise.all([
-      scope(supabase.from('products').select('*').order('nama_obat')),
+      semua(() => scope(supabase.from('products').select('*').order('nama_obat'))),
       scope(supabase.from('services').select('*').eq('status', 'aktif').order('nama')),
       scope(supabase.from('insurers').select('id,nama').eq('aktif', true).order('nama')),
     ])

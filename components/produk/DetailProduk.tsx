@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Truck } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { semua } from '@/lib/semua'
 import { useLang } from '@/lib/i18n'
 import Dialog from '@/components/Dialog'
 import { TR } from '@/lib/ui'
@@ -44,13 +45,13 @@ export default function DetailProduk({ produk, profil, namaApoteker, onTutup, on
   const muat = useCallback(async () => {
     const [{ data: ps }, { data: b }, { data: out }, { data: inn }] = await Promise.all([
       supabase.from('product_suppliers').select('*, suppliers(*)').eq('product_id', produk.id),
-      supabase.from('product_batches').select('*').eq('product_id', produk.id).order('expired_date'),
+      semua(() => supabase.from('product_batches').select('*').eq('product_id', produk.id).order('expired_date')),
       // transaction_items tidak punya created_at sendiri, jadi urutkan di sini,
       // bukan lewat .order() yang akan diam-diam mengurutkan kolom yang salah.
-      supabase.from('transaction_items')
-        .select('*, transactions(nomor_transaksi, created_at, status)').eq('product_id', produk.id),
-      supabase.from('po_items')
-        .select('*, purchase_orders(nomor_po, tanggal_terima, status, suppliers(nama_supplier))').eq('product_id', produk.id),
+      semua(() => supabase.from('transaction_items')
+        .select('*, transactions(nomor_transaksi, created_at, status)').eq('product_id', produk.id)),
+      semua(() => supabase.from('po_items')
+        .select('*, purchase_orders(nomor_po, tanggal_terima, status, suppliers(nama_supplier))').eq('product_id', produk.id)),
     ])
     setSuppliers(ps || [])
     setBatches(b || [])

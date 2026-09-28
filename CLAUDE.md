@@ -2244,6 +2244,39 @@ TANPA `order by`. Untuk siapa pun yang terdaftar di dua fasilitas, PostgreSQL
 boleh mengembalikan yang mana saja dan boleh berbeda antar permintaan: data
 tersimpan ke outlet yang salah tanpa pernah muncul sebagai galat.
 
+## Jawaban Supabase berhenti di baris ke-1.000, tanpa galat
+
+PostgREST memotong tiap jawaban di **1.000 baris** (`max_rows`), dibuktikan
+28 September 2026: `icd10` menjawab `content-range: 0-999/18543`. Potongannya
+TIDAK muncul sebagai galat: `data` berisi 1.000 baris, `error` null, dan
+layarnya menjumlahkan yang ada.
+
+Sebelum ini tidak satu pun kueri daftar di project ini menarik per halaman.
+Akibatnya satu per satu, dan tidak ada yang akan dilaporkan sebagai galat:
+
+- Kasir, Produk, dan Pembelian tidak mengenal produk ke-1.001, padahal paket
+  Growth menjual 8.000 produk.
+- Laporan penjualan kehilangan transaksi sesudah yang ke-1.000. Apotek dengan
+  40 transaksi sehari melewatinya dalam 25 hari.
+- **SIPNAP menghitung saldo awal dari SELURUH riwayat**, jadi laporan wajib
+  narkotika mulai salah begitu riwayatnya lewat 1.000 baris.
+- Ekspor CSV, yang dipakai orang sebagai cadangan, terpotong.
+
+`semua()` di `lib/semua.ts` menarik halaman demi halaman sampai habis. Ia
+menerima FUNGSI yang membangun kuerinya (builder yang sudah di-await tidak
+bisa dipakai ulang) dan menambahkan urutan `id` sebagai pemutus seri, supaya
+dua halaman tidak saling beririsan.
+
+**Daftar baru mana pun yang bisa melewati 1.000 baris lewat `semua()`.**
+Kotak pencarian yang sudah `.limit(8)` tidak perlu. RPC yang mengembalikan
+`jsonb` tidak terpotong; RPC yang mengembalikan `setof`/`table` terpotong
+sama persis.
+
+Beranda sekalian berhenti menarik SELURUH riwayat item terjual: itemnya
+sekarang disaring lewat transaksinya (`transactions!inner(...)` lalu
+`.gte('transactions.created_at', ...)`). Menarik per halaman tanpa saringan
+itu hanya mengubah angka yang salah jadi halaman yang lambat.
+
 ## Tidak ada `alert`, `confirm`, atau `prompt` di aplikasi ini
 
 Semuanya lewat `components/Umpan.tsx`: `kabar()`, `konfirmasi()`, `tanya()`.

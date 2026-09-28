@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, Search, Eye, Pencil, Printer, Tag } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
@@ -78,7 +79,7 @@ export default function HalamanProduk() {
     mulai()
     const in60 = new Date(); in60.setDate(in60.getDate() + 60)
     const [{ data: p }, { count }] = await Promise.all([
-      scope(supabase.from('products').select('*').order('kode')),
+      semua(() => scope(supabase.from('products').select('*').order('kode'))),
       scope(supabase.from('product_batches').select('*', { count: 'exact', head: true })
         .lte('expired_date', in60.toISOString().split('T')[0])
         .gt('stok_batch', 0)

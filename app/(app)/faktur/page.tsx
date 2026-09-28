@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { CalendarClock, CreditCard, Printer, Receipt, Wallet } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
@@ -56,9 +57,9 @@ export default function HalamanFaktur() {
 
   const muat = async () => {
     mulai()
-    const { data } = await app.scope(
+    const { data } = await semua(() => app.scope(
       supabase.from('faktur').select('*, suppliers(nama_supplier), purchase_orders(nomor_po)'),
-    )
+    ))
     const rows = ((data as Faktur[]) || []).slice()
     // Belum lunas dulu, yang paling dekat jatuh tempo di atas. Halaman ini
     // dibuka untuk menjawab satu pertanyaan: mana yang harus dibayar hari ini.

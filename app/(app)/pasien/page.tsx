@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Eye, History, Pencil, Search, Stethoscope, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { usePemuat } from '@/lib/pemuat'
 import { useLang } from '@/lib/i18n'
@@ -50,7 +51,7 @@ export default function HalamanPasien() {
 
   const muat = useCallback(async () => {
     mulai()
-    const { data } = await app.scope(supabase.from('patients').select('*').order('nama'))
+    const { data } = await semua(() => app.scope(supabase.from('patients').select('*').order('nama')))
     setDaftar((data as Pasien[]) || [])
     selesai()
   // eslint-disable-next-line react-hooks/exhaustive-deps
