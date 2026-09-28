@@ -32,6 +32,17 @@ export default function Auth() {
       window.location.replace('/atur-sandi' + window.location.hash)
       return
     }
+    // Tautan konfirmasi pendaftaran juga mendarat di sini (Site URL). Sesinya
+    // sudah dibentuk supabase-js dari alamatnya; tanpa penerus ini orangnya
+    // melihat formulir masuk dan mengira harus mengetik sandinya lagi.
+    // /beranda yang menyelesaikan sisanya: membentuk faskes dari metadata
+    // akun, atau menerima undangan yang tertunda (lib/app-context.tsx).
+    if (/access_token=/.test(window.location.hash) && /type=(signup|invite|magiclink|email_change)/.test(window.location.hash)) {
+      const { data: dengar } = supabase.auth.onAuthStateChange((kejadian, sesi) => {
+        if (sesi && (kejadian === 'SIGNED_IN' || kejadian === 'INITIAL_SESSION')) window.location.replace('/beranda')
+      })
+      return () => dengar.subscription.unsubscribe()
+    }
     // "Minta tautan baru" dari halaman /atur-sandi membuka formulir ini langsung.
     if (new URLSearchParams(window.location.search).get('lupa') === '1') setMode('lupa')
   }, [])

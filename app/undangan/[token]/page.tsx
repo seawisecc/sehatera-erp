@@ -69,7 +69,8 @@ export default function HalamanUndangan({ params }: { params: Promise<{ token: s
   const buatAkun = async () => {
     setSalah(''); setPesan('')
     if (!nama.trim()) { setSalah(t('Nama wajib diisi.', 'Name is required.')); return }
-    if (sandi.length < 6) { setSalah(t('Kata sandi minimal 6 karakter.', 'Password must be at least 6 characters.')); return }
+    // Sama dengan pendaftaran, atur ulang sandi, dan setelan Auth Supabase (8).
+    if (sandi.length < 8) { setSalah(t('Kata sandi minimal 8 karakter.', 'Password must be at least 8 characters.')); return }
     if (sandi !== ulangi) { setSalah(t('Ulangi kata sandi tidak cocok.', 'Password confirmation does not match.')); return }
     setSibuk(true)
 

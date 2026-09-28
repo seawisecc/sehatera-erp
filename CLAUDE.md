@@ -123,6 +123,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0085_penomoran_per_faskes_sungguhan` | Trigger nomor lama dicabut, penomoran per faskes 0002 akhirnya berlaku; `next_doc_number` dikunci; indeks jalur harian |
 | `0086_penunjang_luar_katalog` | `minta_penunjang` berhenti gagal 55000 untuk pemeriksaan di luar katalog |
 | `0087_waktu_apotek_berzona` | Sembilan `created_at` apotek jadi timestamptz: jam tidak lagi mundur 8 jam |
+| `0088_email_wajib_dikonfirmasi` | Trigger `auto_confirm_email` di `auth.users` dicabut: email wajib dikonfirmasi |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -2375,6 +2376,13 @@ tanpa disalin balik ke sini akan hilang saat dipasang ulang. Warnanya ditulis
 harfiah (Vital Tide), alasan yang sama dengan `opengraph-image.tsx`: klien
 email tidak membaca CSS aplikasi, dan tata letaknya tabel dengan gaya inline
 karena Gmail dan Outlook membuang `<style>`.
+
+**Setelan Auth yang berlaku** (dashboard, 28 September 2026): Site URL
+`https://sehatera.seawise.id` (sebelumnya `http://localhost:3000`, jadi
+tautan di SETIAP email Auth mengarah ke laptop pengembang); Redirect URL
+`https://sehatera.seawise.id/**` dan `http://localhost:3000/**`; Confirm email
+MENYALA dan sejak migrasi 0088 benar-benar berlaku; minimal sandi 8.
+Perlindungan sandi bocor dan batas sesi TIDAK tersedia di paket Free.
 
 **Lupa kata sandi** lahir di hari yang sama: `/?lupa=1` dan `/atur-sandi`.
 Jawaban formulirnya sama untuk email terdaftar maupun tidak, supaya ia tidak
