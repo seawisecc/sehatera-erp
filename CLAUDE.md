@@ -2682,8 +2682,8 @@ Yang belum, dan alasannya masing-masing berbeda:
   klinik memang belum pernah dimintai DAN kode SNOMED yang dilarang ditebak.
 - **Radiologi** menunggu ImagingStudy, yang menuntut DICOM router dari PACS.
   Klinik pratama tidak punya PACS.
-- **Pemicu otomatis**: sekarang dua tombol ditekan tangan karena project ini
-  belum punya penjadwal.
+- **Pemicu otomatis**: rutenya ada (`/api/cron/satusehat`, migrasi 0080) tapi
+  pemicunya DIMATIKAN atas permintaan pemilik; lihat "Penjadwal pertama".
 - **Kode KFA untuk 24 obat sisanya**, diisi lewat pencari di Pengaturan.
 
 BPJS belum sama sekali: kredensialnya belum ada. Tempat menyimpannya sudah
@@ -2699,7 +2699,14 @@ terpelihara, dan yang setengah benar lebih berbahaya daripada tidak ada karena
 orang mulai memercayainya. Ini dikatakan di layar resep, bukan didiamkan.
 
 Payment gateway belum tersambung: pergantian paket masih manual lewat Super
-Admin. SMTP undangan tim belum disetel, tautannya dikirim tangan.
+Admin. Pemilik sedang menunggu review akun Midtrans; kode gateway TokoKu
+(selesai 13 September) adalah acuannya.
+
+**Email Auth sudah jalan** lewat Resend (lihat "Email: Resend lewat Custom
+SMTP"), tapi **undangan tim masih dikirim tangan**: undangan Sehatera adalah
+tabel `invitations` milik sendiri (0012), bukan undangan Supabase Auth, jadi
+SMTP Auth tidak mengirimnya. Butuh pengiriman lewat API Resend dari route
+handler dan `RESEND_API_KEY` di env Vercel.
 
 Paket **Klinik** PUBLIK sejak migrasi 0084 (28 September 2026, permintaan
 pemilik): Rp 1.490.000/bln, Rp 14.900.000/th. **Deskripsinya sengaja tidak
@@ -2711,6 +2718,49 @@ langsung mendapat masa coba paket Klinik (`register_faskes`), jadi gerbang
 0081 tidak menahan mereka. Rumah sakit tetap tidak ditawarkan di pendaftaran
 mandiri: harganya per implementasi, dan halaman `/kenapa` sekarang menyebut
 penawaran hanya untuk rumah sakit.
+
+
+### Posisi per 29 September 2026
+
+Sesi 28 September adalah audit menyeluruh (fitur, keamanan, UI, kecepatan)
+beserta perbaikannya, lalu lima fitur baru. Semuanya sudah di produksi,
+migrasi sampai **0092**, dan **seluruh 35 berkas uji lulus** lewat
+`bash scripts/uji-semua.sh`.
+
+Fitur baru: stok opname (0089), tutup kasir (0091), transfer stok antar
+outlet (0092), ganti kata sandi dari dalam aplikasi, keluar otomatis sesudah
+2 jam diam, lupa kata sandi lewat email. Yang dibetulkan dari audit, masing-
+masing dengan bagiannya sendiri di berkas ini: penomoran per faskes (0085),
+jam apotek mundur 8 jam (0087), SIPNAP yang dijangkarkan ke stok, email yang
+tidak pernah diverifikasi (0088), Site URL Auth yang masih localhost, peran
+yang tidak mengenal outlet (0090), daftar terpotong 1.000 baris, penunjang
+di luar katalog (0086), dan dialog yang merebut fokus.
+
+**Yang belum diuji di layar, hanya lewat uji database:** menerima transfer
+(butuh berpindah outlet aktif), tutup kasir dengan selisih betulan, dan
+opname dengan selisih betulan. Hasil cetak SIPNAP belum pernah dilihat
+sesudah perubahannya (jendela cetak diblokir di peramban otomatisasi); isi
+HTML-nya sudah dibaca dan benar.
+
+### Rencana berikutnya (usulan, urut dampak)
+
+1. **Panduan awal untuk faskes baru**: daftar centang di Beranda (profil,
+   poli, dokter, tarif, impor obat) yang hilang sendiri kalau selesai. Paket
+   Klinik kini publik dan pendaftaran mandiri, jadi ini yang menentukan masa
+   coba jadi pelanggan atau ditinggal.
+2. **Email undangan tim otomatis** lewat API Resend (lihat di atas).
+3. **Pengingat harian lewat email**: langganan habis 7 hari lagi, SIP habis
+   dalam 60 hari, ringkasan batch hampir kedaluwarsa. Satu jadwal harian masih
+   boleh di Vercel Hobby. Mengirim ke klien sungguhan, jadi penjadwalnya
+   dinyalakan hanya dengan persetujuan pemilik.
+4. **Cetak lembar hitung opname dan bukti setoran kasir.**
+5. Kerapian kecil dari audit HP: label "RATA-RATA / KUNJUNGAN" di Beranda
+   terlipat, dan tombol Tindak Lanjut memotong nama obat di layar sempit.
+
+**Menunggu pihak luar:** review akun Midtrans (gateway), kredensial BPJS dari
+klinik rekanan, verifikasi Sehatera sebagai Penyedia Sistem RME di SSP
+(SatuSehat produksi), kode KFA 24 obat demo (dipilih manusia), cek merek
+Sehatera di PDKI.
 
 ## Gambar bagikan: tidak pernah dibuka, jadi tidak pernah ketahuan basi
 
