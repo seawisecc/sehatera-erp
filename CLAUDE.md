@@ -2762,6 +2762,31 @@ klinik rekanan, verifikasi Sehatera sebagai Penyedia Sistem RME di SSP
 (SatuSehat produksi), kode KFA 24 obat demo (dipilih manusia), cek merek
 Sehatera di PDKI.
 
+## Migrasi Data: impor lewat jalur yang sama dengan layarnya
+
+Diperbarui 1 Oktober 2026 (`app/(app)/pengaturan/migrasi/page.tsx`).
+
+- **Impor pasien lewat `simpan_pasien()` baris per baris, BUKAN insert ke
+  `patients`.** Tabel itu tidak punya trigger yang menahan NIK dan telepon
+  kosong; aturannya cuma di dalam fungsi (0059). Nomor RM diterbitkan baru,
+  nomor lama masuk catatan. Tanpa NIK/telepon hanya lolos kalau
+  `alasan_identitas` diisi, dan itu masuk jejak audit.
+- **Kolom ekspor = kolom template impor** (produk, layanan, pasien,
+  asuransi), supaya hasil ekspor bisa diimpor ke outlet lain tanpa
+  kehilangan barcode, rak, atau kode KFA.
+- Impor stok awal menaikkan `stok_total` HANYA kalau batch-nya tersimpan.
+  Versi lama membuang galat insert, dan sejak SIPNAP dijangkarkan ke stok
+  sistem itu langsung jadi saldo narkotika yang salah.
+- Ekspor Kunjungan & Diagnosis ikut hak `rekam_medis.baca`.
+- Kolom baru pada tabel yang punya impor/ekspor: daftarkan di keduanya.
+
+**Laporan dicabut dari bawaan peran dokter** (keputusan pemilik, 1 Oktober
+2026): isinya omzet, piutang, klaim, dan setoran, bukan alat memeriksa
+pasien. Pemilik masih bisa memberikannya per orang lewat centang modul.
+Daftar pengguna sekarang menandai pengguna bermodul manual yang belum
+dicentang menu bawaan perannya, karena modul manual itu daftar beku dan
+menu baru (Opname, Transfer) tidak pernah masuk sendiri.
+
 ## Gambar bagikan: tidak pernah dibuka, jadi tidak pernah ketahuan basi
 
 `app/opengraph-image.tsx` adalah layar pertama yang dilihat calon klien, sering

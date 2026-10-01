@@ -86,7 +86,11 @@ export const ROLE_PAGES: Record<string, string[]> = {
   // Peran klinik. Pembagiannya mengikuti siapa memegang apa, bukan siapa lebih
   // senior: pendaftaran memegang identitas dan antrean tapi TIDAK boleh
   // membuka rekam medis, dokter memegang pemeriksaan tapi tidak perlu kasir.
-  dokter:           ['dashboard','reservasi','kunjungan','pasien','penunjang','laporan'],
+  // Laporan dicabut dari dokter atas keputusan pemilik (1 Oktober 2026):
+  // isinya omzet, piutang penjamin, klaim, dan setoran kasir, dan tidak satu
+  // pun dibutuhkan untuk memeriksa pasien. Pemilik tetap bisa memberikannya
+  // per orang lewat centang modul kalau dokternya juga pengelola klinik.
+  dokter:           ['dashboard','reservasi','kunjungan','pasien','penunjang'],
   perawat:          ['dashboard','reservasi','kunjungan','pasien','penunjang'],
   pendaftaran:      ['dashboard','reservasi','kunjungan','pasien','transaksi'],
   // Analis tidak diberi Kunjungan maupun Pasien: yang ia butuhkan cuma
@@ -104,6 +108,7 @@ export const ROLE_LABELS: Record<string, string> = {
   dokter: 'Dokter',
   perawat: 'Perawat',
   pendaftaran: 'Pendaftaran',
+  analis: 'Analis Lab & Radiologi',
   superadmin: 'Super Admin',
 }
 

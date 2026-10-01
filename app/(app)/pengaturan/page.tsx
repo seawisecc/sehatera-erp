@@ -14,6 +14,7 @@ import { useUmpan } from '@/components/Umpan'
 import { useTheme, ThemePicker } from '@/lib/theme'
 import { pesanError } from '@/lib/session'
 import { menuItems, ROLE_PAGES } from '@/lib/navigation'
+import { MODUL_SEKTOR } from '@/lib/faskes'
 import { tanggal, rupiah } from '@/lib/format'
 import JejakAudit from '@/components/JejakAudit'
 import PengaturanPoli from '@/components/klinik/PengaturanPoli'
@@ -250,6 +251,22 @@ export default function HalamanPengaturan() {
     kasir: t('Kasir', 'Cashier'), admin: 'Admin',
     dokter: t('Dokter', 'Doctor'), perawat: t('Perawat', 'Nurse'),
     pendaftaran: t('Pendaftaran', 'Front desk'),
+  }
+  /**
+   * Menu bawaan peran yang TIDAK ikut dicentang di modul manual pengguna.
+   *
+   * Modul manual adalah daftar beku: menu yang lahir sesudahnya (Stok Opname,
+   * Transfer Stok) tidak pernah masuk sendiri, jadi apoteker yang modulnya
+   * diatur sebelum menu itu ada tidak akan pernah melihatnya, dan tidak ada
+   * yang tahu kenapa. Yang dikatakan di sini cuma selisihnya; boleh jadi
+   * memang sengaja dicabut, dan itu keputusan pemilik, bukan layar ini.
+   */
+  const menuTakDicentang = (u: any): string[] => {
+    if (!Array.isArray(u.modules) || !u.modules.length) return []
+    const ada = MODUL_SEKTOR[app.sektor]
+    return (ROLE_PAGES[u.role] || [])
+      .filter(id => ada.includes(id) && !u.modules.includes(id))
+      .map(id => { const m = menuItems.find(x => x.id === id); return m ? t(m.label, m.en) : id })
   }
   // Poli cuma ada di klinik dan rumah sakit. Menampilkannya di apotek berarti
   // menawarkan sesuatu yang tidak akan pernah dipakai, dan tiap menu mati
@@ -903,7 +920,15 @@ export default function HalamanPengaturan() {
                                   <td className="px-4 py-3">
                                     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--surface-2)] text-[var(--brand-soft)]">{roleLabels[u.role] || u.role}</span>
                                   </td>
-                                  <td className="px-4 py-3 text-center text-xs text-[var(--ink-soft)]">{Array.isArray(u.modules) && u.modules.length ? `${u.modules.length} ${t('modul','modules')}` : t('default role','default role')}</td>
+                                  <td className="px-4 py-3 text-center text-xs text-[var(--ink-soft)]">
+                                    {Array.isArray(u.modules) && u.modules.length ? `${u.modules.length} ${t('modul','modules')}` : t('bawaan peran','role default')}
+                                    {menuTakDicentang(u).length > 0 && (
+                                      <span className="block mt-0.5 text-[11px] text-amber-700"
+                                        title={menuTakDicentang(u).join(', ')}>
+                                        {t(`${menuTakDicentang(u).length} menu bawaan belum dicentang`, `${menuTakDicentang(u).length} default menus unchecked`)}
+                                      </span>
+                                    )}
+                                  </td>
                                   <td className="px-4 py-3 text-center">
                                     <button onClick={() => toggleUserStatus(u)}
                                       className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
