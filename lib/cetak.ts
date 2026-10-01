@@ -1016,7 +1016,9 @@ table.isi{width:100%;border-collapse:collapse;margin:10px 0;font-size:11px;}
 table.isi th,table.isi td{border:1px solid #000;padding:5px 6px;vertical-align:top;}
 table.isi th{background:#eee;text-align:left;}
 table.isi td.n,table.isi th.n{text-align:right;white-space:nowrap;}
-table.isi td.isian{width:70px;}
+table.isi th.fisik{width:12%;}
+table.isi th.catatan{width:22%;}
+table.isi td.isian{height:30px;}
 table.isi tr{page-break-inside:avoid;}
 .beda td{font-weight:bold;}
 .ringkas{margin:8px 0;font-size:12px;}
@@ -1037,6 +1039,14 @@ table.isi tr{page-break-inside:avoid;}
  * - **Final**: berita acara. Sistem, fisik, selisih, dan alasan, dengan baris
  *   berselisih ditebalkan, lalu tanda tangan penghitung dan penanggung jawab.
  */
+/** "6 Agu 2026": tanggal kedaluwarsa di tabel, supaya kolomnya tidak memakan ruang tulis. */
+const tanggalPendek = (v: unknown): string => {
+  if (!v) return '-'
+  const d = new Date(v as string)
+  if (Number.isNaN(d.getTime())) return '-'
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 export function lembarOpname(p: ProfilApotek, d: DataOpname, items: BarisOpname[], opsi: { tampilSistem?: boolean } = {}): string {
   const final = d.status === 'final'
   const sistem = final || !!opsi.tampilSistem
@@ -1052,7 +1062,7 @@ export function lembarOpname(p: ProfilApotek, d: DataOpname, items: BarisOpname[
   <td>${teks(b.rak, '')}</td>
   <td>${teks(b.nama_obat)}<br><span style="font-weight:normal">${teks(b.kode, '')}</span></td>
   <td>${teks(b.batch_number, '(tanpa batch)')}</td>
-  <td>${b.expired_date ? tanggalPanjang(b.expired_date) : '-'}</td>
+  <td style="white-space:nowrap">${tanggalPendek(b.expired_date)}</td>
   <td>${teks(b.satuan, '')}</td>
   ${sistem ? `<td class="n">${teks(b.stok_sistem, '0')}</td>` : ''}
   ${final
@@ -1081,7 +1091,7 @@ ${final ? `<p class="ringkas">${berselisih.length} dari ${items.length} baris be
   <thead><tr>
     <th class="n">No</th><th>Rak</th><th>Obat</th><th>Batch</th><th>Kedaluwarsa</th><th>Satuan</th>
     ${sistem ? '<th class="n">Sistem</th>' : ''}
-    ${final ? '<th class="n">Fisik</th><th class="n">Selisih</th><th>Alasan</th>' : '<th>Fisik</th><th>Catatan</th>'}
+    ${final ? '<th class="n">Fisik</th><th class="n">Selisih</th><th>Alasan</th>' : '<th class="fisik">Fisik</th><th class="catatan">Catatan</th>'}
   </tr></thead>
   <tbody>${baris}</tbody>
 </table>

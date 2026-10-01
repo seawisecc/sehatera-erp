@@ -122,10 +122,16 @@ export default function Dialog({
       const kotak = kotakRef.current
       if (!kotak) return
       if (sentuh) { kotak.focus(); return }
-      const bisa = kotak.querySelector<HTMLElement>(
-        'input:not([type="hidden"]):not([readonly]), select, textarea, button, [href], [tabindex]:not([tabindex="-1"])',
-      )
-      bisa?.focus()
+      // DUA pencarian, bukan satu. querySelector dengan daftar ber-koma
+      // mengembalikan yang pertama menurut URUTAN DOKUMEN, bukan menurut
+      // urutan selektornya, dan tombol silang ada di kepala dialog sebelum
+      // isian mana pun. Jadi selama ini fokus selalu jatuh ke tombol silang,
+      // dan kasir yang langsung mengetik kas awal kehilangan ketikannya.
+      // Ketahuan 1 Oktober 2026 saat menguji Buka Kasir di layar.
+      const isian = kotak.querySelector<HTMLElement>(
+        'input:not([type="hidden"]):not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])')
+      const lain = kotak.querySelector<HTMLElement>('button, [href], [tabindex]:not([tabindex="-1"])')
+      ;(isian || lain)?.focus()
     }, 40)
 
     return () => {

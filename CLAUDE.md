@@ -128,6 +128,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0090_peran_ikut_outlet` | `peran_saya()` dan `my_context()` membaca peran di outlet yang sedang dibuka |
 | `0091_sesi_kasir` | `transactions.dibuat_oleh`, `sesi_kasir`, buka/tutup kasir dengan kas seharusnya yang dibekukan |
 | `0092_transfer_stok` | `stock_transfers`, kirim/terima/batal antar outlet satu kelompok, produk dicocokkan di penerima |
+| `0094_pesan_selisih_kasir_rupiah` | Pesan tolak `tutup_kasir()` menulis "Rp -5.000", bukan "-5,000" |
 | `0093_anggota_tim_langsung` | `tambah_anggota_tim()`, `izinkan_atur_sandi()`, `pengelola_faskes()`, `id_akun_by_email()` (server saja) |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
@@ -2475,6 +2476,14 @@ Laporan > Setoran Kasir (pemilik dan admin, `kasir.setoran`).
   pemilik/admin untuk kasir yang lupa menutup.
 - **Tidak memblokir penjualan.** Kasir yang lupa membuka sesi tetap melayani.
 
+## Dialog: isian dicari LEBIH DULU daripada tombol
+
+Sampai 1 Oktober 2026 autofokus dialog memakai satu `querySelector` berisi
+daftar ber-koma (`input, select, ..., button`). Daftar ber-koma mengembalikan
+yang pertama menurut URUTAN DOKUMEN, bukan urutan selektornya, dan tombol
+silang ada di kepala dialog, jadi fokus SELALU jatuh ke sana: kasir yang
+langsung mengetik kas awal kehilangan ketikannya. Sekarang dua pencarian.
+
 ## Dialog: `onTutup` di ref, jangan di dependensi
 
 Sampai 28 September 2026 efek autofokus `components/Dialog.tsx` bergantung
@@ -2736,11 +2745,18 @@ tidak pernah diverifikasi (0088), Site URL Auth yang masih localhost, peran
 yang tidak mengenal outlet (0090), daftar terpotong 1.000 baris, penunjang
 di luar katalog (0086), dan dialog yang merebut fokus.
 
-**Yang belum diuji di layar, hanya lewat uji database:** menerima transfer
-(butuh berpindah outlet aktif), tutup kasir dengan selisih betulan, dan
-opname dengan selisih betulan. Hasil cetak SIPNAP belum pernah dilihat
-sesudah perubahannya (jendela cetak diblokir di peramban otomatisasi); isi
-HTML-nya sudah dibaca dan benar.
+**Diuji di layar 1 Oktober 2026** di Rexco 88: transfer 1 Paracetamol ke
+Renon lalu diterima di sana (produk terbentuk di katalog Renon, batch dan
+kedaluwarsa ikut), tutup kasir dengan selisih -5.000 (ditolak tanpa catatan,
+bukti setoran tercetak), dan opname kategori Bebas dengan Zinc BOB-024-EXP
+7 -> 6 karena rusak. Ketiganya meninggalkan jejak di data demo, dan memang
+dimaksudkan begitu.
+
+Jendela cetak bisa dilihat di peramban otomatisasi dengan mengganti
+`window.open` di tab itu supaya mengembalikan `contentWindow` sebuah iframe
+(dengan `print` dikosongkan): `bukaCetak` menulis dokumennya ke sana tanpa
+jendela baru dan tanpa dialog cetak. Hasil cetak SIPNAP belum dilihat dengan
+cara itu.
 
 ### Rencana berikutnya (usulan, urut dampak)
 
