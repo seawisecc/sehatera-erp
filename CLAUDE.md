@@ -2757,9 +2757,16 @@ HTML-nya sudah dibaca dan benar.
    dalam 60 hari, ringkasan batch hampir kedaluwarsa. Satu jadwal harian masih
    boleh di Vercel Hobby. Mengirim ke klien sungguhan, jadi penjadwalnya
    dinyalakan hanya dengan persetujuan pemilik.
-4. **Cetak lembar hitung opname dan bukti setoran kasir.**
-5. Kerapian kecil dari audit HP: label "RATA-RATA / KUNJUNGAN" di Beranda
-   terlipat, dan tombol Tindak Lanjut memotong nama obat di layar sempit.
+4. ~~Cetak lembar hitung opname dan bukti setoran kasir~~ **SELESAI
+   1 Oktober 2026** (`lembarOpname`, `buktiSetoranKasir` di `lib/cetak.ts`).
+   Lembar hitung draf dicetak HITUNG BUTA, tanpa angka sistem: penghitung
+   yang melihat angka sistem cenderung menyalinnya, dan opname yang menyalin
+   sistem tidak menemukan apa pun. Urutnya per RAK, urutan orang berjalan.
+   Yang final jadi berita acara bertanda tangan. Bukti setoran memakai angka
+   yang DIBEKUKAN di `sesi_kasir`, jadi cetak ulangnya sama persis dengan
+   malam itu; rincian per metode sengaja tidak ikut karena tidak dibekukan.
+5. ~~Kerapian HP~~ **SELESAI 1 Oktober 2026**: label pendek untuk kartu
+   rata-rata di Beranda, nama obat di Tindak Lanjut boleh dua baris.
 
 **Menunggu pihak luar:** review akun Midtrans (gateway), kredensial BPJS dari
 klinik rekanan, verifikasi Sehatera sebagai Penyedia Sistem RME di SSP

@@ -195,7 +195,9 @@ export default function HalamanTindakLanjut() {
                           <div className="text-[9px] text-[var(--ink-faint)] mt-0.5 leading-none">{hari < 0 ? t('lewat', 'past') : t('hari lagi', 'days left')}</div>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-[var(--ink)] text-sm leading-tight truncate">{b.products?.nama_obat || '-'}</p>
+                          {/* Di ponsel nama obat boleh dua baris: yang terpotong justru bagian
+                              yang membedakan "Amoxicillin 500 mg" dari "Amoxicillin sirup". */}
+                          <p className="font-medium text-[var(--ink)] text-sm leading-tight break-words sm:truncate">{b.products?.nama_obat || '-'}</p>
                           <p className="text-[11px] text-[var(--ink-soft)] leading-tight mt-0.5">
                             <span className="num">{b.batch_number || '-'}</span> · {t('kadaluarsa', 'expiry')} {exp} · {t('stok', 'stock')} {angka(b.stok_batch)}
                           </p>
@@ -204,7 +206,7 @@ export default function HalamanTindakLanjut() {
                             wadah grupnya, dan enam kotak merah berjajar membuat
                             mata jatuh ke tombol alih-alih ke nama obatnya. */}
                         <button onClick={() => setPilih(b)}
-                          className={`shrink-0 px-3 py-1.5 rounded-lg border bg-[var(--surface)] text-xs font-semibold transition ${g.btn}`}>
+                          className={`shrink-0 px-2.5 sm:px-3 py-1.5 rounded-lg border bg-[var(--surface)] text-xs font-semibold transition ${g.btn}`}>
                           {t('Tindak Lanjut', 'Follow up')}
                         </button>
                       </div>

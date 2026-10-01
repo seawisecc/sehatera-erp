@@ -9,7 +9,7 @@
  */
 import {
   beritaAcaraPemusnahan, purchaseOrder, buktiPembayaranFaktur,
-  strukPenjualan, etiketObat, fakturPenjamin, labelRak,
+  strukPenjualan, etiketObat, fakturPenjamin, labelRak, lembarOpname, buktiSetoranKasir,
 } from './cetak'
 
 const p = { nama_faskes: 'Klinik Rexco 88', alamat: 'Denpasar', nomor_ijin: 'SIA/1', nomor_telepon: '0361', nama_apoteker: 'Apt. A', nomor_sipa: 'SIPA/1', kota: 'Denpasar' }
@@ -24,6 +24,9 @@ const dokumen: [string, string][] = [
     [{ nama_obat: 'Amoxicillin', jumlah: 10, satuan: 'tablet', rute: 'oral' }] as never)],
   ['fakturPenjamin', fakturPenjamin(p, { nomor: 'KL/1' } as never, [])],
   ['labelRak', labelRak(p, [{ nama_obat: 'Zinc', kode: 'OB-024' }] as never)],
+  ['lembarOpname draf', lembarOpname(p, { nomor: 'OPN/1', status: 'draf' }, [{ nama_obat: 'Codein <10>', stok_sistem: 40 }])],
+  ['lembarOpname final', lembarOpname(p, { nomor: 'OPN/1', status: 'final' }, [{ nama_obat: 'Codein', stok_sistem: 40, stok_fisik: 38, selisih: -2, alasan: 'rusak' }])],
+  ['buktiSetoranKasir', buktiSetoranKasir(p, { kasir_email: 'kasir@x.test', kas_awal: 100000, kas_seharusnya: 250000, kas_dihitung: 245000, selisih: -5000 })],
 ]
 
 // Suntikan yang sama persis dengan yang ada di `bukaCetak`.
@@ -65,6 +68,22 @@ for (const [nama, html] of dokumen) {
     gagal++
     console.log(`GAGAL ${nama}: ada komentar CSS panjang yang ikut tercetak`)
   } else console.log(`ok   ${nama}: tidak ada komentar panjang yang ikut tercetak`)
+}
+
+// Opname: lembar draf itu hitung BUTA, angka sistem tidak boleh tercetak.
+const draf = dokumen.find(d => d[0] === 'lembarOpname draf')![1]
+const final = dokumen.find(d => d[0] === 'lembarOpname final')![1]
+const setoran = dokumen.find(d => d[0] === 'buktiSetoranKasir')![1]
+const cekLain: [string, boolean][] = [
+  ['opname draf tanpa kolom Sistem', !draf.includes('>Sistem<') && !draf.includes('>40<')],
+  ['opname draf meloloskan karakter HTML', draf.includes('Codein &lt;10&gt;')],
+  ['opname final membawa sistem, fisik, selisih', final.includes('>40<') && final.includes('>38<') && final.includes('>-2<')],
+  ['opname final menebalkan yang berselisih', final.includes('class="beda"')],
+  ['setoran menyebut KURANG untuk selisih minus', setoran.includes('KURANG') && setoran.includes('Rp -5.000')],
+]
+for (const [apa, lulus] of cekLain) {
+  if (!lulus) { gagal++; console.log(`GAGAL ${apa}`) }
+  else console.log(`ok   ${apa}`)
 }
 
 if (gagal) throw new Error(`${gagal} pemeriksaan gagal`)

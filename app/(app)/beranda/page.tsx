@@ -249,7 +249,10 @@ export default function HalamanBeranda() {
     { label: t('Kunjungan', 'Visits'),        nilai: angka(kunjKini.kunjungan),  kini: kunjKini.kunjungan,  lalu: kunjLalu.kunjungan,  Icon: Stethoscope },
     { label: t('Pasien baru', 'New patients'), nilai: angka(kunjKini.pasienBaru), kini: kunjKini.pasienBaru, lalu: kunjLalu.pasienBaru, Icon: UserPlus },
     { label: t('Omzet', 'Revenue'),           nilai: rupiah(kini.omzet),         kini: kini.omzet,          lalu: lalu.omzet,          Icon: Wallet },
-    { label: t('Rata-rata / kunjungan', 'Average / visit'),
+    // `pendek` untuk ponsel: kartunya selebar setengah layar, dan label
+    // panjang terlipat dua baris sehingga angkanya tidak sejajar dengan
+    // kartu di sebelahnya.
+    { label: t('Rata-rata / kunjungan', 'Average / visit'), pendek: t('Per kunjungan', 'Per visit'),
       nilai: rupiah(kunjKini.kunjungan ? kini.omzet / kunjKini.kunjungan : 0),
       kini: kunjKini.kunjungan ? kini.omzet / kunjKini.kunjungan : 0,
       lalu: kunjLalu.kunjungan ? lalu.omzet / kunjLalu.kunjungan : 0, Icon: Receipt },
@@ -257,7 +260,7 @@ export default function HalamanBeranda() {
     { label: t('Omzet', 'Revenue'),                        nilai: rupiah(kini.omzet),    kini: kini.omzet,     lalu: lalu.omzet,     Icon: Wallet },
     { label: t('Transaksi', 'Transactions'),               nilai: angka(kini.transaksi), kini: kini.transaksi, lalu: lalu.transaksi, Icon: ShoppingCart },
     { label: t('Item terjual', 'Items sold'),              nilai: angka(kini.item),      kini: kini.item,      lalu: lalu.item,      Icon: Package },
-    { label: t('Rata-rata / transaksi', 'Average / sale'), nilai: rupiah(rata),          kini: rata,           lalu: rataLalu,       Icon: Receipt },
+    { label: t('Rata-rata / transaksi', 'Average / sale'), pendek: t('Per transaksi', 'Per sale'), nilai: rupiah(rata),          kini: rata,           lalu: rataLalu,       Icon: Receipt },
   ]
 
   const perluPerhatian = stokMinim.length + segeraExp.length + jatuhTempo.length
@@ -297,7 +300,11 @@ export default function HalamanBeranda() {
         {kartu.map((k, i) => (
           <div key={i} className={`${KARTU} p-4 sm:p-5`}>
             <div className="flex items-start justify-between gap-2 mb-3">
-              <p className="text-[11px] sm:text-xs text-[var(--ink-soft)] font-medium uppercase tracking-wide leading-tight">{k.label}</p>
+              <p className="text-[11px] sm:text-xs text-[var(--ink-soft)] font-medium uppercase tracking-wide leading-tight">
+                {'pendek' in k && k.pendek
+                  ? <><span className="sm:hidden">{k.pendek}</span><span className="hidden sm:inline">{k.label}</span></>
+                  : k.label}
+              </p>
               <k.Icon size={16} className="shrink-0 text-[var(--ink-faint)]" strokeWidth={1.9} />
             </div>
             <p className="text-xl sm:text-2xl font-bold text-[var(--ink)] leading-tight break-words num">

@@ -969,3 +969,186 @@ ${GAYA_BARCODE}
 <div class="lembar">${kartu}</div>
 </body></html>`
 }
+
+// ── Stok opname ──
+
+export type DataOpname = {
+  nomor?: string | null
+  tanggal?: string | null
+  cakupan?: string | null
+  status?: string | null
+  dibuat_oleh?: string | null
+  difinalkan_oleh?: string | null
+  difinalkan_pada?: string | null
+  catatan?: string | null
+}
+
+export type BarisOpname = {
+  kode?: string | null
+  nama_obat?: string | null
+  satuan?: string | null
+  rak?: string | null
+  batch_number?: string | null
+  expired_date?: string | null
+  stok_sistem?: number | null
+  stok_fisik?: number | null
+  selisih?: number | null
+  alasan?: string | null
+}
+
+const GAYA_TABEL_OPNAME = `
+.meta{display:flex;flex-wrap:wrap;gap:4px 24px;margin:8px 0 4px;font-size:11px;}
+table.isi{width:100%;border-collapse:collapse;margin:10px 0;font-size:11px;}
+table.isi th,table.isi td{border:1px solid #000;padding:5px 6px;vertical-align:top;}
+table.isi th{background:#eee;text-align:left;}
+table.isi td.n,table.isi th.n{text-align:right;white-space:nowrap;}
+table.isi td.isian{width:70px;}
+table.isi tr{page-break-inside:avoid;}
+.beda td{font-weight:bold;}
+.ringkas{margin:8px 0;font-size:12px;}
+`
+
+/**
+ * Lembar hitung opname, dan berita acara hasilnya.
+ *
+ * SATU templat untuk dua keadaan, alasan yang sama dengan berita acara
+ * pemusnahan: dokumen opname yang dicetak dua kali dengan tata letak berbeda
+ * akan dipertanyakan saat pemeriksaan.
+ *
+ * - **Draf**: lembar yang dibawa ke rak. Kolom fisik KOSONG untuk diisi
+ *   tangan, urut rak lalu nama, karena itu urutan orang berjalan. Stok sistem
+ *   sengaja TIDAK dicetak bawaannya (hitung buta): penghitung yang melihat
+ *   angka sistem cenderung menulis angka itu, dan opname yang menyalin sistem
+ *   tidak menemukan apa pun.
+ * - **Final**: berita acara. Sistem, fisik, selisih, dan alasan, dengan baris
+ *   berselisih ditebalkan, lalu tanda tangan penghitung dan penanggung jawab.
+ */
+export function lembarOpname(p: ProfilApotek, d: DataOpname, items: BarisOpname[], opsi: { tampilSistem?: boolean } = {}): string {
+  const final = d.status === 'final'
+  const sistem = final || !!opsi.tampilSistem
+  const berselisih = items.filter(b => (b.selisih ?? 0) !== 0)
+  const tambah = berselisih.reduce((a, b) => a + Math.max(0, b.selisih || 0), 0)
+  const kurang = berselisih.reduce((a, b) => a + Math.max(0, -(b.selisih || 0)), 0)
+
+  const baris = items.map((b, i) => {
+    const beda = final && (b.selisih ?? 0) !== 0
+    const sel = b.selisih ?? 0
+    return `<tr${beda ? ' class="beda"' : ''}>
+  <td class="n">${i + 1}</td>
+  <td>${teks(b.rak, '')}</td>
+  <td>${teks(b.nama_obat)}<br><span style="font-weight:normal">${teks(b.kode, '')}</span></td>
+  <td>${teks(b.batch_number, '(tanpa batch)')}</td>
+  <td>${b.expired_date ? tanggalPanjang(b.expired_date) : '-'}</td>
+  <td>${teks(b.satuan, '')}</td>
+  ${sistem ? `<td class="n">${teks(b.stok_sistem, '0')}</td>` : ''}
+  ${final
+    ? `<td class="n">${teks(b.stok_fisik, '-')}</td><td class="n">${sel > 0 ? '+' : ''}${sel}</td><td>${teks(b.alasan, '')}</td>`
+    : `<td class="isian"></td><td class="isian"></td>`}
+</tr>`
+  }).join('')
+
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8">
+<title>${final ? 'Berita Acara Stok Opname' : 'Lembar Hitung Opname'} ${teks(d.nomor, '')}</title>
+<style>${GAYA_DOKUMEN}${GAYA_TABEL_OPNAME}
+@page{margin:12mm;}
+</style></head><body>
+${kepalaApotek(p)}
+<h1>${final ? 'BERITA ACARA STOK OPNAME' : 'LEMBAR HITUNG STOK OPNAME'}</h1>
+<h2>No: ${teks(d.nomor)}</h2>
+<div class="meta">
+  <span>Tanggal: ${tanggalPanjang(d.tanggal)}</span>
+  <span>Cakupan: ${teks(d.cakupan, 'Semua produk')}</span>
+  <span>Jumlah baris: ${items.length}</span>
+  ${d.catatan ? `<span>Catatan: ${teks(d.catatan)}</span>` : ''}
+</div>
+${final ? `<p class="ringkas">${berselisih.length} dari ${items.length} baris berselisih. Stok bertambah ${tambah} dan berkurang ${kurang} unit. Difinalkan ${tanggalPanjang(d.difinalkan_pada)} oleh ${teks(d.difinalkan_oleh)}.</p>`
+  : `<p class="ringkas">Isi kolom Fisik dengan jumlah yang benar-benar dihitung, termasuk 0 kalau kosong. Tulis alasan di kolom Catatan untuk barang rusak, hilang, atau kedaluwarsa.</p>`}
+<table class="isi">
+  <thead><tr>
+    <th class="n">No</th><th>Rak</th><th>Obat</th><th>Batch</th><th>Kedaluwarsa</th><th>Satuan</th>
+    ${sistem ? '<th class="n">Sistem</th>' : ''}
+    ${final ? '<th class="n">Fisik</th><th class="n">Selisih</th><th>Alasan</th>' : '<th>Fisik</th><th>Catatan</th>'}
+  </tr></thead>
+  <tbody>${baris}</tbody>
+</table>
+<div class="ttd">
+  <div class="ttd-box"><p>Dihitung oleh</p><div class="ttd-line"></div><p><b>${final ? teks(d.dibuat_oleh) : '&nbsp;'}</b></p></div>
+  <div class="ttd-box"><p>Diperiksa oleh</p><div class="ttd-line"></div><p>&nbsp;</p></div>
+  <div class="ttd-box">
+    <p>Penanggung Jawab</p><div class="ttd-line"></div>
+    <p><b>${teks(p.nama_apoteker)}</b></p>${p.nomor_sipa ? `<p>SIPA: ${teks(p.nomor_sipa)}</p>` : ''}
+  </div>
+</div>
+</body></html>`
+}
+
+// ── Setoran kasir ──
+
+export type DataSetoran = {
+  kasir_email?: string | null
+  kasir_nama?: string | null
+  dibuka_pada?: string | null
+  ditutup_pada?: string | null
+  kas_awal?: number | null
+  tunai_diterima?: number | null
+  non_tunai?: number | null
+  jumlah_transaksi?: number | null
+  kas_seharusnya?: number | null
+  kas_dihitung?: number | null
+  selisih?: number | null
+  catatan?: string | null
+}
+
+const jamPanjang = (v: unknown): string => {
+  if (!v) return '-'
+  const d = new Date(v as string)
+  if (Number.isNaN(d.getTime())) return '-'
+  return d.toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+/**
+ * Bukti setoran kasir: kertas yang ikut uang laci saat diserahkan.
+ *
+ * Angkanya diambil dari baris `sesi_kasir` yang DIBEKUKAN saat tutup
+ * (migrasi 0091), bukan dihitung ulang, jadi bukti yang dicetak ulang minggu
+ * depan sama persis dengan yang ditandatangani malam itu walau ada transaksi
+ * yang dibatalkan sesudahnya. Rincian per metode bayar sengaja tidak ikut:
+ * ia tidak dibekukan, jadi cetak ulangnya bisa berbeda.
+ */
+export function buktiSetoranKasir(p: ProfilApotek, d: DataSetoran): string {
+  const sel = Number(d.selisih || 0)
+  const ket = sel === 0 ? 'COCOK' : sel > 0 ? 'LEBIH' : 'KURANG'
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8">
+<title>Bukti Setoran Kasir ${teks(d.kasir_email, '')}</title>
+<style>${GAYA_DOKUMEN}
+body{max-width:640px;margin:0 auto;}
+table.uang td.n{text-align:right;white-space:nowrap;}
+table.uang td{vertical-align:middle;}
+table.uang tr.garis td{border-top:1px solid #000;}
+table.uang tr.tebal td{font-weight:bold;font-size:13px;}
+.cap{display:inline-block;border:2px solid #000;font-weight:bold;padding:3px 12px;letter-spacing:2px;}
+</style></head><body>
+${kepalaApotek(p)}
+<h1>BUKTI SETORAN KASIR</h1>
+<h2>${jamPanjang(d.ditutup_pada)}</h2>
+<table>
+  <tr><td class="label">Kasir</td><td>: ${teks(d.kasir_nama || d.kasir_email)}${d.kasir_nama ? ` (${teks(d.kasir_email)})` : ''}</td></tr>
+  <tr><td class="label">Dibuka</td><td>: ${jamPanjang(d.dibuka_pada)}</td></tr>
+  <tr><td class="label">Ditutup</td><td>: ${jamPanjang(d.ditutup_pada)}</td></tr>
+  <tr><td class="label">Jumlah transaksi</td><td>: ${teks(d.jumlah_transaksi, '0')}</td></tr>
+</table>
+<table class="uang">
+  <tr><td>Kas awal</td><td class="n">${rupiah(d.kas_awal)}</td></tr>
+  <tr><td>Tunai diterima</td><td class="n">${rupiah(d.tunai_diterima)}</td></tr>
+  <tr class="garis tebal"><td>Seharusnya di laci</td><td class="n">${rupiah(d.kas_seharusnya)}</td></tr>
+  <tr class="tebal"><td>Dihitung saat tutup</td><td class="n">${rupiah(d.kas_dihitung)}</td></tr>
+  <tr class="garis tebal"><td>Selisih <span class="cap">${ket}</span></td><td class="n">${rupiah(sel)}</td></tr>
+  <tr><td>Non-tunai (tidak di laci)</td><td class="n">${rupiah(d.non_tunai)}</td></tr>
+</table>
+${d.catatan ? `<p><b>Catatan selisih:</b> ${teks(d.catatan)}</p>` : ''}
+<div class="ttd">
+  <div class="ttd-box"><p>Diserahkan oleh</p><div class="ttd-line"></div><p><b>${teks(d.kasir_nama || d.kasir_email)}</b></p></div>
+  <div class="ttd-box"><p>Diterima oleh</p><div class="ttd-line"></div><p>&nbsp;</p></div>
+</div>
+</body></html>`
+}

@@ -1,7 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { Printer } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { bukaCetak, buktiSetoranKasir } from '@/lib/cetak'
+import { useUmpan } from '@/components/Umpan'
+import TombolIkon from '@/components/TombolIkon'
 import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -24,7 +28,15 @@ type Baris = {
 export default function SetoranKasir() {
   const app = useApp()
   const { t } = useLang()
+  const { kabar } = useUmpan()
   const [daftar, setDaftar] = useState<Baris[] | null>(null)
+
+  // Cetak ulang dari angka yang DIBEKUKAN, jadi sama persis dengan yang
+  // ditandatangani malam itu.
+  const cetak = (b: Baris) => {
+    const ok = bukaCetak(buktiSetoranKasir(app.settingsData || {}, b), 800, 900)
+    if (!ok) kabar(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
+  }
 
   const muat = useCallback(async () => {
     const { data } = await semua<Baris>(() => app.scope(supabase.from('sesi_kasir').select('*').order('dibuka_pada', { ascending: false })))
@@ -57,13 +69,14 @@ export default function SetoranKasir() {
               <th className={TH_R}>{t('Dihitung', 'Counted')}</th>
               <th className={TH_R}>{t('Selisih', 'Diff.')}</th>
               <th className={TH_L}>{t('Catatan', 'Note')}</th>
+              <th className={TH_L}><span className="sr-only">{t('Cetak', 'Print')}</span></th>
             </tr>
           </thead>
           <tbody>
             {daftar === null ? (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-[var(--ink-faint)]">{t('Memuat…', 'Loading…')}</td></tr>
+              <tr><td colSpan={9} className="px-4 py-10 text-center text-[var(--ink-faint)]">{t('Memuat…', 'Loading…')}</td></tr>
             ) : daftar.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-[var(--ink-faint)]">
+              <tr><td colSpan={9} className="px-4 py-10 text-center text-[var(--ink-faint)]">
                 {t('Belum ada sesi kasir. Kasir membukanya dari layar Kasir.', 'No register sessions yet. Cashiers open them from the Cashier screen.')}
               </td></tr>
             ) : daftar.map(b => {
@@ -84,6 +97,13 @@ export default function SetoranKasir() {
                     {b.status === 'buka' ? '-' : rupiah(sel)}
                   </td>
                   <td className="px-4 py-2.5 text-xs text-[var(--ink-soft)]">{b.catatan || '-'}</td>
+                  <td className="px-2 py-1.5">
+                    {b.status !== 'buka' && (
+                      <TombolIkon label={t('Cetak bukti setoran', 'Print deposit slip')} onClick={() => cetak(b)}>
+                        <Printer size={14} />
+                      </TombolIkon>
+                    )}
+                  </td>
                 </tr>
               )
             })}

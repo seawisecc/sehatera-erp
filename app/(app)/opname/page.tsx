@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ClipboardCheck, Search, ArrowLeft } from 'lucide-react'
+import { ClipboardCheck, Search, ArrowLeft, Printer } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
@@ -14,6 +14,7 @@ import { angka, tanggal, tanggalJam } from '@/lib/format'
 import { KATEGORI_LABEL, TBL_WRAP, TBL_KARTU, TBL_KARTU_WADAH, TBL, THEAD, TH_L, TH_R, TH_C, TR } from '@/lib/ui'
 import { useBertahap, TombolLagi } from '@/lib/bertahap'
 import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
+import { bukaCetak, lembarOpname } from '@/lib/cetak'
 
 /**
  * Stok opname: menghitung fisik, lalu menyesuaikan stok DENGAN ALASAN.
@@ -38,7 +39,7 @@ type Baris = {
   id: string; product_id: string; batch_id: string | null
   stok_sistem: number; stok_fisik: number | null; selisih: number | null
   alasan: string | null; catatan: string | null
-  products: { nama_obat: string; kode: string | null; satuan: string | null; kategori: string | null } | null
+  products: { nama_obat: string; kode: string | null; satuan: string | null; kategori: string | null; rak: string | null } | null
   product_batches: { batch_number: string | null; expired_date: string | null } | null
 }
 
@@ -98,7 +99,7 @@ export default function StokOpname() {
   const bukaOpname = useCallback(async (o: Opname) => {
     setPilih(o); setUbah({}); setCari(''); setSaring('semua'); setMuatBaris(true)
     const { data, error } = await semua<Baris>(() => supabase.from('stock_opname_items')
-      .select('id,product_id,batch_id,stok_sistem,stok_fisik,selisih,alasan,catatan,products(nama_obat,kode,satuan,kategori),product_batches(batch_number,expired_date)')
+      .select('id,product_id,batch_id,stok_sistem,stok_fisik,selisih,alasan,catatan,products(nama_obat,kode,satuan,kategori,rak),product_batches(batch_number,expired_date)')
       .eq('opname_id', o.id))
     if (error) kabar(pesanError(error), 'galat')
     // Urut nama obat, lalu kedaluwarsa terdekat: urutan orang berjalan di rak.
@@ -231,6 +232,30 @@ export default function StokOpname() {
     setPilih(null); setUbah({})
   }
 
+  /**
+   * Lembar yang dibawa ke rak (draf) atau berita acaranya (final). Urutnya
+   * RAK lebih dulu, bukan nama: di layar orang mencari, di gudang orang
+   * berjalan, dan lembar yang urut abjad membuatnya bolak-balik antar rak.
+   * Draf dicetak dengan hitung buta; lihat `lembarOpname`.
+   */
+  const cetak = () => {
+    if (!pilih) return
+    const urut = [...baris].sort((a, b) =>
+      (a.products?.rak || '\uffff').localeCompare(b.products?.rak || '\uffff', 'id', { numeric: true })
+      || (a.products?.nama_obat || '').localeCompare(b.products?.nama_obat || '', 'id')
+      || (a.product_batches?.expired_date || '9999').localeCompare(b.product_batches?.expired_date || '9999'))
+    const ok = bukaCetak(lembarOpname(app.settingsData || {}, {
+      nomor: pilih.nomor, tanggal: pilih.tanggal, cakupan: namaCakupan(pilih.kategori), status: pilih.status,
+      dibuat_oleh: pilih.dibuat_oleh, difinalkan_oleh: pilih.difinalkan_oleh, difinalkan_pada: pilih.difinalkan_pada,
+      catatan: pilih.catatan,
+    }, urut.map(b => ({
+      kode: b.products?.kode, nama_obat: b.products?.nama_obat, satuan: b.products?.satuan, rak: b.products?.rak,
+      batch_number: b.product_batches?.batch_number, expired_date: b.product_batches?.expired_date,
+      stok_sistem: b.stok_sistem, stok_fisik: b.stok_fisik, selisih: b.selisih, alasan: b.alasan,
+    }))), 1100, 800)
+    if (!ok) kabar(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
+  }
+
   const adaDraf = daftar.some(o => o.status === 'draf')
   const namaCakupan = (k: string | null) => k ? (KATEGORI_LABEL[k] || k) : t('Semua produk', 'All products')
 
@@ -254,19 +279,24 @@ export default function StokOpname() {
               {pilih.alasan_batal && <> · {t('dibatalkan', 'cancelled')}: {pilih.alasan_batal}</>}
             </p>
           </div>
-          {draf && (
+          {(draf || pilih.status === 'final') && (
             <div className="flex flex-wrap items-center gap-2">
-              {bolehHitung && (
+              {baris.length > 0 && (
+                <button onClick={cetak} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[var(--line)] text-sm text-[var(--ink-soft)] hover:bg-[var(--surface-2)]">
+                  <Printer size={15} /> {draf ? t('Cetak lembar hitung', 'Print count sheet') : t('Cetak berita acara', 'Print report')}
+                </button>
+              )}
+              {draf && bolehHitung && (
                 <button onClick={batalkan} disabled={sibuk} className="px-3.5 py-2 rounded-xl border border-[var(--line)] text-sm text-[var(--ink-soft)] hover:bg-[var(--surface-2)] disabled:opacity-50">
                   {t('Batalkan', 'Cancel')}
                 </button>
               )}
-              {bolehHitung && (
+              {draf && bolehHitung && (
                 <button onClick={simpan} disabled={sibuk || belumDisimpan === 0} className="px-3.5 py-2 rounded-xl border border-[var(--brand)] text-sm font-semibold text-[var(--brand)] hover:bg-[var(--surface-2)] disabled:opacity-40">
                   {t('Simpan hitungan', 'Save counts')}{belumDisimpan > 0 && <span className="num"> ({belumDisimpan})</span>}
                 </button>
               )}
-              {bolehFinal && (
+              {draf && bolehFinal && (
                 <button onClick={finalkan} disabled={sibuk} className="px-3.5 py-2 rounded-xl bg-[var(--brand)] text-[var(--on-brand)] text-sm font-semibold hover:bg-[var(--brand-hover)] disabled:opacity-50">
                   {t('Finalkan', 'Finalize')}
                 </button>

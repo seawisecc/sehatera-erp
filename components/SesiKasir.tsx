@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Wallet } from 'lucide-react'
+import { Printer, Wallet } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
@@ -10,6 +10,7 @@ import { pesanError } from '@/lib/session'
 import { rupiah, jam } from '@/lib/format'
 import { boleh } from '@/lib/hak'
 import Dialog, { TOMBOL_KEDUA, TOMBOL_UTAMA } from '@/components/Dialog'
+import { bukaCetak, buktiSetoranKasir, type DataSetoran } from '@/lib/cetak'
 
 /**
  * Sesi kasir di atas layar Kasir: buka dengan kas awal, tutup dengan uang yang
@@ -39,6 +40,9 @@ export default function SesiKasir({ segarkan }: { segarkan: number }) {
   const [dihitung, setDihitung] = useState('')
   const [catatan, setCatatan] = useState('')
   const [sibuk, setSibuk] = useState(false)
+  // Sesi yang BARU ditutup, supaya buktinya bisa dicetak saat uangnya
+  // diserahkan. Bertahan sampai kasir membuka sesi berikutnya atau menutupnya.
+  const [ditutup, setDitutup] = useState<DataSetoran | null>(null)
 
   const email = app.session?.email?.toLowerCase() || ''
   const bolehSesi = boleh(app.currentRole, 'kasir.sesi', app.isSuper)
@@ -71,7 +75,7 @@ export default function SesiKasir({ segarkan }: { segarkan: number }) {
     const { error } = await supabase.rpc('buka_kasir', { p_kas_awal: angkaSaja(kasAwal) })
     setSibuk(false)
     if (error) { kabar(pesanError(error), 'galat'); return }
-    setBukaBuka(false); setKasAwal('')
+    setBukaBuka(false); setKasAwal(''); setDitutup(null)
     kabar(t('Kasir dibuka.', 'Register opened.'), 'ok')
     muat()
   }
@@ -85,12 +89,19 @@ export default function SesiKasir({ segarkan }: { segarkan: number }) {
     setSibuk(false)
     if (error) { kabar(pesanError(error), 'galat'); return }
     setBukaTutup(false); setDihitung(''); setCatatan('')
+    setDitutup({ ...data, kasir_nama: app.authName || null })
     const sel = Number(data.selisih || 0)
     kabar(sel === 0
       ? t('Kasir ditutup. Laci cocok.', 'Register closed. Drawer balances.')
       : t(`Kasir ditutup dengan selisih ${rupiah(sel)}. Catatannya tersimpan untuk pemilik.`,
           `Register closed with a difference of ${rupiah(sel)}. The note is saved for the owner.`), sel === 0 ? 'ok' : 'info')
     muat()
+  }
+
+  const cetakBukti = () => {
+    if (!ditutup) return
+    const ok = bukaCetak(buktiSetoranKasir(app.settingsData || {}, ditutup), 800, 900)
+    if (!ok) kabar(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
   }
 
   const selisihSementara = hitung && dihitung.trim() !== '' ? angkaSaja(dihitung) - hitung.kas_seharusnya : null
@@ -110,7 +121,20 @@ export default function SesiKasir({ segarkan }: { segarkan: number }) {
             {t('Tutup kasir', 'Close register')}
           </button>
         </div>
-      ) : (
+      ) : (<>
+        {ditutup && (
+          <div className="mb-3 flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--line)] text-sm">
+            <span className="text-[var(--ink)]">
+              {t('Kasir ditutup', 'Register closed')} <span className="num">{jam(ditutup.ditutup_pada as string)}</span>.{' '}
+              {t('Serahkan uang laci bersama bukti setorannya.', 'Hand over the drawer cash with its deposit slip.')}
+            </span>
+            <button onClick={cetakBukti}
+              className="ml-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-[var(--brand)] text-[var(--brand)] font-semibold hover:bg-[var(--surface-2)]">
+              <Printer size={15} /> {t('Cetak bukti setoran', 'Print deposit slip')}
+            </button>
+            <button onClick={() => setDitutup(null)} className="text-xs text-[var(--ink-faint)] hover:text-[var(--ink)]">{t('Tutup', 'Dismiss')}</button>
+          </div>
+        )}
         <div className="mb-5 flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl bg-[var(--surface-2)] border border-dashed border-[var(--line)] text-sm">
           <Wallet size={16} className="text-[var(--ink-faint)]" />
           <span className="text-[var(--ink-soft)]">
@@ -122,7 +146,7 @@ export default function SesiKasir({ segarkan }: { segarkan: number }) {
             {t('Buka kasir', 'Open register')}
           </button>
         </div>
-      )}
+      </>)}
 
       {bukaBuka && (
         <Dialog judul={t('Buka kasir', 'Open register')} lebar="sm" onTutup={() => setBukaBuka(false)}
