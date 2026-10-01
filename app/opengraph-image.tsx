@@ -131,7 +131,7 @@ export default function OpengraphImage() {
         </div>
 
         <div style={{ display: 'flex', fontSize: 25, color: '#c7e6ef', lineHeight: 1.45, marginBottom: 38, maxWidth: 900 }}>
-          {'Rekam medis, e-resep, antrean poli, kasir dengan batch & kadaluarsa, klaim penjamin, laporan SIPNAP, dan pengiriman ke SatuSehat.'}
+          {'Rekam medis, e-resep, antrean poli, kasir dengan batch & kedaluwarsa, klaim penjamin, laporan SIPNAP, dan data yang siap dikirim ke SatuSehat.'}
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap' }}>

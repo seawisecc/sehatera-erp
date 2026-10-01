@@ -67,7 +67,7 @@ const TITLE = "Sehatera | Sistem Apotek, Klinik, dan Rumah Sakit";
  * pertama yang dipotong pratinjau harus memuat alasan orang berhenti menggulung.
  */
 const DESCRIPTION =
-  "Rekam medis elektronik, e-resep, antrean per poli, reservasi, kasir dengan batch & kadaluarsa, klaim BPJS & asuransi, laporan SIPNAP, dan pengiriman ke SatuSehat. Untuk apotek, klinik, dan rumah sakit.";
+  "Rekam medis elektronik, e-resep, antrean per poli, reservasi, kasir dengan batch & kedaluwarsa, klaim BPJS & asuransi, laporan SIPNAP, dan data yang siap dikirim ke SatuSehat. Untuk apotek, klinik, dan rumah sakit.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
