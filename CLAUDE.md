@@ -2744,10 +2744,13 @@ HTML-nya sudah dibaca dan benar.
 
 ### Rencana berikutnya (usulan, urut dampak)
 
-1. **Panduan awal untuk faskes baru**: daftar centang di Beranda (profil,
-   poli, dokter, tarif, impor obat) yang hilang sendiri kalau selesai. Paket
-   Klinik kini publik dan pendaftaran mandiri, jadi ini yang menentukan masa
-   coba jadi pelanggan atau ditinggal.
+1. ~~Panduan awal untuk faskes baru~~ **SELESAI 1 Oktober 2026**
+   (`components/PanduanAwal.tsx`). Tiap butir DIHITUNG dari data, bukan
+   dicentang tangan, jadi ia hilang sendiri begitu semuanya terisi dan muncul
+   lagi kalau ada yang dihapus. Hanya pemilik, admin, dan super admin yang
+   sedang melihat satu klien. Butir menunjuk ke tab yang BENAR-BENAR memuat
+   kolomnya: apoteker dan SIPA ada di tab `apoteker`, bukan `profil`, dan
+   versi pertama sempat salah menunjuk.
 2. **Email undangan tim otomatis** lewat API Resend (lihat di atas).
 3. **Pengingat harian lewat email**: langganan habis 7 hari lagi, SIP habis
    dalam 60 hari, ringkasan batch hampir kedaluwarsa. Satu jadwal harian masih

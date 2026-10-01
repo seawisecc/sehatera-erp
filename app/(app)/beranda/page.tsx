@@ -11,6 +11,7 @@ import { semua } from '@/lib/semua'
 import { useApp } from '@/lib/app-context'
 import { useLang } from '@/lib/i18n'
 import { rupiah, angka, desimal, tanggalLokal } from '@/lib/format'
+import PanduanAwal from '@/components/PanduanAwal'
 
 /**
  * Beranda: ringkasan satu layar.
@@ -288,6 +289,8 @@ export default function HalamanBeranda() {
           ))}
         </div>
       </div>
+
+      <PanduanAwal />
 
       {/* ── Angka utama, masing-masing dengan pembandingnya ── */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
