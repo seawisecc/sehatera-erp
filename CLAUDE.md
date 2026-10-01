@@ -128,6 +128,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0090_peran_ikut_outlet` | `peran_saya()` dan `my_context()` membaca peran di outlet yang sedang dibuka |
 | `0091_sesi_kasir` | `transactions.dibuat_oleh`, `sesi_kasir`, buka/tutup kasir dengan kas seharusnya yang dibekukan |
 | `0092_transfer_stok` | `stock_transfers`, kirim/terima/batal antar outlet satu kelompok, produk dicocokkan di penerima |
+| `0095_kode_produk_supplier_per_faskes` | Kode OBT/SUP per faskes lewat `kode_berikut()`, indeks unik global dibuang, kode otomatis lama dinomori ulang |
 | `0094_pesan_selisih_kasir_rupiah` | Pesan tolak `tutup_kasir()` menulis "Rp -5.000", bukan "-5,000" |
 | `0093_anggota_tim_langsung` | `tambah_anggota_tim()`, `izinkan_atur_sandi()`, `pengelola_faskes()`, `id_akun_by_email()` (server saja) |
 
@@ -2334,6 +2335,43 @@ select tgname from pg_trigger where tgrelid = 'public.x'::regclass
 `auto_confirm_email` (email dianggap terverifikasi saat mendaftar) sama-sama
 dari sana, tidak ada di migrasi mana pun, dan tidak ketahuan dari membaca
 folder migrasi. Yang berlaku adalah katalog database, bukan berkasnya.
+
+## Kode produk & supplier: per faskes, dan unik per faskes
+
+Migrasi 0095 (1 Oktober 2026). Dua kesalahan sejenis dari folder `sql/`:
+
+- **`products_kode_key` dan `suppliers_kode_key` unik di SELURUH database.**
+  Klinik baru yang mengimpor katalog berkode "OB-001" ditolak karena faskes
+  lain sudah memakai kode itu, dengan pesan yang tidak menyebut faskes lain.
+  Sekarang unik per faskes (`uq_products_kode_per_company`,
+  `uq_suppliers_kode_per_company`).
+- **Satu sequence untuk semua faskes**, jadi produk pertama Renon bernomor
+  OBT-0020 dan supplier pertama Apotek Sejahtera SUP-0034. Sekarang
+  `kode_berikut()` (max per faskes + kunci advisory, pola `next_doc_number`)
+  dipanggil trigger `trg_z_kode_*`, yang berjalan SESUDAH
+  `trg_set_company_id`. Kode kosong ('') juga diberi nomor.
+
+Kode otomatis lama dinomori ulang per faskes atas keputusan pemilik (semua
+pengguna masih uji coba, belum ada label tercetak). Kode buatan tangan tidak
+disentuh. **Sesudah klien sungguhan memakai aplikasinya, kode produk TIDAK
+boleh dinomori ulang lagi**: ia tercetak di label rak dan barcode, dan dipakai
+berkas impor stok dan KFA sebagai kunci pencocokan.
+
+Pemeriksaan yang menemukannya layak diulang tiap ada tabel baru: indeks unik
+pada tabel ber-`company_id` yang tidak menyertakan `company_id`.
+
+```sql
+select indexrelid::regclass, pg_get_indexdef(indexrelid) from pg_index i
+  join pg_class t on t.oid = i.indrelid
+ where i.indisunique and not i.indisprimary and t.relnamespace = 'public'::regnamespace
+   and exists (select 1 from information_schema.columns c where c.table_schema = 'public'
+               and c.table_name = t.relname and c.column_name = 'company_id')
+   and pg_get_indexdef(indexrelid) not ilike '%company_id%';
+```
+
+Yang muncul dan memang benar: indeks yang menempel pada `visit_id`,
+`unit_id`, `patient_id`, atau `product_id` (sudah terbatas satu faskes), dan
+token (`token_antrean`, `token_hash`) yang memang harus unik sedunia.
 
 ## Kolom waktu wajib `timestamptz`
 
