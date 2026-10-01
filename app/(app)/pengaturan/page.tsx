@@ -47,6 +47,17 @@ import TombolIkon from '@/components/TombolIkon'
 const TAB_SAH = ['profil', 'outlet', 'pengguna', 'poli', 'perizinan', 'apoteker', 'nasional', 'tampilan', 'langganan', 'jejak'] as const
 type Tab = typeof TAB_SAH[number]
 
+/**
+ * Kata sandi awal acak, 10 karakter dari huruf dan angka yang tidak mudah
+ * tertukar saat dibacakan atau diketik ulang (tanpa 0/O, 1/l/I).
+ */
+function sandiAcak(): string {
+  const huruf = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const acak = new Uint32Array(10)
+  crypto.getRandomValues(acak)
+  return Array.from(acak, n => huruf[n % huruf.length]).join('')
+}
+
 export default function HalamanPengaturan() {
   const { t, lang } = useLang()
   const { kabar, konfirmasi } = useUmpan()
@@ -69,7 +80,11 @@ export default function HalamanPengaturan() {
   const [tagihan, setTagihan] = useState<any[]>([])
   const [sibuk, setSibuk] = useState(false)
   const [undangan, setUndangan] = useState<any[]>([])
-  const [undanganBaru, setUndanganBaru] = useState<{ tautan: string; email: string } | null>(null)
+  // Kotak hasil sesudah akun dibuat atau sandinya diatur ulang. Sandinya
+  // hanya ada di memori halaman ini: tidak disimpan di mana pun, jadi begitu
+  // kotaknya ditutup ia tidak bisa dimunculkan lagi.
+  const [akunBaru, setAkunBaru] = useState<{ email: string; sandi: string | null; jenis: 'baru' | 'lama' | 'atur_ulang' } | null>(null)
+  const [lihatSandi, setLihatSandi] = useState(false)
   const [tersalin, setTersalin] = useState(false)
 
   const scope = app.scope
@@ -134,37 +149,65 @@ export default function HalamanPengaturan() {
   }
 
   const openTambahUser = () => {
-    setUserForm({ nama: '', email: '', password: '', role: 'kasir', modules: ROLE_PAGES['kasir'] })
+    setUserForm({ nama: '', email: '', password: sandiAcak(), role: 'kasir', modules: ROLE_PAGES['kasir'] })
+    setLihatSandi(true)
     setShowUserForm(true)
   }
 
+  /** Panggilan ke route handler tim, membawa sesi pemanggil sebagai bukti siapa dia. */
+  const panggilTim = async (alamat: string, isi: Record<string, unknown>) => {
+    const { data: sesi } = await supabase.auth.getSession()
+    const token = sesi.session?.access_token
+    if (!token) return { ok: false, pesan: t('Sesi berakhir. Masuk lagi.', 'Session ended. Sign in again.') } as any
+    const res = await fetch(alamat, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ ...isi, company: (app.isSuper && app.superViewCompany) || null }),
+    })
+    const j = await res.json().catch(() => ({ ok: false, pesan: t('Jawaban server tidak terbaca.', 'Unreadable server response.') }))
+    // Galat database membawa kodenya, jadi pesan SH00x lewat pesanError()
+    // seperti galat RPC lain; galat server sendiri sudah berupa kalimat.
+    if (!j.ok && j.kode) j.pesan = pesanError({ code: j.kode, message: j.pesan })
+    return j
+  }
+
   /**
-   * Mengundang anggota tim.
+   * Membuatkan akun anggota tim: email dan kata sandi awal (migrasi 0093).
    *
-   * Menggantikan cara lama, yaitu pemilik mengetik kata sandi awal orang itu
-   * lalu memberitahukannya. Sejak itu pemilik mengetahui kata sandi kasirnya,
-   * dan biasanya kata sandi itu tidak pernah diganti; setiap transaksi atas
-   * nama kasir jadi tidak membuktikan siapa yang menyerahkan obat. Untuk
-   * apotek yang menjual narkotika dan psikotropika itu bukan detail sepele.
+   * Keputusan pemilik, menggantikan undangan lewat tautan. Yang menjaga
+   * alasan lama undangan (pemilik tidak boleh tahu sandi kasirnya selamanya)
+   * adalah penanda wajib-ganti: orangnya harus membuat sandinya sendiri saat
+   * pertama masuk, sebelum bisa memakai apa pun.
    */
-  const handleUndang = async () => {
+  const handleTambah = async () => {
+    if (!userForm.nama.trim()) { kabar(t('Nama wajib diisi.', 'Name is required.')); return }
     if (!userForm.email.trim()) { kabar(t('Email wajib diisi.', 'Email is required.')); return }
+    if (userForm.password.length < 8) { kabar(t('Kata sandi awal minimal 8 karakter.', 'The first password needs at least 8 characters.')); return }
     setSavingUser(true)
-    const { data, error } = await supabase.rpc('buat_undangan', {
-      p_email: userForm.email.trim(),
-      p_nama: userForm.nama.trim() || null,
-      p_role: userForm.role,
-      p_modules: userForm.modules,
+    const j = await panggilTim('/api/tim/buat', {
+      email: userForm.email.trim(), nama: userForm.nama.trim(), role: userForm.role,
+      modules: userForm.modules, sandi: userForm.password,
     })
     setSavingUser(false)
-    if (error) { kabar(pesanError(error), 'galat'); return }
-
-    // Tokennya hanya dikembalikan SEKALI, karena sesudah ini yang tersimpan di
-    // database cuma sidiknya. Jadi tautannya ditampilkan sekarang, bukan nanti.
-    const tautan = `${window.location.origin}/undangan/${(data as any).token}`
-    setUndanganBaru({ tautan, email: (data as any).email })
+    if (!j.ok) { kabar(j.pesan, 'galat'); return }
+    setAkunBaru({ email: j.email, sandi: j.akunLama ? null : userForm.password, jenis: j.akunLama ? 'lama' : 'baru' })
     setShowUserForm(false)
-    muatUndangan()
+    fetchUsers()
+  }
+
+  /** Sandi baru dibangkitkan, bukan diketik, supaya tidak ada "123456" yang dipakai untuk semua kasir. */
+  const handleAturUlangSandi = async (u: any) => {
+    if (!await konfirmasi({
+      tombol: t('Atur ulang', 'Reset'),
+      judul: t(`Atur ulang kata sandi ${u.nama}?`, `Reset ${u.nama}'s password?`),
+      pesan: t('Sandi lamanya langsung berhenti berlaku. Sandi baru ditampilkan sekali untuk Anda sampaikan langsung, dan ia wajib menggantinya saat masuk.',
+               'The old password stops working immediately. The new one is shown once for you to pass on in person, and they must change it when signing in.'),
+    })) return
+    const sandi = sandiAcak()
+    const j = await panggilTim('/api/tim/sandi', { email: u.email, sandi })
+    if (!j.ok) { kabar(j.pesan, 'galat'); return }
+    setLihatSandi(true)
+    setAkunBaru({ email: u.email, sandi, jenis: 'atur_ulang' })
   }
 
   const muatUndangan = useCallback(async () => {
@@ -711,25 +754,36 @@ export default function HalamanPengaturan() {
                     if (showUserForm) return (
                       <div>
                         <button onClick={() => setShowUserForm(false)} className="inline-flex items-center gap-1.5 text-sm text-[var(--ink-soft)] hover:text-[var(--brand)] mb-3"><ArrowLeft size={15} /> {t('Kembali ke Pengguna', 'Back to Users')}</button>
-                        <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Undang Anggota Tim', 'Invite a Team Member')}</h2>
+                        <h2 className="text-xl font-bold text-[var(--ink)] mb-1">{t('Tambah Anggota Tim', 'Add a Team Member')}</h2>
                         <p className="text-sm text-[var(--ink-soft)] mb-5 leading-relaxed">
-                          {t('Kamu membuat tautan undangan, dan yang diundang menentukan kata sandinya sendiri. Kamu tidak akan mengetahuinya, dan memang tidak seharusnya: selama kata sandi kasir diketahui orang lain, transaksi atas namanya tidak membuktikan siapa yang menyerahkan obat.',
-                             'You create an invitation link and the invitee sets their own password. You will not know it, and should not: while someone else knows a cashier password, a sale under their name proves nothing about who handed over the medicine.')}
+                          {t('Buatkan email dan kata sandi awal, lalu sampaikan langsung ke orangnya. Saat pertama masuk ia wajib mengganti kata sandinya sendiri, supaya sesudah itu hanya ia yang tahu: transaksi dan rekam medis atas namanya baru membuktikan siapa yang mengerjakannya.',
+                             'Set an email and a first password, then pass them on in person. On first sign-in they must change the password, so afterwards only they know it: sales and records under their name then prove who did the work.')}
                         </p>
                         <div className="space-y-5">
                           <div className="border border-[var(--line)] rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                               <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">Email</label>
-                              <input type="email" value={userForm.email} onChange={e => setUserForm({...userForm, email: e.target.value})} placeholder="nama@apotek.com" className={inputCls} />
+                              <input type="email" value={userForm.email} onChange={e => setUserForm({...userForm, email: e.target.value})} placeholder="nama@email.com" className={inputCls} />
                             </div>
                             <div>
                               <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">{t('Nama', 'Name')}</label>
                               <input value={userForm.nama} onChange={e => setUserForm({...userForm, nama: e.target.value})} placeholder={t('Nama lengkap', 'Full name')} className={inputCls} />
                             </div>
                             <div>
+                              <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">{t('Kata sandi awal', 'First password')}</label>
+                              <div className="flex gap-2">
+                                <input type={lihatSandi ? 'text' : 'password'} value={userForm.password} autoComplete="new-password"
+                                  onChange={e => setUserForm({...userForm, password: e.target.value})} className={inputCls + ' num'} />
+                                <button type="button" onClick={() => { setUserForm({...userForm, password: sandiAcak()}); setLihatSandi(true) }}
+                                  className="shrink-0 px-3 rounded-lg border border-[var(--line)] text-xs font-medium text-[var(--brand)] hover:bg-[var(--surface-2)] transition">
+                                  {t('Acak', 'Generate')}
+                                </button>
+                              </div>
+                              <p className="text-[11px] text-[var(--ink-faint)] mt-1">{t('Minimal 8 karakter. Wajib diganti orangnya saat pertama masuk.', 'At least 8 characters. They must change it on first sign-in.')}</p>
+                            </div>
+                            <div>
                               <label className="text-sm font-medium text-[var(--ink-mid)] mb-1 block">Role</label>
                               <select value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value, modules: ROLE_PAGES[e.target.value] || []})} className={inputCls}>
-                                <option value="pemilik">{t('Pemilik', 'Owner')}</option>
                                 <option value="admin">Admin</option>
                                 <option value="apoteker">{t('Apoteker', 'Pharmacist')}</option>
                                 <option value="asisten_apoteker">{t('Asisten Apoteker', 'Pharmacist Assistant')}</option>
@@ -749,9 +803,9 @@ export default function HalamanPengaturan() {
                             onToggle={(id) => toggleFormModule('new', id)}
                             onClear={() => setUserForm({...userForm, modules: []})}
                             onAll={() => setUserForm({...userForm, modules: menuItems.map(m => m.id)})} />
-                          <button onClick={handleUndang} disabled={savingUser}
+                          <button onClick={handleTambah} disabled={savingUser}
                             className="w-full bg-[var(--brand)] text-[var(--on-brand)] py-3 rounded-xl text-sm font-semibold hover:bg-[var(--brand-hover)] transition disabled:opacity-50">
-                            {savingUser ? t('Membuat undangan…', 'Creating the invitation…') : t('Buat Tautan Undangan', 'Create Invitation Link')}
+                            {savingUser ? t('Membuat akun…', 'Creating the account…') : t('Buat Akun', 'Create Account')}
                           </button>
                         </div>
                       </div>
@@ -817,49 +871,68 @@ export default function HalamanPengaturan() {
                         <h2 className="text-xl font-bold text-[var(--ink)]">{t('Manajemen pengguna', 'User management')}</h2>
                         <button onClick={openTambahUser}
                           className="inline-flex items-center gap-2 bg-[var(--brand)] text-[var(--on-brand)] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] transition">
-                          <UserPlus size={15} /> {t('Undang Anggota', 'Invite Member')}
+                          <UserPlus size={15} /> {t('Tambah Anggota', 'Add Member')}
                         </button>
                       </div>
                       <p className="text-sm text-[var(--ink-soft)] mb-5">{t(`Atur anggota tim ${app.kata('faskes').toLowerCase()} beserta hak akses modul masing-masing.`, `Manage ${app.kata('faskes').toLowerCase()} team members and their module access.`)}</p>
 
-                      {/* Tautan undangan hanya bisa ditampilkan SEKALI: yang
-                          tersimpan di database cuma sidiknya, jadi tidak ada
-                          cara memunculkannya lagi nanti. Kotak ini bertahan
-                          sampai ditutup sendiri, bukan hilang setelah beberapa
-                          detik. */}
-                      {undanganBaru && (
+                      {/* Sandinya hanya ada di memori halaman ini, jadi kotak
+                          ini bertahan sampai ditutup sendiri, bukan hilang
+                          sesudah beberapa detik. */}
+                      {akunBaru && (() => {
+                        const pesan = akunBaru.sandi
+                          ? t(`Masuk di ${window.location.origin}\nEmail: ${akunBaru.email}\nKata sandi awal: ${akunBaru.sandi}\nSaat pertama masuk, Anda diminta membuat kata sandi sendiri.`,
+                              `Sign in at ${window.location.origin}\nEmail: ${akunBaru.email}\nFirst password: ${akunBaru.sandi}\nOn first sign-in you will be asked to set your own password.`)
+                          : ''
+                        return (
                         <div className="mb-5 rounded-2xl border border-green-300 bg-green-50 p-4">
                           <p className="text-sm font-semibold text-green-900 mb-1">
-                            {t('Undangan untuk', 'Invitation for')} {undanganBaru.email} {t('sudah dibuat.', 'created.')}
+                            {akunBaru.jenis === 'atur_ulang'
+                              ? t(`Kata sandi ${akunBaru.email} sudah diatur ulang.`, `${akunBaru.email} password has been reset.`)
+                              : t(`Akun ${akunBaru.email} sudah dibuat.`, `Account ${akunBaru.email} created.`)}
                           </p>
-                          <p className="text-xs text-green-800 mb-3 leading-relaxed">
-                            {t('Salin tautan ini dan kirim sendiri lewat WhatsApp atau email. Tautannya hanya bisa dilihat sekarang: yang tersimpan di database cuma sidiknya, jadi kalau kotak ini ditutup, tautannya tidak bisa dimunculkan lagi. Buat undangan baru kalau terlanjur hilang.',
-                               'Copy this link and send it yourself over WhatsApp or email. It can only be seen now: the database keeps only its fingerprint, so once this box closes the link cannot be shown again. Create a new invitation if it gets lost.')}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <input readOnly value={undanganBaru.tautan}
-                              onFocus={e => e.currentTarget.select()}
-                              className="flex-1 min-w-[16rem] border border-green-300 bg-white rounded-lg px-3 py-2 text-xs num" />
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await navigator.clipboard.writeText(undanganBaru.tautan)
-                                  setTersalin(true); setTimeout(() => setTersalin(false), 2000)
-                                } catch {
-                                  kabar(t('Peramban menolak menyalin. Pilih teksnya lalu salin sendiri.',
-                                          'The browser refused to copy. Select the text and copy it manually.'))
-                                }
-                              }}
-                              className="px-3 py-2 rounded-lg bg-green-700 text-white text-xs font-medium hover:bg-green-800 transition">
-                              {tersalin ? t('Tersalin', 'Copied') : t('Salin', 'Copy')}
-                            </button>
-                            <button onClick={() => setUndanganBaru(null)}
-                              className="px-3 py-2 rounded-lg border border-green-300 text-green-800 text-xs font-medium hover:bg-green-100 transition">
-                              {t('Tutup', 'Close')}
-                            </button>
-                          </div>
+                          {akunBaru.jenis === 'lama' ? (
+                            <p className="text-xs text-green-800 leading-relaxed">
+                              {t('Email ini sudah punya akun Sehatera, jadi ia masuk dengan kata sandinya sendiri. Kata sandi yang Anda ketik tidak dipakai, dan sandinya tidak ditimpa.',
+                                 'This email already has a Sehatera account, so they sign in with their own password. The password you typed is not used, and theirs is not overwritten.')}
+                            </p>
+                          ) : (<>
+                            <p className="text-xs text-green-800 mb-3 leading-relaxed">
+                              {t('Sampaikan langsung ke orangnya. Kata sandi ini hanya tampil sekarang dan tidak disimpan di mana pun; kalau terlanjur hilang, atur ulang dari daftar di bawah.',
+                                 'Pass this on in person. The password is shown only now and stored nowhere; if it gets lost, reset it from the list below.')}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div className="flex-1 min-w-[14rem] border border-green-300 bg-white rounded-lg px-3 py-2 text-xs">
+                                <span className="text-[var(--ink-soft)]">{akunBaru.email}</span>
+                                <span className="mx-2 text-[var(--ink-faint)]">|</span>
+                                <span className="num font-semibold text-[var(--ink)]">{lihatSandi ? akunBaru.sandi : '••••••••••'}</span>
+                              </div>
+                              <button onClick={() => setLihatSandi(v => !v)}
+                                className="px-3 py-2 rounded-lg border border-green-300 text-green-800 text-xs font-medium hover:bg-green-100 transition">
+                                {lihatSandi ? t('Sembunyikan', 'Hide') : t('Lihat', 'Show')}
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await navigator.clipboard.writeText(pesan)
+                                    setTersalin(true); setTimeout(() => setTersalin(false), 2000)
+                                  } catch {
+                                    kabar(t('Peramban menolak menyalin. Catat sandinya sendiri.',
+                                            'The browser refused to copy. Note the password down yourself.'))
+                                  }
+                                }}
+                                className="px-3 py-2 rounded-lg bg-green-700 text-white text-xs font-medium hover:bg-green-800 transition">
+                                {tersalin ? t('Tersalin', 'Copied') : t('Salin pesan masuk', 'Copy sign-in message')}
+                              </button>
+                            </div>
+                          </>)}
+                          <button onClick={() => setAkunBaru(null)}
+                            className="mt-3 px-3 py-1.5 rounded-lg border border-green-300 text-green-800 text-xs font-medium hover:bg-green-100 transition">
+                            {t('Tutup', 'Close')}
+                          </button>
                         </div>
-                      )}
+                        )
+                      })()}
 
                       {undangan.length > 0 && (
                         <div className="mb-5 border border-[var(--line)] rounded-xl overflow-hidden">
@@ -945,6 +1018,15 @@ export default function HalamanPengaturan() {
                                           ubah pengguna: yang diubah bukan data ORANGNYA
                                           melainkan tempat ia boleh masuk, dan perannya bisa
                                           berbeda di tiap outlet. */}
+                                      {/* Bukan untuk pemilik dan bukan untuk diri sendiri:
+                                          database menolak keduanya, jadi tombolnya tidak
+                                          ditawarkan sama sekali. */}
+                                      {u.role !== 'pemilik' && u.email?.toLowerCase() !== app.session?.email?.toLowerCase() && (
+                                        <TombolIkon label={t('Atur ulang kata sandi', 'Reset password')}
+                                          onClick={() => handleAturUlangSandi(u)}>
+                                          <KeyRound size={14} />
+                                        </TombolIkon>
+                                      )}
                                       <TombolIkon label={t('Atur akses outlet', 'Outlet access')}
                                         onClick={() => setAksesOutlet(u)}>
                                         <Building2 size={14} />

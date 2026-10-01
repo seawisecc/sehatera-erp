@@ -38,6 +38,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false)
 
   /**
+   * Akun yang masih memegang sandi awal dari pemilik atau admin (0093).
+   * Dibaca dari sesi lokal, bukan dari server: yang dijaga di sini adalah
+   * kebiasaan, bukan rahasia. user_metadata bisa ditulis pemiliknya sendiri,
+   * jadi penanda ini tidak bisa jadi palang keamanan, dan memang bukan.
+   */
+  const [wajibGanti, setWajibGanti] = useState(false)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) =>
+      setWajibGanti(data.session?.user?.user_metadata?.wajib_ganti_sandi === true))
+  }, [])
+
+  /**
    * Spanduk langganan dibiarkan ringkas sesudah sekali dibaca.
    *
    * Nilai awalnya `true` supaya render pertama di server dan di peramban
@@ -371,6 +383,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {gantiSandi && app.session?.email && (
         <GantiSandi email={app.session.email} onTutup={() => setGantiSandi(false)} />
+      )}
+      {wajibGanti && !gantiSandi && app.session?.email && (
+        <GantiSandi email={app.session.email} wajib onTutup={keluar} onSelesai={() => setWajibGanti(false)} />
       )}
       <KeluarDiam />
     </div>

@@ -128,6 +128,7 @@ memasang lubang keamanan yang sudah ditutup.
 | `0090_peran_ikut_outlet` | `peran_saya()` dan `my_context()` membaca peran di outlet yang sedang dibuka |
 | `0091_sesi_kasir` | `transactions.dibuat_oleh`, `sesi_kasir`, buka/tutup kasir dengan kas seharusnya yang dibekukan |
 | `0092_transfer_stok` | `stock_transfers`, kirim/terima/batal antar outlet satu kelompok, produk dicocokkan di penerima |
+| `0093_anggota_tim_langsung` | `tambah_anggota_tim()`, `izinkan_atur_sandi()`, `pengelola_faskes()`, `id_akun_by_email()` (server saja) |
 
 `supabase/seed.sql` mengisi paket & super admin. `supabase/seed_demo.sql`
 mengisi satu apotek dengan data yang cukup untuk mencoba aplikasinya.
@@ -2703,10 +2704,9 @@ Admin. Pemilik sedang menunggu review akun Midtrans; kode gateway TokoKu
 (selesai 13 September) adalah acuannya.
 
 **Email Auth sudah jalan** lewat Resend (lihat "Email: Resend lewat Custom
-SMTP"), tapi **undangan tim masih dikirim tangan**: undangan Sehatera adalah
-tabel `invitations` milik sendiri (0012), bukan undangan Supabase Auth, jadi
-SMTP Auth tidak mengirimnya. Butuh pengiriman lewat API Resend dari route
-handler dan `RESEND_API_KEY` di env Vercel.
+SMTP"). Undangan tim tidak lagi dipakai sejak 0093: akun tim dibuatkan
+langsung oleh pemilik atau admin (lihat "Tim dibuatkan akun, bukan
+diundang"), jadi tidak ada email undangan yang perlu dikirim.
 
 Paket **Klinik** PUBLIK sejak migrasi 0084 (28 September 2026, permintaan
 pemilik): Rp 1.490.000/bln, Rp 14.900.000/th. **Deskripsinya sengaja tidak
@@ -2751,7 +2751,8 @@ HTML-nya sudah dibaca dan benar.
    sedang melihat satu klien. Butir menunjuk ke tab yang BENAR-BENAR memuat
    kolomnya: apoteker dan SIPA ada di tab `apoteker`, bukan `profil`, dan
    versi pertama sempat salah menunjuk.
-2. **Email undangan tim otomatis** lewat API Resend (lihat di atas).
+2. ~~Email undangan tim otomatis~~ **dibatalkan**: pemilik memilih akun
+   dibuatkan langsung (migrasi 0093), jadi tidak ada undangan yang dikirim.
 3. **Pengingat harian lewat email**: langganan habis 7 hari lagi, SIP habis
    dalam 60 hari, ringkasan batch hampir kedaluwarsa. Satu jadwal harian masih
    boleh di Vercel Hobby. Mengirim ke klien sungguhan, jadi penjadwalnya
@@ -2764,6 +2765,38 @@ HTML-nya sudah dibaca dan benar.
 klinik rekanan, verifikasi Sehatera sebagai Penyedia Sistem RME di SSP
 (SatuSehat produksi), kode KFA 24 obat demo (dipilih manusia), cek merek
 Sehatera di PDKI.
+
+## Tim dibuatkan akun, bukan diundang
+
+Keputusan pemilik, 1 Oktober 2026 (migrasi 0093, `app/api/tim/`). Pemilik
+atau admin membuatkan email dan kata sandi awal; orangnya langsung masuk.
+Undangan lewat tautan tidak lagi ditawarkan di layar (undangan lama yang
+masih menggantung tetap bisa dicabut).
+
+- **Kata sandi awal WAJIB diganti saat pertama masuk.** Penandanya
+  `user_metadata.wajib_ganti_sandi`, dipasang route handler, dan AppShell
+  membuka Ganti Sandi yang tidak bisa ditutup kecuali dengan keluar. Itu
+  yang menjaga alasan lama undangan: pemilik tidak boleh memegang sandi
+  kasirnya selamanya, kalau tidak transaksi atas nama kasir tidak
+  membuktikan siapa yang melayani. user_metadata bisa ditulis pemiliknya
+  sendiri, jadi ini KEBIASAAN yang dijaga, bukan palang keamanan.
+- **Urutan di route: hak dulu lewat SESI pemanggil (`tambah_anggota_tim`),
+  baru akun Auth lewat service_role.** Kalau pembuatan akun gagal, baris
+  `app_users`-nya dibuang lagi.
+- **Email yang sudah punya akun tidak ditimpa sandinya**: ia cuma
+  ditambahkan ke tim dan masuk dengan sandinya sendiri. Menimpa sandi akun
+  yang sudah ada adalah mengambil alih akun orang.
+- **Atur ulang sandi oleh admin** hanya kalau SETIAP faskes tempat orang itu
+  terdaftar dikelola pemanggil, bukan pemilik, dan bukan dirinya sendiri.
+  Admin klinik A tidak boleh mengambil alih orang yang juga bekerja di
+  klinik B milik orang lain. Sandi barunya dibangkitkan, bukan diketik, dan
+  ditandai wajib-ganti lagi. Tercatat di jejak audit.
+- `id_akun_by_email()` hanya untuk service_role: yang bisa memanggilnya
+  bisa menebak email mana yang punya akun.
+
+Sekalian ketahuan: `buat_undangan()` hanya menerima lima peran apotek, jadi
+dokter, perawat, pendaftaran, dan analis tidak pernah bisa diundang sama
+sekali. `tambah_anggota_tim()` menerima semua peran kecuali pemilik.
 
 ## Migrasi Data: impor lewat jalur yang sama dengan layarnya
 

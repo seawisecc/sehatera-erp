@@ -28,7 +28,18 @@ const INPUT =
 // Sama dengan pendaftaran, atur ulang sandi, undangan, dan setelan Auth.
 const MIN_SANDI = 8
 
-export default function GantiSandi({ email, onTutup }: { email: string; onTutup: () => void }) {
+/**
+ * `wajib`: dipakai saat akun masih memegang sandi awal yang dibuatkan pemilik
+ * atau admin (migrasi 0093). Dialognya tidak bisa ditutup kecuali dengan
+ * keluar, karena sandi yang diketik orang lain bukan sandi pemiliknya, dan
+ * transaksi atas nama orang ini baru berarti sesudah hanya ia yang tahu.
+ */
+export default function GantiSandi({ email, onTutup, wajib = false, onSelesai }: {
+  email: string
+  onTutup: () => void
+  wajib?: boolean
+  onSelesai?: () => void
+}) {
   const { t } = useLang()
   const { kabar } = useUmpan()
   const [lama, setLama] = useState('')
@@ -60,7 +71,9 @@ export default function GantiSandi({ email, onTutup }: { email: string; onTutup:
         : eLama.message)
       return
     }
-    const { error } = await supabase.auth.updateUser({ password: baru })
+    // Penanda wajib-ganti dibersihkan di panggilan yang SAMA dengan sandinya,
+    // supaya tidak ada keadaan "sandi sudah diganti tapi masih ditagih".
+    const { error } = await supabase.auth.updateUser({ password: baru, data: { wajib_ganti_sandi: false } })
     setSibuk(false)
     if (error) {
       setGalat(/weak|pwned|leaked/i.test(error.message)
@@ -69,7 +82,7 @@ export default function GantiSandi({ email, onTutup }: { email: string; onTutup:
       return
     }
     kabar(t('Kata sandi diganti. Pakai yang baru saat masuk berikutnya.', 'Password changed. Use the new one next time you sign in.'), 'ok')
-    onTutup()
+    if (onSelesai) onSelesai(); else onTutup()
   }
 
   const label = 'block text-[13px] font-medium text-[var(--ink-mid)] mb-1.5'
@@ -77,12 +90,16 @@ export default function GantiSandi({ email, onTutup }: { email: string; onTutup:
 
   return (
     <Dialog
-      judul={t('Ganti kata sandi', 'Change password')}
-      sub={email}
+      judul={wajib ? t('Buat kata sandi Anda sendiri', 'Set your own password') : t('Ganti kata sandi', 'Change password')}
+      sub={wajib
+        ? t(`${email}. Kata sandi awal dibuatkan pemilik atau admin, jadi harus diganti sebelum mulai bekerja. Sesudah ini hanya Anda yang tahu.`,
+            `${email}. Your first password was set by the owner or an admin, so it must be changed before you start. After this only you know it.`)
+        : email}
+      labelTutup={wajib ? t('Keluar', 'Sign out') : undefined}
       lebar="sm"
       onTutup={onTutup}
       aksi={<>
-        <button type="button" onClick={onTutup} className={TOMBOL_KEDUA}>{t('Batal', 'Cancel')}</button>
+        <button type="button" onClick={onTutup} className={TOMBOL_KEDUA}>{wajib ? t('Keluar', 'Sign out') : t('Batal', 'Cancel')}</button>
         <button type="button" onClick={simpan} disabled={sibuk} className={TOMBOL_UTAMA}>
           {sibuk ? t('Menyimpan…', 'Saving…') : t('Simpan', 'Save')}
         </button>
@@ -93,7 +110,7 @@ export default function GantiSandi({ email, onTutup }: { email: string; onTutup:
           <div className="px-3.5 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm leading-relaxed">{galat}</div>
         )}
         <div>
-          <label htmlFor="sandi-lama" className={label}>{t('Kata sandi sekarang', 'Current password')}</label>
+          <label htmlFor="sandi-lama" className={label}>{wajib ? t('Kata sandi awal yang diberikan', 'The first password you were given') : t('Kata sandi sekarang', 'Current password')}</label>
           <div className="relative">
             <input id="sandi-lama" type={tipe} value={lama} autoComplete="current-password"
               onChange={e => setLama(e.target.value)} className={INPUT + ' pr-11'} />
