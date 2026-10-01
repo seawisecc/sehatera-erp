@@ -198,7 +198,7 @@ export default function HalamanProduk() {
       tombol: t('Cetak semua', 'Print all'),
     })) return
 
-    const ok = bukaCetak(labelRak(app.settingsData || {}, daftar.map(x => ({
+    const ok = bukaCetak(labelRak(app.profilCetak(), daftar.map(x => ({
       nama_obat: x.nama_obat, nama_generik: x.nama_generik, kandungan: x.kandungan,
       satuan: x.satuan, harga_jual: x.harga_jual, kode: x.kode,
       barcode: x.barcode, rak: x.rak, kode_kfa: x.kode_kfa, kategori: x.kategori,

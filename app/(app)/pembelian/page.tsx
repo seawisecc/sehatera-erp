@@ -307,7 +307,7 @@ export default function HalamanPembelian() {
 
   const cetakPO = async (po: any) => {
     const { data: items } = await supabase.from('po_items').select('*').eq('po_id', po.id)
-    const ok = bukaCetak(purchaseOrder(app.settingsData, {
+    const ok = bukaCetak(purchaseOrder(app.profilCetak(), {
       nomor_po: po.nomor_po,
       tanggal: po.tanggal_po || po.created_at,
       status: po.status,

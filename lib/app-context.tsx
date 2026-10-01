@@ -82,6 +82,12 @@ export type AppState = {
   sektor: Sektor
   /** Satu kata istilah yang mengikuti jenis fasilitas dan bahasa yang dipakai. */
   kata: (kunci: 'faskes' | 'pelanggan' | 'penanggungJawab' | 'izin') => string
+  /**
+   * Profil untuk dokumen cetak: `settingsData` ditambah sektornya. Semua
+   * pemanggil `lib/cetak.ts` lewat sini, supaya kop dokumen tahu menulis
+   * SIA atau izin operasional.
+   */
+  profilCetak: () => Record<string, any>
 }
 
 const Ctx = createContext<AppState | null>(null)
@@ -287,6 +293,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     namaFaskes,
     sektor,
     kata: (kunci) => istilah(sektor, kunci, lang === 'en'),
+    profilCetak: () => ({ ...(settingsData || {}), sektor }),
   }
 
   return <Ctx.Provider value={nilai}>{children}</Ctx.Provider>

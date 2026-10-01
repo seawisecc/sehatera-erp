@@ -86,5 +86,23 @@ for (const [apa, lulus] of cekLain) {
   else console.log(`ok   ${apa}`)
 }
 
+// Kop: label izin ikut jenis faskes, di SETIAP templat yang mencetak nomor izin.
+const klinik = { ...p, sektor: 'klinik' }
+const apotek = { ...p, sektor: 'apotek' }
+const pasang: [string, (q: typeof p) => string][] = [
+  ['beritaAcaraPemusnahan', q => beritaAcaraPemusnahan(q, {})],
+  ['purchaseOrder', q => purchaseOrder(q, {} as never, [])],
+  ['buktiPembayaranFaktur', q => buktiPembayaranFaktur(q, {} as never)],
+  ['strukPenjualan', q => strukPenjualan(q, { total: 0, bayar: 0, kembalian: 0 } as never, [])],
+  ['lembarOpname', q => lembarOpname(q, {}, [])],
+  ['buktiSetoranKasir', q => buktiSetoranKasir(q, {})],
+]
+for (const [nama, buat] of pasang) {
+  const k = buat(klinik), a = buat(apotek)
+  const lulus = !k.includes('SIA:') && k.includes('Izin Operasional Klinik: SIA/1') && a.includes('SIA: SIA/1')
+  if (!lulus) { gagal++; console.log(`GAGAL kop ${nama}: label izin tidak ikut sektor`) }
+  else console.log(`ok   kop ${nama}: label izin ikut sektor`)
+}
+
 if (gagal) throw new Error(`${gagal} pemeriksaan gagal`)
 console.log('\nSEMUA UJI LULUS')

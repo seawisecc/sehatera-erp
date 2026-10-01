@@ -244,7 +244,7 @@ export default function StokOpname() {
       (a.products?.rak || '\uffff').localeCompare(b.products?.rak || '\uffff', 'id', { numeric: true })
       || (a.products?.nama_obat || '').localeCompare(b.products?.nama_obat || '', 'id')
       || (a.product_batches?.expired_date || '9999').localeCompare(b.product_batches?.expired_date || '9999'))
-    const ok = bukaCetak(lembarOpname(app.settingsData || {}, {
+    const ok = bukaCetak(lembarOpname(app.profilCetak(), {
       nomor: pilih.nomor, tanggal: pilih.tanggal, cakupan: namaCakupan(pilih.kategori), status: pilih.status,
       dibuat_oleh: pilih.dibuat_oleh, difinalkan_oleh: pilih.difinalkan_oleh, difinalkan_pada: pilih.difinalkan_pada,
       catatan: pilih.catatan,

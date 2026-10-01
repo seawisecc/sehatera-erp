@@ -164,7 +164,7 @@ export default function HalamanFarmasi() {
               'This prescription has no drug lines to print yet.'), 'galat')
       return
     }
-    const ok = bukaCetak(etiketObat(app.settingsData || {}, {
+    const ok = bukaCetak(etiketObat(app.profilCetak(), {
       nomor_resep: r.nomor,
       nama_pasien: r.pasien_nama,
       nomor_rm: r.nomor_rm,

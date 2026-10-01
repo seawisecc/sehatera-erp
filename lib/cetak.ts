@@ -14,6 +14,7 @@
  */
 
 import { barcodeHtml, GAYA_BARCODE } from './barcode'
+import { bacaSektor, istilah, type Sektor } from './faskes'
 
 export type ProfilApotek = {
   /** Nama fasilitas. `nama_apotek` masih diterima demi data lama. */
@@ -25,7 +26,20 @@ export type ProfilApotek = {
   nama_apoteker?: string | null
   nomor_sipa?: string | null
   kota?: string | null
+  /**
+   * Jenis faskes, untuk label nomor izin di kop. `settings` tidak memuatnya,
+   * jadi pemanggil memakai `app.profilCetak()`, bukan `app.settingsData`.
+   * Kosong dibaca sebagai apotek, bentuk yang sudah ada.
+   */
+  sektor?: Sektor | string | null
 }
+
+/**
+ * Label nomor izin di kop: SIA untuk apotek, izin operasional untuk klinik
+ * dan rumah sakit. Kop yang menulis "SIA" di klinik mencetak nomor izin
+ * operasional dengan nama izin yang salah, pada dokumen yang ditandatangani.
+ */
+const labelIzin = (p: ProfilApotek) => istilah(bacaSektor(p.sektor), 'izin', false)
 
 /**
  * Semua nilai yang masuk templat lewat sini.
@@ -172,7 +186,7 @@ const kepalaApotek = (p: ProfilApotek) => `
 <div class="apotek">
   <h1>${teks(p.nama_faskes ?? p.nama_apotek, 'Fasilitas')}</h1>
   <p>${teks(p.alamat, '')}</p>
-  <p>SIA: ${teks(p.nomor_ijin)} | Telp: ${teks(p.nomor_telepon)}</p>
+  <p>${labelIzin(p)}: ${teks(p.nomor_ijin)} | Telp: ${teks(p.nomor_telepon)}</p>
 </div>
 <div class="divider"></div>`
 
@@ -278,7 +292,7 @@ td{padding:8px;border-bottom:1px solid #eee;font-size:11px;}
   <div>
     <h1>${teks(p.nama_faskes ?? p.nama_apotek, 'Fasilitas')}</h1>
     <p>${teks(p.alamat, '')}</p>
-    <p>SIA: ${teks(p.nomor_ijin)} | Telp: ${teks(p.nomor_telepon)}</p>
+    <p>${labelIzin(p)}: ${teks(p.nomor_ijin)} | Telp: ${teks(p.nomor_telepon)}</p>
   </div>
   <div style="text-align:right;">
     <h1>PURCHASE ORDER</h1>
@@ -360,7 +374,7 @@ td{padding:6px 8px;vertical-align:top;}
   <div class="apotek">
     <h1>${teks(p.nama_faskes ?? p.nama_apotek, 'Fasilitas')}</h1>
     <p>${teks(p.alamat, '')}</p>
-    <p>SIA: ${teks(p.nomor_ijin)} | Telp: ${teks(p.nomor_telepon)}</p>
+    <p>${labelIzin(p)}: ${teks(p.nomor_ijin)} | Telp: ${teks(p.nomor_telepon)}</p>
   </div>
   <div style="text-align:right;"><span class="stamp">LUNAS</span></div>
 </div>
@@ -588,7 +602,7 @@ p{text-align:center;font-size:11.5px;color:#000;margin:1px 0;}
 </style></head><body>
 <h2>${teks(p.nama_faskes ?? p.nama_apotek)}</h2>
 <p>${teks(p.alamat, '')}</p>
-${p.nomor_ijin ? `<p>SIA: ${teks(p.nomor_ijin)}</p>` : ''}
+${p.nomor_ijin ? `<p>${labelIzin(p)}: ${teks(p.nomor_ijin)}</p>` : ''}
 ${p.nomor_telepon ? `<p>Telp: ${teks(p.nomor_telepon)}</p>` : ''}
 <div class="divider"></div>
 <div class="row small"><span>No.</span><span>${teks(d.nomor_transaksi, '')}</span></div>

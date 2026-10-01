@@ -34,7 +34,7 @@ export default function SetoranKasir() {
   // Cetak ulang dari angka yang DIBEKUKAN, jadi sama persis dengan yang
   // ditandatangani malam itu.
   const cetak = (b: Baris) => {
-    const ok = bukaCetak(buktiSetoranKasir(app.settingsData || {}, b), 800, 900)
+    const ok = bukaCetak(buktiSetoranKasir(app.profilCetak(), b), 800, 900)
     if (!ok) kabar(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
   }
 

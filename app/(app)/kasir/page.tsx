@@ -298,7 +298,7 @@ export default function HalamanKasir() {
   }
 
   const cetakStruk = () => {
-    const ok = bukaCetak(strukPenjualan(app.settingsData, struk, strukItems), 350, 600)
+    const ok = bukaCetak(strukPenjualan(app.profilCetak(), struk, strukItems), 350, 600)
     if (!ok) kabar(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
   }
 

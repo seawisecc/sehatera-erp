@@ -210,7 +210,7 @@ export default function Klaim() {
   }
 
   const cetak = (k: any) => {
-    const ok = bukaCetak(fakturPenjamin(app.settingsData || {}, {
+    const ok = bukaCetak(fakturPenjamin(app.profilCetak(), {
       nomor: k.nomor, penjamin: k.penjamin, asuransi: k.asuransi,
       dari: k.dari, sampai: k.sampai, jumlah_transaksi: k.jumlah_transaksi,
       total_pelayanan: k.total_pelayanan, total_ditagihkan: k.total_ditagihkan,

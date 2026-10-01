@@ -305,7 +305,7 @@ export default function HalamanLaporan() {
       }
     })
 
-    const ok = bukaCetak(laporanSipnap(app.settingsData, sipnap, baris), 1200, 800)
+    const ok = bukaCetak(laporanSipnap(app.profilCetak(), sipnap, baris), 1200, 800)
     if (!ok) kabar(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
   }
 

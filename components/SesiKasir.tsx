@@ -100,7 +100,7 @@ export default function SesiKasir({ segarkan }: { segarkan: number }) {
 
   const cetakBukti = () => {
     if (!ditutup) return
-    const ok = bukaCetak(buktiSetoranKasir(app.settingsData || {}, ditutup), 800, 900)
+    const ok = bukaCetak(buktiSetoranKasir(app.profilCetak(), ditutup), 800, 900)
     if (!ok) kabar(t('Jendela cetak diblokir peramban. Izinkan pop-up untuk situs ini.', 'The print window was blocked. Allow pop-ups for this site.'))
   }
 

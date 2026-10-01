@@ -78,7 +78,7 @@ export default function HalamanFaktur() {
   }, [app.superViewCompany])
 
   const cetakBukti = (f: Faktur) =>
-    bukaCetak(buktiPembayaranFaktur(app.settingsData, {
+    bukaCetak(buktiPembayaranFaktur(app.profilCetak(), {
       nomor_faktur: f.nomor_faktur,
       nama_supplier: f.suppliers?.nama_supplier,
       nomor_po: f.purchase_orders?.nomor_po,

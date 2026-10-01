@@ -68,7 +68,7 @@ export default function HalamanTindakLanjut() {
   useEffect(() => { muat() }, [muat])
 
   const cetakBA = (row: any) => {
-    const ok = bukaCetak(beritaAcaraPemusnahan(app.settingsData, {
+    const ok = bukaCetak(beritaAcaraPemusnahan(app.profilCetak(), {
       nomor_ba: row.nomor_ba,
       tanggal_musnahkan: row.tanggal_musnahkan,
       nama_produk: row.products?.nama_obat,
