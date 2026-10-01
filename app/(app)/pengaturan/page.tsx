@@ -236,8 +236,8 @@ export default function HalamanPengaturan() {
   }
 
   const handleDeleteUser = async (u: any) => {
-    if (!await konfirmasi({ bahaya: true, tombol: t('Hapus pengguna', 'Remove user'), judul: t(`Hapus pengguna "${u.nama}"?`, `Remove "${u.nama}"?`), pesan: t(`Akun loginnya tetap ada, tapi ia kehilangan akses ke apotek ini.`,
-                   `Delete user "${u.nama}"? Their login account remains, but they lose access to this pharmacy.`)})) return
+    if (!await konfirmasi({ bahaya: true, tombol: t('Hapus pengguna', 'Remove user'), judul: t(`Hapus pengguna "${u.nama}"?`, `Remove "${u.nama}"?`), pesan: t(`Akun loginnya tetap ada, tapi ia kehilangan akses ke ${app.kata('faskes').toLowerCase()} ini.`,
+                   `Their login account remains, but they lose access to this ${app.kata('faskes').toLowerCase()}.`)})) return
     const { error } = await supabase.from('app_users').delete().eq('id', u.id)
     if (error) { kabar(pesanError(error), 'galat'); return }
     fetchUsers()
@@ -820,7 +820,7 @@ export default function HalamanPengaturan() {
                           <UserPlus size={15} /> {t('Undang Anggota', 'Invite Member')}
                         </button>
                       </div>
-                      <p className="text-sm text-[var(--ink-soft)] mb-5">{t('Atur anggota tim apotek beserta hak akses modul masing-masing.', 'Manage pharmacy team members and their module access.')}</p>
+                      <p className="text-sm text-[var(--ink-soft)] mb-5">{t(`Atur anggota tim ${app.kata('faskes').toLowerCase()} beserta hak akses modul masing-masing.`, `Manage ${app.kata('faskes').toLowerCase()} team members and their module access.`)}</p>
 
                       {/* Tautan undangan hanya bisa ditampilkan SEKALI: yang
                           tersimpan di database cuma sidiknya, jadi tidak ada
